@@ -1,8 +1,9 @@
-// Self-check for readable() in ui.html: run `node test-readable.js`.
+// Self-check for readable() in web/ui.html: run `node tests/test-readable.js`
+// from the repo root, or `node test-readable.js` from tests/.
 // It pulls the function out of the page it actually ships in, so it cannot
 // drift from the deployed copy.
 const fs = require('fs');
-const page = fs.readFileSync(__dirname + '/ui.html', 'utf8');
+const page = fs.readFileSync(__dirname + '/../web/ui.html', 'utf8');
 const start = page.indexOf('// ---------- spoken text -> readable text');
 const end = page.indexOf('// ---------- inspector ----------');
 eval(page.slice(start, end));
