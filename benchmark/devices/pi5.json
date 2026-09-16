@@ -9,7 +9,7 @@
     "litert_lm": "http://127.0.0.1:9379/v1/chat/completions"
   },
   "binaries": {
-    "little_gemma": "/home/mitlab/little-gemma/lg"
+    "little_gemma": "/usr/local/bin/lg"
   },
   "models": {
     "e2b": {
@@ -22,16 +22,27 @@
     },
     "e4b-q4km": {
       "name": "gemma4-e4b", "quant": "Q4_K_M",
-      "path": "/home/mitlab/models/gemma-4-E4B-it-Q4_K_M.gguf"
+      "path": "/home/mitlab/models/gemma-4-E4B-it-Q4_K_M.gguf",
+      "_missing": "NOT DOWNLOADED YET — Tier 3 only"
     },
     "e4b-q5km": {
       "name": "gemma4-e4b", "quant": "Q5_K_M",
-      "path": "/home/mitlab/models/gemma-4-E4B-it-Q5_K_M.gguf"
+      "path": "/home/mitlab/models/gemma-4-E4B-it-Q5_K_M.gguf",
+      "_missing": "NOT DOWNLOADED YET — Tier 3 only"
     },
     "e4b-q8": {
       "name": "gemma4-e4b", "quant": "Q8_0",
-      "path": "/home/mitlab/models/gemma-4-E4B-it-Q8_0.gguf"
+      "path": "/home/mitlab/models/gemma-4-E4B-it-Q8_0.gguf",
+      "_missing": "NOT DOWNLOADED YET — Tier 3 only"
     }
   },
-  "_note": "Written once for this box. Nothing here is experiment-specific — conditions/ holds that. Tier-3 quant entries only need to exist on whichever device runs the sweep."
+  "mtp_heads": {
+    "e2b": "/home/mitlab/models/mtp-gemma-4-E2B-it.gguf",
+    "e4b": "/home/mitlab/models/mtp-gemma-4-E4B-it.gguf"
+  },
+  "litert_models": {
+    "e4b": "gemma-4-E4B-it.litertlm",
+    "_note": "E2B is NOT imported — condition C is E4B-only on this box until it is. Serve with: /home/mitlab/litert-venv/bin/litert-lm serve gemma-4-E4B-it.litertlm --port 9379"
+  },
+  "_verified": "2026-09-17: paths confirmed on the box. lg is at /usr/local/bin/lg (not under ~/little-gemma). Tier-3 quant files are absent and must be fetched before Tier 3."
 }
