@@ -37,7 +37,9 @@ REFUSAL = re.compile(
     r"(?i)\bi (?:do not|don't|cannot|can't|am not able to)\b"
     r"|\bno (?:access|way) to\b|\bunable to\b|\bmy (?:knowledge|training)\b"
     r"|\bas of my\b|\bmay be out of date\b|\bcheck a (?:live|current)\b"
-    r"|\bi have no\b|\brecommend checking\b|\bplease check\b")
+    r"|\bi have no\b|\brecommend checking\b|\bplease check\b"
+    # Asking for clarification states nothing either.
+    r"|\bplease provide\b|\bmore context\b|\bcould you (?:please )?(?:tell|specify|clarify)\b")
 
 
 def merge_config(device_path, condition_path, model_key, overrides):
@@ -78,6 +80,7 @@ def merge_config(device_path, condition_path, model_key, overrides):
         cfg["binary"] = (dev.get("binaries") or {}).get("little_gemma")
         cfg["binary_args"] = (dev.get("binary_args") or {}).get("little_gemma")
         cfg["log"] = (dev.get("logs") or {}).get("little_gemma")
+        cfg["on_timeout"] = (dev.get("on_timeout") or {}).get("little_gemma")
         if not cfg["binary"]:
             sys.exit(f"device {dev['device']!r} has no binaries.little_gemma path")
     elif engine == "proposed":

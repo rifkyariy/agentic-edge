@@ -31,13 +31,16 @@ lg_up() {   # lg_up <gguf>
   sudo -n systemctl stop va-llm little-gemma
   pgrep -f "[b]uild-fast/run -m" | xargs -r kill; sleep 2
   rm -f "$LG_SOCK"
-  nohup /home/mitlab/little-gemma/build-fast/run -m "$1" -s "$LG_SOCK" \
+  # Respawn loop: adapters.py kills a runaway server on timeout (on_timeout
+  # in devices/pi5.json) and this brings it straight back.
+  nohup sh -c "while :; do rm -f $LG_SOCK; /home/mitlab/little-gemma/build-fast/run -m $1 -s $LG_SOCK; sleep 1; done" \
     > /tmp/lg.log 2>&1 < /dev/null &
   for _ in $(seq 120); do [ -S "$LG_SOCK" ] && return; sleep 2; done
   log "little-gemma did not come up"; return 1
 }
 
 lg_down() {
+  pgrep -f "[w]hile :; do rm -f" | xargs -r kill
   pgrep -f "[b]uild-fast/run -m" | xargs -r kill; sleep 2
   sudo -n systemctl start va-llm && wait_llama
 }

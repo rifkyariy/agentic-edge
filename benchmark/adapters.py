@@ -140,7 +140,20 @@ def run_little_gemma(cfg, case):
     try:
         r = subprocess.run(argv, capture_output=True,
                            text=True, timeout=cfg.get("timeout_s", 180))
-    except (OSError, subprocess.TimeoutExpired) as e:
+    except subprocess.TimeoutExpired as e:
+        # No max-token flag exists, so a long answer runs into the timeout.
+        # Keep what it said: a truncated answer can still be a fabrication,
+        # the same as llama.cpp stopping at max_tokens.
+        # The server keeps generating after the client dies and serves one
+        # conversation at a time, so the next case would queue behind it.
+        if cfg.get("on_timeout"):
+            subprocess.run(cfg["on_timeout"], shell=True, timeout=300)
+        part = e.stdout.decode("utf-8", "replace") if isinstance(e.stdout, bytes) \
+            else (e.stdout or "")
+        return {"ok": False, "truncated": True, "error": f"timeout {e.timeout}s",
+                "text": part.replace("<turn|>", "").strip(),
+                "total_s": _now() - t0, "tool_called": None}
+    except OSError as e:
         return {"ok": False, "error": str(e), "total_s": _now() - t0}
     total = _now() - t0
     # `<turn|>` is little-gemma's end-of-turn marker, not part of the answer.
