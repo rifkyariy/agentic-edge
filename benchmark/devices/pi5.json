@@ -2,7 +2,7 @@
   "device": "raspi5",
   "cuda": false,
   "hardware": "Raspberry Pi 5, 8GB, 4x Cortex-A76, no GPU",
-  "power_mode": "stock, active cooler",
+  "power_mode": "stock, active cooler, cpufreq governor ondemand",
   "proposed_url": "http://127.0.0.1:8090",
   "endpoints": {
     "llama_cpp": "http://127.0.0.1:8080/v1/chat/completions",
@@ -13,25 +13,30 @@
   },
   "models": {
     "e2b": {
-      "name": "gemma4-e2b", "quant": "Q4_K_XL",
+      "name": "gemma4-e2b",
+      "quant": "Q4_K_XL",
       "path": "/home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf"
     },
     "e4b": {
-      "name": "gemma4-e4b", "quant": "Q4_K_XL",
+      "name": "gemma4-e4b",
+      "quant": "Q4_K_XL",
       "path": "/home/mitlab/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf"
     },
     "e4b-q4km": {
-      "name": "gemma4-e4b", "quant": "Q4_K_M",
+      "name": "gemma4-e4b",
+      "quant": "Q4_K_M",
       "path": "/home/mitlab/models/gemma-4-E4B-it-Q4_K_M.gguf",
       "_missing": "NOT DOWNLOADED YET — Tier 3 only"
     },
     "e4b-q5km": {
-      "name": "gemma4-e4b", "quant": "Q5_K_M",
+      "name": "gemma4-e4b",
+      "quant": "Q5_K_M",
       "path": "/home/mitlab/models/gemma-4-E4B-it-Q5_K_M.gguf",
       "_missing": "NOT DOWNLOADED YET — Tier 3 only"
     },
     "e4b-q8": {
-      "name": "gemma4-e4b", "quant": "Q8_0",
+      "name": "gemma4-e4b",
+      "quant": "Q8_0",
       "path": "/home/mitlab/models/gemma-4-E4B-it-Q8_0.gguf",
       "_missing": "NOT DOWNLOADED YET — Tier 3 only"
     }
@@ -42,7 +47,12 @@
   },
   "litert_models": {
     "e4b": "gemma-4-E4B-it.litertlm",
-    "_note": "E2B is NOT imported — condition C is E4B-only on this box until it is. Serve with: /home/mitlab/litert-venv/bin/litert-lm serve gemma-4-E4B-it.litertlm --port 9379"
+    "_note": "E2B is NOT imported on this box, so condition C is E4B-only. Serve with: /home/mitlab/litert-venv/bin/litert-lm serve --host 127.0.0.1 --port 9379 (no model argument; the request's model id picks the bundle)"
   },
-  "_verified": "2026-09-17: paths confirmed on the box. lg is at /usr/local/bin/lg (not under ~/little-gemma). Tier-3 quant files are absent and must be fetched before Tier 3."
+  "_verified": "2026-09-17: paths confirmed on the box. lg is at /usr/local/bin/lg (not under ~/little-gemma). Tier-3 quant files are absent and must be fetched before Tier 3.",
+  "timeout_s": 600,
+  "logs": {
+    "little_gemma": "/tmp/lg.log"
+  },
+  "_little_gemma": "pi5_run.sh starts `run -m <model> -s /tmp/lg.sock > /tmp/lg.log` per model with va-llm stopped, and exports LG_SOCK=/tmp/lg.sock; the systemd unit is E4B-only."
 }

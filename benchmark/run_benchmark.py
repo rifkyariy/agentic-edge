@@ -23,6 +23,8 @@ import statistics
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import adapters
@@ -75,6 +77,7 @@ def merge_config(device_path, condition_path, model_key, overrides):
         cfg["label"] += " [CUDA]" if cfg["cuda"] else " [CPU]"
         cfg["binary"] = (dev.get("binaries") or {}).get("little_gemma")
         cfg["binary_args"] = (dev.get("binary_args") or {}).get("little_gemma")
+        cfg["log"] = (dev.get("logs") or {}).get("little_gemma")
         if not cfg["binary"]:
             sys.exit(f"device {dev['device']!r} has no binaries.little_gemma path")
     elif engine == "proposed":
@@ -83,11 +86,68 @@ def merge_config(device_path, condition_path, model_key, overrides):
             sys.exit(f"device {dev['device']!r} has no proposed_url")
     else:
         cfg["endpoint"] = (dev.get("endpoints") or {}).get(engine)
+        if engine == "litert_lm":
+            # LiteRT-LM serves .litertlm bundles by id, not our GGUF paths.
+            cfg["request_model"] = (dev.get("litert_models") or {}).get(model_key)
         if not cfg["endpoint"]:
             sys.exit(f"device {dev['device']!r} has no endpoints.{engine}")
 
+    # The model key must change what is actually loaded, not just the label.
+    # llama.cpp's /props says what it has; va-web can switch it (below).
+    cfg["llama_props_url"] = ((dev.get("endpoints") or {}).get("llama_cpp") or
+                              "").split("/v1/")[0] + "/props"
+    cfg.setdefault("proposed_url", dev.get("proposed_url"))
+    cfg["litert_models"] = dev.get("litert_models") or {}
+
     cfg.update(overrides)
     return cfg
+
+
+def _get_json(url, timeout=5):
+    with urllib.request.urlopen(url, timeout=timeout) as r:
+        return json.loads(r.read())
+
+
+def loaded_model(cfg):
+    """What the engine actually has loaded, or None if we can't tell."""
+    if cfg["engine"] in ("llama_cpp", "proposed"):
+        try:
+            return _get_json(cfg["llama_props_url"]).get("model_path")
+        except (urllib.error.URLError, OSError, ValueError):
+            return None
+    if cfg["engine"] == "little_gemma":
+        out = subprocess.run(["pgrep", "-af", "[r]un -m "], capture_output=True, text=True)
+        m = re.search(r" -m (\S+)", out.stdout)
+        return m.group(1) if m else None
+    return cfg.get("request_model")
+
+
+def ensure_model(cfg):
+    """Make llama.cpp serve cfg's model (via va-web's POST /model, which
+    restarts va-llm), or exit. A row labelled E4B that ran E2B is worse than
+    no row. For little-gemma and LiteRT-LM it only verifies."""
+    want = cfg["model"].get("path")
+    have = loaded_model(cfg)
+    if cfg["engine"] == "litert_lm" or not want or have == want:
+        return have
+    if cfg["engine"] in ("llama_cpp", "proposed") and cfg.get("proposed_url"):
+        print(f"switching llama.cpp model: {have} -> {want} (restarts va-llm)...")
+        req = urllib.request.Request(
+            cfg["proposed_url"].rstrip("/") + "/model",
+            data=json.dumps({"path": want}).encode(),
+            headers={"Content-Type": "application/json"})
+        try:
+            urllib.request.urlopen(req, timeout=15).read()
+        except urllib.error.HTTPError as e:
+            sys.exit(f"model switch refused: {e.read()[:200]}")
+        deadline = time.time() + 300
+        while time.time() < deadline:
+            time.sleep(3)
+            if loaded_model(cfg) == want:
+                return want
+        sys.exit(f"llama.cpp did not come up with {want} within 300s")
+    sys.exit(f"{cfg['engine']} has {have!r} loaded, run wants {want!r} — "
+             f"start it with the right model first")
 
 
 def score(case, r):
@@ -194,6 +254,9 @@ def main():
         sys.exit(f"unknown engine {cfg['engine']!r}")
 
     skipped = adapters.unsupported(cfg["engine"], cfg)
+    if cfg["engine"] == "litert_lm" and not cfg.get("request_model"):
+        skipped.append(("model", cfg["litert_models"].get("_note") or
+                        f"no .litertlm bundle for {args.model} on this device"))
     if skipped:
         print(f"SKIPPED {cfg['condition']} on {cfg['device']}: "
               f"{cfg['engine']} cannot do " +
@@ -202,7 +265,10 @@ def main():
                                           for t, w in skipped],
                "started_at": time.strftime("%Y-%m-%dT%H:%M:%S"), "results": []}
     else:
-        if cfg["engine"] == "proposed":
+        cfg["loaded_model"] = ensure_model(cfg)
+        # va-web's /option also drives condition B's server, so its MTP and
+        # thinking labels match how llama.cpp was actually launched.
+        if cfg["engine"] in ("proposed", "llama_cpp") and cfg.get("proposed_url"):
             print(f"configuring: mtp={cfg['mtp']} thinking={cfg['thinking']} "
                   f"(restarts va-llm, waiting)...")
             adapters.configure_proposed(cfg)

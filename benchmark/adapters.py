@@ -59,7 +59,7 @@ def run_openai_compat(cfg, case):
     a mismatch silently mislabels the row.
     """
     body = {
-        "model": cfg.get("model", {}).get("name", "local"),
+        "model": cfg.get("request_model") or cfg.get("model", {}).get("name", "local"),
         "messages": [{"role": "user", "content": case["prompt"]}],
         "stream": True,
         "temperature": 0,
@@ -112,14 +112,29 @@ def run_openai_compat(cfg, case):
 
 
 # ---------------------------------------------------------------- little-gemma
-_LG_TIMING = re.compile(
-    r"(prompt|gen):\s*(\d+)\s*tokens?\s*in\s*([\d.]+)s\s*\(([\d.]+)\s*tok/s\)")
+# Client mode (`lg` -> `run -c`) prints only the answer; the timings go to the
+# SERVER's log, one line per turn:
+#   turn: 23 in 15.65s (1.5 tok/s), 2 out 0.68s (3.0 tok/s), ttft 15.65s
+_LG_TURN = re.compile(
+    r"turn: (\d+) in ([\d.]+)s \([\d.]+ tok/s\), (\d+) out ([\d.]+)s "
+    r"\(([\d.]+) tok/s\), ttft ([\d.]+)s")
+
+
+def _lg_last_turn(log_path):
+    try:
+        with open(log_path, errors="replace") as f:
+            f.seek(max(0, os.path.getsize(log_path) - 4096))
+            hits = _LG_TURN.findall(f.read())
+        return hits[-1] if hits else None
+    except OSError:
+        return None
 
 
 def run_little_gemma(cfg, case):
-    """little-gemma is a bare CLI: `lg "<prompt>"`, printing the answer plus
-    timing lines. No server, no tool calling, no thinking flag — the plainest
-    possible adapter, and the baseline everything else is measured against."""
+    """little-gemma is a bare CLI: `lg "<prompt>"` against its resident socket
+    server. No tool calling, no thinking flag — the plainest possible adapter.
+    Token counts and tok/s come from the server log (cfg["log"]) when set."""
+    before = _lg_last_turn(cfg["log"]) if cfg.get("log") else None
     t0 = _now()
     argv = [cfg["binary"]] + list(cfg.get("binary_args") or []) + [case["prompt"]]
     try:
@@ -128,20 +143,19 @@ def run_little_gemma(cfg, case):
     except (OSError, subprocess.TimeoutExpired) as e:
         return {"ok": False, "error": str(e), "total_s": _now() - t0}
     total = _now() - t0
-    combined = r.stdout + "\n" + r.stderr
-    timings = {m.group(1): (int(m.group(2)), float(m.group(3)), float(m.group(4)))
-               for m in _LG_TIMING.finditer(combined)}
-    gen, prompt_t = timings.get("gen"), timings.get("prompt")
-    text = "\n".join(l for l in r.stdout.splitlines()
-                     if not _LG_TIMING.search(l)).strip()
+    # `<turn|>` is little-gemma's end-of-turn marker, not part of the answer.
+    text = r.stdout.replace("<turn|>", "").strip()
+    turn = _lg_last_turn(cfg["log"]) if cfg.get("log") else None
+    if turn == before:  # no new line for this turn — don't reuse the last one
+        turn = None
     return {
-        "ok": r.returncode == 0, "text": text, "total_s": total,
-        "ttft_s": prompt_t[1] if prompt_t else None,
-        "prompt_tokens": prompt_t[0] if prompt_t else None,
-        "completion_tokens": gen[0] if gen else None,
-        "tokens_per_s": gen[2] if gen else None,
+        "ok": r.returncode == 0 and bool(text), "text": text, "total_s": total,
+        "ttft_s": float(turn[5]) if turn else None,
+        "prompt_tokens": int(turn[0]) if turn else None,
+        "completion_tokens": int(turn[2]) if turn else None,
+        "tokens_per_s": float(turn[4]) if turn else None,
         "thinking_chars": None, "tool_called": None,
-        "error": None if r.returncode == 0 else (r.stderr[:300] or "nonzero exit"),
+        "error": None if r.returncode == 0 and text else (r.stderr[:300] or "empty reply"),
     }
 
 
