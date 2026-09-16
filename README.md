@@ -14,6 +14,19 @@ mic/wav ──► va-asr ──asr.sock──► va-orchestrator ──tts.sock�
 Config lives in **one file**: `/etc/voice-agent/config.env`. Code lives in
 `/opt/voice-agent/`. Change a value, restart that one service.
 
+This repo is organised by kind, not by how it lands on the Pi — every
+systemd unit hardcodes a flat `/opt/voice-agent/*` or `/etc/voice-agent/*`
+path, so `deploy.sh` is what maps one layout onto the other:
+
+```
+services/     the five Python services (asr, tts, tools, orchestrator, web)
+web/          ui.html — the browser UI, no build step
+config/       config.env (defaults) and system-prompt.txt
+systemd/      the va-*.service unit files
+tests/        node tests/test-readable.js — checks web/ui.html directly
+deploy.sh     ./deploy.sh [target...]  — see the script header for targets
+```
+
 ## Tools (web search)
 
 `va-tools` executes what the model asks for. Two tools: `web_search` and
@@ -439,6 +452,15 @@ prompt short — every token in it is paid for on the cold turn.
 sudo systemctl start  va-llm va-tts va-asr va-orchestrator
 sudo systemctl stop   va-orchestrator va-asr va-tts va-llm
 sudo journalctl -u va-orchestrator -f
+```
+
+Pushing a code change:
+
+```bash
+./deploy.sh                 # every service + the UI + the system prompt
+./deploy.sh orchestrator ui  # just these, restarted after copying
+./deploy.sh units            # systemd/*.service -> /etc/systemd/system/, daemon-reload
+./deploy.sh config           # config/config.env -> /etc/voice-agent/, diff-reviewed first
 ```
 
 Talk to a single service without the rest, to test it in isolation:
