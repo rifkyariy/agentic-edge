@@ -1,0 +1,28 @@
+[Unit]
+# Tools. Executes what the model asks for. Swap the engine by pointing ExecStart
+# at a different script honouring the same request/response contract; the
+# orchestrator fetches the schema each turn, so new tools need no changes there.
+Description=Voice agent: tools (web search, page fetch)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=mitlab
+Group=mitlab
+EnvironmentFile=/etc/voice-agent/config.env
+EnvironmentFile=-/etc/voice-agent/runtime.env
+ExecStart=/usr/bin/python3 /opt/voice-agent/tools_service.py
+RuntimeDirectory=voice-agent
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+Restart=on-failure
+RestartSec=5
+# This one talks to the open internet; keep it away from everything else.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/run/voice-agent
+
+[Install]
+WantedBy=multi-user.target

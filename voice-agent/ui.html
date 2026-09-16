@@ -1,0 +1,2122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice agent</title>
+<style>
+  :root {
+    --bg: #fbfaf9; --panel: #ffffff; --line: #e6e2dd; --sub: #f5f3f0;
+    --text: #1c1a17; --muted: #6f6a63;
+    --user: #eef2f7; --user-line: #cfdbe8;
+    --bot: #f1f5f0; --bot-line: #d2e0cf;
+    --accent: #2f6f4e; --danger: #a33a30; --warn: #8a6d1f;
+    --radius: 10px; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a; --panel: #1f1e23; --line: #322f38; --sub: #26242b;
+      --text: #ecebe8; --muted: #9b958d;
+      --user: #22283040; --user-line: #3b4a5e;
+      --bot: #1f2a2140; --bot-line: #3a5341;
+      --accent: #7fc0a0; --danger: #e08379; --warn: #d7b35a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex; flex-direction: column; height: 100vh;
+  }
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  h1 { font-size: 15px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 7px; }
+  /* One quiet group instead of four bordered chips. Colour carries the state;
+     the label just says which service. */
+  .pills {
+    display: flex; align-items: center; gap: 14px; margin-left: auto;
+    border: 1px solid var(--line); border-radius: 999px; padding: 5px 13px;
+    background: var(--bg);
+  }
+  .svc { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+  .svc .led {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--muted);
+    box-shadow: 0 0 0 0 transparent; transition: background .2s;
+  }
+  .svc.ok .led { background: var(--accent); }
+  .svc.warn .led { background: var(--warn); animation: breathe 1.4s ease-in-out infinite; }
+  .svc.bad .led { background: var(--danger); }
+  .svc.ok { color: var(--text); }
+  .svc.bad { color: var(--danger); }
+  @media (max-width: 760px) { .svc .nm { display: none; } .pills { gap: 9px; } }
+
+  .split { flex: 1; display: flex; min-height: 0; }
+  #log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  aside {
+    width: 370px; flex: 0 0 370px; border-left: 1px solid var(--line);
+    background: var(--panel); overflow-y: auto; padding: 14px;
+  }
+  aside h2 { font-size: 13px; font-weight: 600; margin: 0 0 10px; display: flex; align-items: center; gap: 6px; }
+
+  .step { border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 8px; background: var(--bg); }
+  .step > summary {
+    cursor: pointer; padding: 8px 10px; display: flex; align-items: center; gap: 7px;
+    font-size: 13px; list-style: none;
+  }
+  .step > summary::-webkit-details-marker { display: none; }
+  .step .num {
+    font-size: 10px; color: var(--muted); border: 1px solid var(--line);
+    border-radius: 4px; padding: 0 4px; font-family: var(--mono);
+  }
+  .step .val { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--accent); }
+  .step .val.off { color: var(--muted); }
+  .step .body { padding: 0 10px 10px; font-size: 12px; color: var(--muted); }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-family: var(--mono); font-size: 11px; }
+  .kv b { font-weight: 400; color: var(--text); }
+
+  /* Live status per stage, so the pipeline reads as it happens rather than
+     only after the turn is over. */
+  .pdot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; background: var(--line); }
+  .pdot.run { background: var(--accent); animation: breathe 1.2s ease-in-out infinite; }
+  .pdot.done { background: var(--accent); }
+  .pdot.skip { background: transparent; border: 1px solid var(--line); }
+  .pdot.bad { background: var(--danger); }
+  .step.run { border-color: var(--accent); }
+  .step.run > summary > span:nth-of-type(2) { color: var(--text); }
+
+  /* Classification chips: the whole set is shown, the matched one lit, so a
+     misrouted question is obvious. */
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+  .cat {
+    font-size: 10.5px; padding: 2px 7px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--muted); white-space: nowrap;
+  }
+  .cat.on { border-color: var(--accent); color: var(--accent); font-weight: 500; }
+  .why {
+    margin-top: 7px; padding: 7px 8px; border-left: 2px solid var(--accent);
+    background: var(--sub); border-radius: 0 6px 6px 0; color: var(--text);
+    font-size: 11.5px;
+  }
+  .why code {
+    font-family: var(--mono); font-size: 11px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 3px; padding: 0 4px;
+  }
+  /* Nested expandable (full JSON, per-tool evidence). */
+  details.sub { margin-top: 6px; border: 1px solid var(--line); border-radius: 6px; }
+  details.sub > summary {
+    cursor: pointer; list-style: none; padding: 5px 8px; font-size: 11px;
+    color: var(--muted); display: flex; align-items: center; gap: 5px;
+  }
+  details.sub > summary::-webkit-details-marker { display: none; }
+  details.sub > summary:hover { color: var(--accent); }
+  details.sub[open] > summary { border-bottom: 1px solid var(--line); }
+  details.sub > .inner { padding: 0 8px 8px; }
+  details.sub > .inner > pre { max-height: 420px; }
+  .part {
+    display: grid; grid-template-columns: 16px 1fr auto; gap: 6px;
+    align-items: center; padding: 3px 0; font-size: 11.5px;
+  }
+  .part + .part { border-top: 1px dashed var(--line); }
+  .part .svg-ico { width: 13px; height: 13px; }
+  .part b { color: var(--text); font-weight: 400; }
+  .part .amt { font-family: var(--mono); font-size: 10.5px; }
+  .part.out { opacity: .45; }
+  .srcrow {
+    display: flex; align-items: center; gap: 5px; padding: 3px 0;
+    font-size: 11px; overflow: hidden;
+  }
+  .srcrow a { color: var(--muted); text-decoration: none; white-space: nowrap;
+              overflow: hidden; text-overflow: ellipsis; }
+  .srcrow a:hover { color: var(--accent); text-decoration: underline; }
+  .srcrow .host { color: var(--text); font-family: var(--mono); font-size: 10.5px; flex: 0 0 auto; }
+  .tcall { border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; margin-top: 7px; }
+  .tcall.bad { border-color: var(--danger); }
+  .tcall .thead { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text); }
+  .tcall .thead .nm { font-family: var(--mono); }
+  .tcall .thead .rt { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+  .nowline { font-family: var(--mono); font-size: 15px; color: var(--text); }
+  pre {
+    background: var(--sub); border: 1px solid var(--line); border-radius: 6px;
+    padding: 7px; overflow-x: auto; font-family: var(--mono); font-size: 10.5px;
+    margin: 6px 0 0; max-height: 210px; color: var(--text);
+  }
+  .note { color: var(--warn); }
+
+  .turn {
+    max-width: 78%; padding: 9px 13px; border-radius: var(--radius);
+    border: 1px solid; flex: 0 0 auto;   /* never squashed by later messages */
+  }
+  .turn.user { align-self: flex-end; background: var(--user); border-color: var(--user-line); }
+  .turn.bot { align-self: flex-start; background: var(--bot); border-color: var(--bot-line); }
+  .turn .who { font-size: 11px; color: var(--muted); margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
+  /* Replay control lives inside the reply it belongs to, not in its own bubble. */
+  .say {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 7px;
+    font: inherit; font-size: 11.5px; cursor: pointer; color: var(--muted);
+    background: transparent; border: 1px solid var(--bot-line);
+    border-radius: 999px; padding: 3px 10px; transition: color .15s, border-color .15s;
+  }
+  .say:hover { color: var(--accent); border-color: var(--accent); }
+  .say.on { color: var(--accent); border-color: var(--accent); }
+  .say .eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 11px; }
+  .say .eq i {
+    width: 2px; background: currentColor; border-radius: 1px; height: 4px;
+    animation: eq .9s ease-in-out infinite;
+  }
+  .say .eq i:nth-child(2) { animation-delay: .15s; }
+  .say .eq i:nth-child(3) { animation-delay: .3s; }
+  .say .eq i:nth-child(4) { animation-delay: .45s; }
+  @keyframes eq { 0%,100% { height: 3px; } 50% { height: 11px; } }
+
+  /* Source chips sit beside the replay control, on the reply they belong to. */
+  .srcs { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 11px;
+    color: var(--muted); text-decoration: none; background: transparent;
+    border: 1px solid var(--bot-line); border-radius: 999px; padding: 3px 9px;
+    max-width: 190px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+  .chip:hover { color: var(--accent); border-color: var(--accent); }
+  .chip.warnchip { color: var(--warn); border-color: var(--warn); cursor: help; }
+  .chip.srcbtn { cursor: pointer; }
+  .chip.srcbtn.open { color: var(--accent); border-color: var(--accent); }
+  .srclist {
+    margin-top: 7px; padding-top: 7px; border-top: 1px dashed var(--bot-line);
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .srclist[hidden] { display: none; }
+  .srcitem {
+    display: flex; flex-direction: column; text-decoration: none;
+    color: var(--text); font-size: 12px; line-height: 1.35;
+  }
+  .srcitem:hover .st { color: var(--accent); text-decoration: underline; }
+  .srcitem .sh { font-size: 10.5px; color: var(--muted); font-family: var(--mono); }
+  .foot { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 7px; }
+  .foot .say { margin-top: 0; }
+
+  /* Pages being flipped through, while the agent searches. */
+  .deck { position: relative; width: 46px; height: 26px; flex: 0 0 auto; }
+  .deck i {
+    position: absolute; inset: 0 auto 0 0; width: 20px; height: 26px;
+    border: 1px solid var(--accent); border-radius: 3px;
+    background: var(--panel); opacity: .9;
+    animation: deal 2.1s cubic-bezier(.45,0,.35,1) infinite;
+  }
+  .deck i:nth-child(2) { animation-delay: .7s; }
+  .deck i:nth-child(3) { animation-delay: 1.4s; }
+  @keyframes deal {
+    0%   { transform: translateX(0) rotate(0deg);      opacity: .25; }
+    25%  { transform: translateX(13px) rotate(7deg);   opacity: 1; }
+    60%  { transform: translateX(26px) rotate(-5deg);  opacity: 1; }
+    100% { transform: translateX(26px) rotate(-5deg);  opacity: 0; }
+  }
+  .searching { display: flex; align-items: center; gap: 10px; }
+  .searching .what { font-size: 13px; color: var(--muted); }
+  /* Clauses are speech flush points, not line breaks. Render them as flowing
+     prose or the reply reads as a broken list at every comma. The joining space
+     is added in JS: a CSS content:' ' gets collapsed at an inline boundary. */
+  .clause { display: inline; }
+  .turn .body { overflow-wrap: break-word; }
+  .meta { align-self: center; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .sys { align-self: center; font-size: 12px; color: var(--warn); text-align: center; }
+  .empty { color: var(--muted); align-self: center; margin-top: 26px; text-align: center; }
+
+  /* F1 race card. */
+  .f1 {
+    align-self: flex-start; max-width: 78%; min-width: 310px; flex: 0 0 auto;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--panel); overflow: hidden;
+  }
+  .f1head {
+    display: flex; align-items: center; gap: 10px; padding: 7px 13px;
+    border-bottom: 1px solid var(--line); font-size: 11px; color: var(--muted);
+  }
+  .f1head .when { margin-left: auto; font-family: var(--mono); }
+  /* Official mark is drawn in solid white — chip it on black like the site
+     does, so it stays visible on a light card too. */
+  .f1mark {
+    display: inline-flex; align-items: center; height: 16px; padding: 0 6px;
+    background: #111; border-radius: 3px;
+  }
+  .f1mark img { height: 8px; display: block; }
+  .f1flag {
+    width: 16px; height: 11px; object-fit: cover; border-radius: 2px;
+    border: 1px solid var(--line); vertical-align: -1px;
+  }
+
+  .f1hero {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 11px;
+    align-items: center; padding: 11px 13px;
+  }
+  .fphoto {
+    width: 54px; height: 54px; border-radius: 50%; object-fit: cover;
+    /* Driver cutouts are full-body (440x1265) — top-anchor for the face. */
+    object-position: top center; border: 1px solid var(--line);
+  }
+  .fcirc {
+    width: 84px; max-height: 60px; object-fit: contain; opacity: .85;
+    /* Many Commons track maps are black line art; lift them in dark mode. */
+  }
+  @media (prefers-color-scheme: dark) { .fcirc { filter: invert(1) hue-rotate(180deg); opacity: .7; } }
+  .fherotext { min-width: 0; }
+  .f1name { font-size: 16px; font-weight: 500; line-height: 1.2; }
+  .f1loc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .fwin { font-size: 12.5px; margin-top: 5px; }
+  .fwin .wlab {
+    font-size: 9.5px; letter-spacing: .6px; text-transform: uppercase;
+    color: var(--danger); border: 1px solid var(--danger);
+    border-radius: 3px; padding: 0 4px; margin-right: 4px;
+  }
+  .podium, .f1rest { border-top: 1px solid var(--line); }
+  .f1rest[hidden] { display: none; }
+  .frow {
+    display: grid; grid-template-columns: 26px 26px 1fr auto auto; gap: 9px;
+    align-items: center; padding: 5px 13px; font-size: 12.5px;
+  }
+  .favi {
+    width: 26px; height: 26px; border-radius: 50%; object-fit: cover;
+    object-position: top center; background: var(--sub);
+  }
+  .frow + .frow { border-top: 1px solid var(--line); }
+  .frow .fpos {
+    font-family: var(--mono); font-size: 11px; text-align: center;
+    color: var(--muted); border: 1px solid var(--line); border-radius: 4px;
+  }
+  .frow.p1 .fpos { color: #9a7b18; border-color: #c9a227; font-weight: 500; }
+  .frow.p2 .fpos { color: var(--muted); border-color: var(--border-strong, #9aa0a6); }
+  .frow.p3 .fpos { color: #8a5a2b; border-color: #b87333; }
+  .frow.p1 { font-size: 13.5px; }
+  .frow .fteam {
+    font-size: 11px; color: var(--muted); display: inline-flex;
+    align-items: center; gap: 4px;
+  }
+  .fteamlogo {
+    /* Thin white marks (Ferrari's shield, Mercedes' star) read as a smudge
+       any smaller than this. Round badge in the team's own livery color;
+       #111 only when a team has none on file. */
+    height: 22px; width: 22px; object-fit: contain; background: #111;
+    border-radius: 50%; padding: 4px; box-sizing: border-box;
+  }
+  .frow .ftime { font-family: var(--mono); font-size: 11px; }
+  .frow .fl {
+    font-size: 9px; color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 3px; padding: 0 3px; vertical-align: 1px;
+  }
+  .f1foot {
+    display: flex; gap: 10px; align-items: center; padding: 7px 13px;
+    border-top: 1px solid var(--line); font-size: 11px; color: var(--muted);
+  }
+  .f1foot .hl { display: inline-flex; align-items: center; gap: 4px; }
+  .f1foot .svg-ico { width: 12px; height: 12px; }
+  .f1foot .restbtn {
+    margin-left: auto; font: inherit; font-size: 11px; cursor: pointer;
+    color: var(--muted); background: transparent; border: 1px solid var(--line);
+    border-radius: 999px; padding: 3px 9px;
+  }
+  .f1foot .restbtn:hover, .f1foot .restbtn.open {
+    color: var(--accent); border-color: var(--accent);
+  }
+  .f1foot a { color: var(--muted); text-decoration: none; }
+  .f1foot a:hover { color: var(--accent); text-decoration: underline; }
+
+  /* Weather card, in the style of a phone weather widget: one coloured
+     panel, the temperature carrying the layout, hours along the bottom.
+     The gradient comes from the condition, so a glance tells you the
+     weather before you read anything. */
+  .wx {
+    align-self: flex-start; max-width: 78%; min-width: 320px; flex: 0 0 auto;
+    border-radius: 18px; overflow: hidden; color: #fff;
+    padding: 15px 17px 0; position: relative;
+    background: linear-gradient(160deg, #2f7fd1 0%, #3f96de 45%, #66b0e8 100%);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .13);
+  }
+  .wx.night {
+    background: linear-gradient(160deg, #1f2b52 0%, #2b3e6e 50%, #41598f 100%);
+  }
+  .wx.wet {
+    background: linear-gradient(160deg, #46617e 0%, #5b7d9c 50%, #7f9bb3 100%);
+  }
+  .wx.storm {
+    background: linear-gradient(160deg, #2d3446 0%, #414b63 50%, #5a6580 100%);
+  }
+  .wxtop { display: flex; align-items: flex-start; gap: 12px; }
+  .wxtop .left { min-width: 0; }
+  .wxplace {
+    font-size: 19px; font-weight: 500; letter-spacing: .1px;
+    line-height: 1.15; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .wxsub { font-size: 11.5px; opacity: .8; margin-top: 1px; }
+  .wxtemp {
+    font-size: 56px; font-weight: 200; line-height: 1; margin-top: 4px;
+    letter-spacing: -2px;
+  }
+  .wxright { margin-left: auto; text-align: right; flex: 0 0 auto; }
+  .wxright .mark { width: 34px; height: 34px; stroke-width: 1.5; }
+  .wxcond { font-size: 15px; font-weight: 500; margin-top: 6px; }
+  .wxfeel { font-size: 11.5px; opacity: .85; margin-top: 1px; }
+
+  .wxbits {
+    display: flex; gap: 13px; flex-wrap: wrap; font-size: 11px;
+    opacity: .9; margin: 10px 0 0;
+  }
+  .wxbits .b { display: inline-flex; align-items: center; gap: 4px; }
+  .wxbits .svg-ico { width: 12px; height: 12px; opacity: .85; }
+
+  /* Hour strip. Hairline above it rather than a filled band, so the card
+     stays one surface. */
+  .wxhours {
+    display: flex; margin: 11px -17px 0; padding: 9px 8px 11px;
+    border-top: 1px solid rgba(255, 255, 255, .22); overflow-x: auto;
+  }
+  .wxh {
+    flex: 1 0 auto; min-width: 54px; text-align: center; padding: 0 3px;
+    font-size: 11px;
+  }
+  .wxh .hh { opacity: .8; font-variant-numeric: tabular-nums; }
+  .wxh .svg-ico { width: 21px; height: 21px; margin: 6px 0 4px; stroke-width: 1.8; }
+  .wxh .ht {
+    display: block; font-size: 14.5px; font-weight: 500; letter-spacing: -.2px;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Reserved whether or not there is rain to report, so every column's
+     temperature sits on the same baseline. */
+  .wxh .hp { display: block; font-size: 9.5px; opacity: .85; min-height: 12px; margin-top: 2px; }
+  .wxh.now .hh { font-weight: 600; opacity: 1; }
+  .wxh.sun .svg-ico { opacity: .95; }
+  /* The sun column has no temperature; make sure its label cannot be read
+     as one. */
+  .wxh.sun .ht { font-size: 10px; font-weight: 400; opacity: .75; letter-spacing: 0; }
+  /* Sun and clear conditions read as warm; everything else stays white so
+     the strip does not turn into a colour chart. */
+  .wxh .warm, .wxright .warm { color: #ffd76a; }
+
+  .wxfoot {
+    display: flex; align-items: center; gap: 8px; margin: 0 -17px;
+    padding: 7px 17px 8px; font-size: 10.5px;
+    background: rgba(0, 0, 0, .13);
+  }
+  .wxfoot a { color: #fff; opacity: .8; text-decoration: none; margin-left: auto; }
+  .wxfoot a:hover { opacity: 1; text-decoration: underline; }
+  .wxfoot .f1flag { border-color: rgba(255, 255, 255, .5); }
+
+  /* Exchange-rate card. */
+  .fx {
+    align-self: flex-start; max-width: 78%; min-width: 290px; flex: 0 0 auto;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--panel); overflow: hidden;
+  }
+  .fxhead {
+    display: flex; align-items: center; padding: 7px 13px;
+    border-bottom: 1px solid var(--line); font-size: 11px; color: var(--muted);
+  }
+  .fxhead .pair { color: var(--text); font-size: 12px; letter-spacing: .3px; }
+  .fxhead .per { margin-left: auto; font-family: var(--mono); }
+  .fxmain { display: flex; align-items: baseline; gap: 10px; padding: 13px 13px 2px; }
+  .fxmain .big { font-size: 27px; font-weight: 500; line-height: 1.1; }
+  .fxmain .big .cur { font-size: 14px; color: var(--muted); font-weight: 400; }
+  .fxmain .chg { margin-left: auto; font-size: 13px; font-family: var(--mono); }
+  .fxmain .chg.up { color: var(--accent); }
+  .fxmain .chg.down { color: var(--danger); }
+  .fxsub { padding: 0 13px 10px; font-size: 11.5px; color: var(--muted); font-family: var(--mono); }
+  .spark { display: block; width: 100%; height: 62px; }
+  .spark polyline { fill: none; stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+  .spark .lu { stroke: var(--accent); }
+  .spark .ld { stroke: var(--danger); }
+  .spark polygon { stroke: none; }
+  .spark .au { fill: var(--accent); opacity: .12; }
+  .spark .ad { fill: var(--danger); opacity: .12; }
+  .fxfoot {
+    display: flex; gap: 10px; align-items: center; padding: 7px 13px;
+    border-top: 1px solid var(--line); font-size: 11px; color: var(--muted);
+  }
+  .fxfoot a { margin-left: auto; color: var(--muted); text-decoration: none; }
+  .fxfoot a:hover { color: var(--accent); text-decoration: underline; }
+  .fxfoot .hl { display: inline-flex; align-items: center; gap: 3px; font-family: var(--mono); }
+  .fxfoot .svg-ico { width: 12px; height: 12px; }
+  .fxfoot .hi { color: var(--accent); }
+  .fxfoot .lo { color: var(--danger); }
+
+  /* Match card. Only rows the tool actually returned are rendered — an empty
+     goals list means no goals row, never a guessed one. */
+  .match {
+    align-self: flex-start; max-width: 78%; min-width: 300px;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--panel); overflow: hidden;
+    /* #log is a flex column: without this the card shrinks as messages are
+       added and overflow:hidden clips its lower rows. */
+    flex: 0 0 auto;
+  }
+  .match .mhead {
+    display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+    border-bottom: 1px solid var(--line); font-size: 11px; color: var(--muted);
+  }
+  .match .mhead img { width: 15px; height: 15px; object-fit: contain; flex: 0 0 auto; }
+  .match .mhead .comp { color: var(--text); font-size: 11.5px; }
+  .match .mhead .when { margin-left: auto; text-align: right; }
+  .stale {
+    display: flex; align-items: center; gap: 5px; font-size: 11px;
+    color: var(--warn); padding: 6px 12px; border-bottom: 1px solid var(--line);
+    background: var(--sub);
+  }
+  .venue {
+    text-align: center; font-size: 11px; color: var(--muted);
+    padding: 0 12px 9px; display: flex; align-items: center;
+    justify-content: center; gap: 5px;
+  }
+  /* Cards are secondary: an icon bottom-right that opens an accordion. */
+  .mfoot {
+    display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+    border-top: 1px solid var(--line); font-size: 11px;
+  }
+  .mfoot a { color: var(--muted); text-decoration: none; }
+  .mfoot a:hover { color: var(--accent); text-decoration: underline; }
+  .cardbtn {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+    font: inherit; font-size: 11px; cursor: pointer; color: var(--muted);
+    background: transparent; border: 1px solid var(--line);
+    border-radius: 999px; padding: 3px 9px;
+  }
+  .cardbtn:hover, .cardbtn.open { color: var(--accent); border-color: var(--accent); }
+  .cardbtn .yc, .cardbtn .rc { width: 7px; height: 10px; border-radius: 1.5px; }
+  .cardbtn .yc { background: #d7b35a; }
+  .cardbtn .rc { background: var(--danger); }
+  .cardlist { border-top: 1px solid var(--line); padding: 8px 12px;
+              display: flex; flex-direction: column; gap: 4px; }
+  /* Must beat the display:flex above, or [hidden] does nothing. */
+  .cardlist[hidden] { display: none; }
+  .match .live { color: var(--danger); display: flex; align-items: center; gap: 4px; }
+  .match .live .led {
+    width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+    animation: breathe 1.3s ease-in-out infinite;
+  }
+  .score {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    gap: 10px; padding: 14px 12px 10px;
+  }
+  .side { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+  .side img { width: 38px; height: 38px; object-fit: contain; }
+  .side .badge {
+    width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+    border: 1px solid var(--line); font-size: 13px; color: var(--muted);
+  }
+  .side .tname { font-size: 12.5px; line-height: 1.25; }
+  .goalsnum { font-size: 27px; font-weight: 500; letter-spacing: 1px; white-space: nowrap; }
+  .ht, .countdown { text-align: center; font-size: 11px; color: var(--muted); padding-bottom: 8px; }
+  .countdown.soon { color: var(--accent); }
+  .events { border-top: 1px solid var(--line); padding: 8px 12px; display: flex;
+            flex-direction: column; gap: 4px; }
+  .ev { display: grid; grid-template-columns: 30px 16px 1fr auto; gap: 7px;
+        align-items: center; font-size: 12px; }
+  .ev .min { font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: right; }
+  .ev .team { font-size: 11px; color: var(--muted); }
+  .ev .ball { width: 9px; height: 9px; border-radius: 50%; background: var(--text); justify-self: center; }
+  .ev .yc, .ev .rc { width: 8px; height: 11px; border-radius: 1.5px; justify-self: center; }
+  .ev .yc { background: #d7b35a; }
+  .ev .rc { background: var(--danger); }
+  .ev .pen { font-size: 10px; color: var(--muted); }
+  .match .msrc { padding: 7px 12px; border-top: 1px solid var(--line); font-size: 11px; }
+  .match .msrc a { color: var(--muted); text-decoration: none; }
+  .match .msrc a:hover { color: var(--accent); text-decoration: underline; }
+
+  footer { border-top: 1px solid var(--line); background: var(--panel); padding: 10px 16px; }
+  form { display: flex; gap: 8px; align-items: center; }
+  input[type=text] {
+    flex: 1; padding: 10px 12px; border-radius: var(--radius); font: inherit;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text);
+  }
+  input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  select {
+    font: inherit; font-size: 13px; padding: 5px 8px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text); max-width: 260px;
+  }
+  button {
+    display: flex; align-items: center; gap: 6px; font: inherit; cursor: pointer;
+    padding: 10px 14px; border-radius: var(--radius);
+    border: 1px solid var(--line); background: var(--bg); color: var(--text);
+  }
+  header button, header select { padding: 5px 9px; font-size: 13px; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  button.stop { color: var(--danger); border-color: var(--danger); }
+  button.rec { background: var(--danger); border-color: var(--danger); color: var(--bg); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  @keyframes pulse { 50% { opacity: .45; } }
+  /* Spinning a brain or an ear looks broken. Only a loader spins; the others
+     breathe, and an indeterminate bar carries the sense of ongoing work. */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes breathe { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  @keyframes slide { 0% { left: -38%; } 100% { left: 100%; } }
+  .spin { animation: spin 1.1s linear infinite; }
+  .breathe { animation: breathe 1.7s ease-in-out infinite; }
+
+  .turn.busy { border-style: dashed; min-width: 230px; }
+  .busy-detail { font-size: 13px; color: var(--muted); }
+  .bar {
+    position: relative; height: 2px; margin-top: 9px; border-radius: 2px;
+    background: var(--bot-line); overflow: hidden;
+  }
+  .bar::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 38%;
+    border-radius: 2px; background: var(--accent);
+    animation: slide 1.5s cubic-bezier(.4,0,.6,1) infinite;
+  }
+  .busy-tail {
+    margin-top: 8px; padding-top: 7px; border-top: 1px dashed var(--bot-line);
+    font-family: var(--mono); font-size: 11px; line-height: 1.5;
+    color: var(--muted); max-height: 52px; overflow: hidden;
+    /* show the newest text, which is at the end */
+    display: flex; flex-direction: column-reverse;
+  }
+  button.rec .svg-ico { animation: pulse 1.1s ease-in-out infinite; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 7px; }
+
+  .scrim {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 10;
+  }
+  /* Must out-specify .scrim above. The UA stylesheet's [hidden]{display:none}
+     is weaker than a class rule, so without this the modal can never hide. */
+  .scrim[hidden] { display: none; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px; max-width: 460px; width: 100%;
+    box-shadow: 0 10px 40px rgba(0,0,0,.25);
+  }
+  .modal h3 {
+    margin: 0 0 12px; font-size: 15px; font-weight: 600;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .swap { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .swap .card {
+    flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+  }
+  .swap .card.to { border-color: var(--accent); }
+  .swap .card .lbl { font-size: 10px; color: var(--muted); text-transform: none; }
+  .swap .card .nm { font-size: 13px; }
+  .swap .card .sub { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  .modal .warn {
+    font-size: 12px; color: var(--warn); background: var(--sub);
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+  }
+  .svg-ico { width: 16px; height: 16px; flex: 0 0 auto; }
+  aside .svg-ico { width: 14px; height: 14px; }
+  @media (max-width: 900px) {
+    .split { flex-direction: column; }
+    aside { width: auto; flex: 0 0 auto; border-left: 0; border-top: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><i data-lucide="audio-lines" class="svg-ico"></i> Voice agent</h1>
+  <select id="modelSel" title="Switch model — restarts va-llm"></select>
+  <button type="button" id="sound" title="Mute or unmute the agent's voice">
+    <i data-lucide="volume-2" class="svg-ico" id="soundIcon"></i> <span id="soundLabel">Sound on</span>
+  </button>
+  <div class="pills" id="pills"></div>
+</header>
+
+<div class="split">
+  <div id="log">
+    <div class="empty" id="empty">Nothing yet. Record a turn, or type one below.</div>
+  </div>
+  <aside>
+    <h2><i data-lucide="list-tree" class="svg-ico"></i> Pipeline — last turn</h2>
+    <div id="steps"></div>
+  </aside>
+</div>
+
+<footer>
+  <form id="f">
+    <button type="button" id="mic" title="Click to record, click again to send">
+      <i data-lucide="mic" class="svg-ico" id="micIcon"></i> <span id="micLabel">Record</span>
+    </button>
+    <input type="text" id="t" placeholder="Type what the user says…" autocomplete="off">
+    <button type="submit" class="primary" id="send"><i data-lucide="send" class="svg-ico"></i> Send</button>
+    <button type="button" class="stop" id="stop" title="Barge-in: stop speaking now">
+      <i data-lucide="octagon-x" class="svg-ico"></i> Stop
+    </button>
+  </form>
+  <div class="hint" id="hint">Connecting…</div>
+</footer>
+
+<div class="scrim" id="scrim" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <h3 id="mTitle"><i data-lucide="refresh-cw" class="svg-ico"></i> Switch model</h3>
+    <div id="mBody"></div>
+    <div class="modal-actions">
+      <button type="button" id="mCancel">Cancel</button>
+      <button type="button" class="primary" id="mOk">
+        <i data-lucide="check" class="svg-ico"></i> Switch and restart
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>
+const log = document.getElementById('log'), hint = document.getElementById('hint');
+const empty = document.getElementById('empty'), pills = document.getElementById('pills');
+const stepsEl = document.getElementById('steps');
+const icons = () => { try { lucide.createIcons(); } catch (e) {} };
+icons();
+
+// botTurn is where clauses append; lastBotTurn outlives it, because TTS audio
+// for the final clause often lands after the turn is already marked done.
+let botTurn = null, lastBotTurn = null, cfg = {}, cur = blank();
+function blank() {
+  return { clauses: [], clips: [], tools: [], sources: [], match: null,
+           t0: null, grounding: null, prompt: null, intent: null,
+           request: null, usage: null, done: null, think: 0 };
+}
+const esc = s => String(s ?? '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+// Images go through the Pi: fetching them straight from the browser was flaky,
+// and one failure permanently replaced the <img> with a fallback. Module scope,
+// because every card type needs it — it lived inside renderMatch and renderF1
+// died with "img is not defined", which silently killed the whole event handler.
+const img = u => '/img?u=' + encodeURIComponent(u);
+const num = (v, u = '') => v == null ? '—' : v + u;
+
+// ---------- spoken text -> readable text ----------
+// The reply is written to be *heard*: the system prompt makes the model spell
+// numbers out ("two thousand twenty six", "zero point eight", "thirteenth")
+// because that is what piper needs — "2026" and "0–2" are read badly. The chat
+// bubble was showing that same string verbatim, which is right for the ear and
+// wrong for the eye. This converts for display only; what TTS receives is
+// never touched.
+const N_UNIT = { zero: 0, oh: 0, one: 1, two: 2, three: 3, four: 4, five: 5,
+  six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12,
+  thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17,
+  eighteen: 18, nineteen: 19 };
+const N_TENS = { twenty: 20, thirty: 30, forty: 40, fourty: 40, fifty: 50,
+  sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+const N_SCALE = { hundred: 100, thousand: 1000, million: 1e6, billion: 1e9 };
+const N_ORD = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6,
+  seventh: 7, eighth: 8, ninth: 9, tenth: 10, eleventh: 11, twelfth: 12,
+  thirteenth: 13, fourteenth: 14, fifteenth: 15, sixteenth: 16,
+  seventeenth: 17, eighteenth: 18, nineteenth: 19, twentieth: 20,
+  thirtieth: 30 };
+
+const ordSuffix = n => (n % 100 >= 11 && n % 100 <= 13)
+  ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+// Group thousands, except in the range that is almost always a year here —
+// 2026 must not render as "2,026".
+const groupNum = n => (n >= 1000 && !(n >= 1900 && n <= 2100))
+  ? n.toLocaleString('en-US') : String(n);
+
+// Nouns that make a bare "one" a quantity rather than an article.
+const UNIT_AFTER = /^(hours?|minutes?|seconds?|days?|weeks?|months?|years?|goals?|points?|laps?|races?|matches|games?|percent|degrees?|kilometres?|kilometers?|km|miles?|metres?|meters?|m|seats?|wins?|titles?)$/i;
+
+function numKind(w) {
+  const k = w.toLowerCase();
+  if (k in N_UNIT) return 'u';
+  if (k in N_TENS) return 't';
+  if (k in N_SCALE) return 's';
+  if (k in N_ORD) return 'o';
+  if (k === 'and') return 'a';
+  if (k === 'point') return 'p';
+  return null;
+}
+const numVal = x => x.k === 'u' ? N_UNIT[x.s]
+  : x.k === 't' ? N_TENS[x.s] : x.k === 'o' ? N_ORD[x.s] : null;
+
+/** A run of number words -> digits, or null to leave the words alone. */
+function runToText(words) {
+  // "one point eight zero four" -> 1.804: after "point" the digits are read
+  // one at a time, so they concatenate rather than add.
+  const pi = words.findIndex(x => x.k === 'p');
+  if (pi > 0 && pi < words.length - 1) {
+    const head = runToText(words.slice(0, pi));
+    const digits = words.slice(pi + 1).map(numVal);
+    if (head == null || digits.some(v => v == null || v > 9)) return null;
+    return head.replace(/,/g, '') + '.' + digits.join('');
+  }
+  const ws = words.filter(x => x.k === 'u' || x.k === 't' || x.k === 's'
+                               || x.k === 'o');
+  if (!ws.length) return null;
+  // A lone "one"/"oh" is usually the article, not a count: "one of the
+  // drivers" must not become "1 of the drivers". A unit right after it means
+  // it really is a count ("one hour", "one goal").
+  if (ws.length === 1 && (ws[0].s === 'one' || ws[0].s === 'oh')
+      && !UNIT_AFTER.test(words.after || '')) return null;
+
+  // "three thirty" is a time, not 33 — nobody says unit-then-tens for a
+  // cardinal (that would be "thirty three").
+  if (ws.length === 2 && ws[0].k === 'u' && ws[1].k === 't'
+      && N_UNIT[ws[0].s] >= 1 && N_UNIT[ws[0].s] <= 12 && N_TENS[ws[1].s] <= 50)
+    return N_UNIT[ws[0].s] + ':' + String(N_TENS[ws[1].s]).padStart(2, '0');
+
+  // "ten fifteen PM" is a clock time, not 1,015 — both halves land in the
+  // teens (unit+unit), which the generic two-chunk merge below otherwise
+  // read as a year-style multiply ("nineteen ninety nine" -> 1999).
+  // AM/PM right after the run is what tells the two apart.
+  if (ws.length === 2 && /^(am|pm)$/i.test(words.after || '')
+      && numVal(ws[0]) >= 1 && numVal(ws[0]) <= 12 && numVal(ws[1]) <= 59)
+    return numVal(ws[0]) + ':' + String(numVal(ws[1])).padStart(2, '0');
+
+  const ord = ws[ws.length - 1].k === 'o' ? ws.pop() : null;
+  if (!ws.length) {
+    if (!ord) return null;
+    const n = N_ORD[ord.s];
+    return groupNum(n) + ordSuffix(n);
+  }
+
+  if (ws.some(x => x.k === 's')) {
+    // Scale words present: the ordinary accumulate-and-carry reading.
+    let total = 0, cur = 0;
+    for (const x of ws) {
+      if (x.k === 's') {
+        const v = N_SCALE[x.s];
+        if (v === 100) cur = (cur || 1) * 100;
+        else { total += (cur || 1) * v; cur = 0; }
+      } else cur += numVal(x);
+    }
+    const n = total + cur + (ord ? N_ORD[ord.s] : 0);
+    return ord ? groupNum(n) + ordSuffix(n) : groupNum(n);
+  }
+
+  // No scale word. Split into chunks so "twenty twenty six" (a year read as
+  // two pairs) does not add up to 66.
+  const chunks = [];
+  let cur = null, last = null;
+  for (const x of ws) {
+    const v = numVal(x);
+    if (cur == null) { cur = v; last = x.k; }
+    else if (last === 't' && x.k !== 't' && v < 10) { cur += v; last = x.k; }
+    else { chunks.push(cur); cur = v; last = x.k; }
+  }
+  if (cur != null) chunks.push(cur);
+
+  let n;
+  if (chunks.length === 1) n = chunks[0];
+  else if (chunks.length === 2 && chunks[0] >= 10 && chunks[0] <= 99
+           && chunks[1] >= 0 && chunks[1] <= 99)
+    n = chunks[0] * 100 + chunks[1];          // "nineteen ninety nine" -> 1999
+  else if (chunks.every(c => c < 10))
+    return chunks.join('');                    // read digit by digit
+  else return null;                            // unsure: leave the words
+
+  n += ord ? N_ORD[ord.s] : 0;
+  return ord ? groupNum(n) + ordSuffix(n) : groupNum(n);
+}
+
+/** Spoken-style text -> text meant to be looked at. */
+function readable(text) {
+  if (!text) return text;
+  // Keep separators: odd entries of this split are the words.
+  const bits = text.split(/([A-Za-z']+)/).filter(s => s !== '');
+  const toks = bits.map(s => ({ w: /^[A-Za-z']+$/.test(s), s }));
+  const glue = s => /^[ \t -]+$/.test(s);
+  const runnable = t => t.w && numKind(t.s);
+
+  const out = [];
+  let i = 0;
+  while (i < toks.length) {
+    const k = toks[i].w ? numKind(toks[i].s) : null;
+    if (!k || k === 'a' || k === 'p') { out.push(toks[i].s); i++; continue; }
+
+    const words = [];
+    let j = i, lastWord = i;
+    while (j < toks.length) {
+      if (toks[j].w) {
+        const kk = numKind(toks[j].s);
+        if (!kk) break;
+        words.push({ k: kk, s: toks[j].s.toLowerCase(), idx: j });
+        lastWord = j;
+        j++;
+      } else if (glue(toks[j].s) && runnable(toks[j + 1] || {})) {
+        j++;                       // swallow the space inside the run
+      } else break;
+    }
+    // A run must not end on "and"/"point" — "finished second and Lando" was
+    // eating the "and".
+    while (words.length && (words[words.length - 1].k === 'a'
+                            || words[words.length - 1].k === 'p')) words.pop();
+    lastWord = words.length ? words[words.length - 1].idx : i;
+    words.after = (toks[lastWord + 2] && toks[lastWord + 2].w)
+      ? toks[lastWord + 2].s : '';
+    const txt = runToText(words);
+    if (txt == null) {
+      // Leave it exactly as written, separators and all.
+      for (let x = i; x <= lastWord; x++) out.push(toks[x].s);
+    } else out.push(txt);
+    i = lastWord + 1;
+  }
+  let s = out.join('');
+  // Words the prompt forces for the ear but that read better as symbols.
+  s = s.replace(/(\d)\s+percent\b/gi, '$1%')
+       .replace(/(\d)\s+degrees\b/gi, '$1°')
+       // "two to one" -> "2 to 1": either side of a score is a count, so the
+       // lone-"one"-is-an-article rule has to yield here.
+       .replace(/(\d+)(\s+(?:to|nil|all)\s+)one\b/gi, '$1$21')
+       // "4 goals to one" — the score noun sits between the two numbers.
+       .replace(/(\d+)(\s+(?:goals?|points?|nil)\s+(?:to|all)\s+)one\b/gi, '$1$21')
+       .replace(/\bto\s+one\s+(goals?|points?)\b/gi, 'to 1 $1')
+       .replace(/\bone(\s+(?:to|nil|all)\s+)(\d+)/gi, '1$1$2')
+       // The model sometimes runs sentences together with no space after the
+       // stop ("out of date.The last confirmed result"). A digit after the
+       // dot is a decimal, so only a capital letter counts.
+       .replace(/([.!?,;:])(?=[A-Z])/g, '$1 ');
+  return s;
+}
+
+// ---------- conversation ----------
+function atBottom() { return log.scrollHeight - log.scrollTop - log.clientHeight < 60; }
+function add(el) { const w = atBottom(); if (empty) empty.remove(); log.appendChild(el); if (w) log.scrollTop = log.scrollHeight; return el; }
+
+function userTurn(text) {
+  const d = document.createElement('div');
+  d.className = 'turn user';
+  d.innerHTML = '<div class="who"><i data-lucide="user" class="svg-ico"></i>heard</div>';
+  const s = document.createElement('div'); s.textContent = text; d.appendChild(s);
+  add(d); icons(); botTurn = null;
+}
+function newBotTurn() {
+  const el = document.createElement('div');
+  el.className = 'turn bot';
+  el.innerHTML = '<div class="who"><i data-lucide="bot" class="svg-ico"></i>agent</div>'
+    + '<div class="body"></div>';
+  el._clips = [];
+  add(el); icons();
+  lastBotTurn = el;
+  return el;
+}
+
+function clause(text) {
+  if (!botTurn) {
+    botTurn = newBotTurn();
+    // Sources were gathered before this bubble existed; put them on now.
+    if (cur.sources.length) renderSources(botTurn, cur.sources);
+  }
+  const w = atBottom();
+  const body = botTurn.querySelector('.body');
+  // Keep the spoken text and re-render the whole bubble from it. Converting
+  // each clause on its own split numbers that straddle a clause boundary —
+  // a forced mid-sentence flush turned "…point seven five four" into
+  // "23.7 54". The audio still gets the original words, one clause at a time.
+  botTurn._spoken = (botTurn._spoken ? botTurn._spoken + ' ' : '') + text;
+  body.textContent = readable(botTurn._spoken);
+  if (w) log.scrollTop = log.scrollHeight;
+}
+
+function footOf(el) {
+  let f = el.querySelector('.foot');
+  if (!f) {
+    f = document.createElement('div');
+    f.className = 'foot';
+    el.appendChild(f);
+  }
+  return f;
+}
+
+/** F1 race card. Winner portrait, circuit layout, top 5 expanding to 10.
+    Every value comes from the tool payload; assets are free-licensed from
+    Wikimedia rather than F1's own trademarked media. */
+function renderF1(f) {
+  const rows = f.results || [];
+  const medal = ['p1', 'p2', 'p3'];
+  const teamLogo = x => x.team_logo
+    ? `<img class="fteamlogo" src="${esc(img(x.team_logo))}" alt=""
+         style="${x.team_color ? `background:${esc(x.team_color)}` : ''}"
+         onerror="this.remove()">` : '';
+  const flag = x => x.flag
+    ? `<img class="f1flag" src="${esc(img(x.flag))}" alt=""
+         onerror="this.remove()">` : '';
+  const line = (x, i) =>
+    `<div class="frow ${i != null && i < 3 ? medal[i] : ''}">
+       <span class="fpos">${esc(x.pos)}</span>
+       ${x.photo ? `<img class="favi" src="${esc(img(x.photo))}" alt=""
+            onerror="this.remove()">` : '<span class="favi"></span>'}
+       <span class="fdrv">${flag(x)} ${esc(x.driver)}${x.fastest
+          ? ' <span class="fl">FL</span>' : ''}</span>
+       <span class="fteam">${teamLogo(x)}${esc(x.team || '')}</span>
+       <span class="ftime">${esc(x.time || x.status || '')}</span>
+     </div>`;
+
+  const podium = rows.slice(0, 3);
+  const rest = rows.slice(3, 10);
+  const win = rows[0];
+
+  const el = document.createElement('div');
+  el.className = 'f1';
+  el.innerHTML =
+    `<div class="f1head">
+       <span class="f1mark">${f.logo ? `<img src="${esc(img(f.logo))}" alt="F1"
+            onerror="this.parentElement.remove()">` : 'FORMULA 1'}</span>
+       <span class="f1r">round ${esc(f.round)} · ${esc(f.season)}</span>
+       <span class="when">${esc(f.date || '')}${f.days_ago != null
+          ? ` · ${f.days_ago === 0 ? 'today' : f.days_ago + 'd ago'}` : ''}</span>
+     </div>
+     <div class="f1hero">
+       ${f.winner_photo
+         ? `<img class="fphoto" src="${esc(img(f.winner_photo))}" alt=""
+              onerror="this.remove()">`
+         : ''}
+       <div class="fherotext">
+         <div class="f1name">${esc(f.name || 'Grand Prix')}</div>
+         <div class="f1loc">${flag(f)} ${esc(f.circuit || '')}${
+            f.locality ? ', ' + esc(f.locality) : ''}${
+            f.country ? ', ' + esc(f.country) : ''}</div>
+         ${win ? `<div class="fwin"><span class="wlab">winner</span>
+            ${esc(win.driver)} <span class="fteam">${teamLogo(win)}${esc(win.team || '')}</span></div>` : ''}
+       </div>
+       ${f.circuit_svg
+         ? `<img class="fcirc" src="${esc(img(f.circuit_svg))}"
+              alt="${esc(f.circuit_svg_title || 'circuit layout')}"
+              title="${esc(f.circuit_svg_title || '')}" onerror="this.remove()">`
+         : ''}
+     </div>
+     <div class="podium">${podium.map((x, i) => line(x, i)).join('')}</div>`
+    + (rest.length ? `<div class="f1rest" hidden>${rest.map(x => line(x)).join('')}</div>` : '')
+    + `<div class="f1foot">
+         ${f.fastest_lap ? `<span class="hl"><i data-lucide="gauge"
+              class="svg-ico"></i>fastest lap ${esc(f.fastest_lap)}</span>` : ''}
+         ${rest.length ? `<button type="button" class="restbtn">top 10</button>` : ''}
+         ${f.url ? `<a href="${esc(f.url)}" target="_blank"
+              rel="noopener noreferrer">${esc(f.source || 'source')}</a>` : ''}
+       </div>`;
+
+  const btn = el.querySelector('.restbtn');
+  if (btn) {
+    const box = el.querySelector('.f1rest');
+    btn.addEventListener('click', () => {
+      box.hidden = !box.hidden;
+      btn.classList.toggle('open', !box.hidden);
+      btn.textContent = box.hidden ? 'top 10' : 'top 5';
+    });
+  }
+  add(el); icons();
+  botTurn = null;
+}
+
+/** Exchange-rate card: bold result, real chart from the returned series. */
+/** Weather card. Every value is a measurement from the tool payload —
+    nothing here is inferred, including the gradient, which is picked from the
+    WMO code the forecast returned. */
+const WARM_ICONS = new Set(['sun', 'cloud-sun', 'cloud-sun-rain', 'sunrise', 'sunset']);
+const NIGHT_ICON = { sun: 'moon', 'cloud-sun': 'cloud-moon', 'cloud-sun-rain': 'cloud-moon-rain' };
+
+/** "14:00" -> "2PM", "18:14" -> "6:14PM". Formatted from the string the tool
+    returned, which is already in the place's own timezone — reformatting via
+    the browser clock would shift it. */
+function wxHour(hhmm) {
+  const [h, m] = (hhmm || '').split(':').map(Number);
+  if (isNaN(h)) return hhmm || '';
+  const ap = h < 12 ? 'AM' : 'PM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return h12 + (m ? ':' + String(m).padStart(2, '0') : '') + ap;
+}
+
+function renderWeather(w) {
+  const deg = v => v == null ? '—' : Math.round(v) + '°';
+  const wet = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82];
+  const storm = [95, 96, 99];
+  const snow = [71, 73, 75, 77, 85, 86];
+  const tone = storm.includes(w.code) ? 'storm'
+    : (wet.includes(w.code) || snow.includes(w.code)) ? 'wet'
+    : w.is_day ? 'day' : 'night';
+  const icoFor = (name, day) => (day ? name : (NIGHT_ICON[name] || name));
+  const mark = icoFor(w.icon || 'sun', w.is_day);
+
+  // Slot the next sunrise/sunset in among the hours, the way a phone widget
+  // does, rather than listing it separately.
+  const cols = (w.hours || []).slice(0, 6).map(h => ({
+    label: h.hour.slice(0, 2) === (w.observed || '').slice(11, 13)
+      ? 'Now' : wxHour(h.hour),
+    icon: icoFor(h.icon || 'cloud', w.is_day || h.hour < '18:00'),
+    temp: deg(h.temp), pop: h.rain_chance, now: h.hour.slice(0, 2) === (w.observed || '').slice(11, 13),
+  }));
+  if (w.sun) {
+    const col = { label: wxHour(w.sun.hour), icon: w.sun.kind,
+                  temp: w.sun.kind === 'sunrise' ? 'rise' : 'set', sunEvent: true };
+    // Keep it in time order: after the last hour earlier than the event.
+    let idx = (w.hours || []).findIndex(h => h.hour > w.sun.hour);
+    if (idx < 0) idx = cols.length;
+    cols.splice(Math.min(idx, cols.length), 0, col);
+    cols.length = Math.min(cols.length, 7);
+  }
+
+  const el = document.createElement('div');
+  el.className = 'wx ' + tone;
+  el.innerHTML =
+    `<div class="wxtop">
+       <div class="left">
+         <div class="wxplace">${esc(w.place || 'Weather')}</div>
+         <div class="wxsub">${esc([w.admin && w.admin !== w.place ? w.admin : '',
+             w.country].filter(Boolean).join(' · '))}</div>
+         <div class="wxtemp">${deg(w.temp)}</div>
+       </div>
+       <div class="wxright">
+         <i data-lucide="${esc(mark)}" class="mark${
+            WARM_ICONS.has(mark) ? ' warm' : ''}"></i>
+         <div class="wxcond">${esc(w.label || '')}</div>
+         <div class="wxfeel">feels like ${deg(w.feels)}</div>
+       </div>
+     </div>
+     <div class="wxbits">
+       <span class="b"><i data-lucide="droplets" class="svg-ico"></i>${esc(w.humidity ?? '—')}%</span>
+       <span class="b"><i data-lucide="wind" class="svg-ico"></i>${esc(w.wind ?? '—')} ${esc(w.wind_unit || '')}</span>
+       ${w.precip != null ? `<span class="b"><i data-lucide="umbrella"
+          class="svg-ico"></i>${esc(w.precip)} mm</span>` : ''}
+       ${w.sun ? `<span class="b"><i data-lucide="${esc(w.sun.kind)}"
+          class="svg-ico"></i>${esc(w.sun.kind === 'sunrise' ? 'sunrise' : 'sunset')}
+          ${esc(wxHour(w.sun.hour))}</span>` : ''}
+     </div>`
+    + (cols.length
+      ? `<div class="wxhours">${cols.map(c => `
+          <div class="wxh${c.now ? ' now' : ''}${c.sunEvent ? ' sun' : ''}">
+            <span class="hh">${esc(c.label)}</span>
+            <i data-lucide="${esc(c.icon)}" class="svg-ico${
+               WARM_ICONS.has(c.icon) ? ' warm' : ''}"></i>
+            <span class="ht">${esc(c.temp)}</span>
+            <span class="hp">${c.pop ? esc(c.pop) + '%' : ''}</span>
+          </div>`).join('')}</div>`
+      : '')
+    + `<div class="wxfoot">
+         ${w.flag ? `<img class="f1flag" src="${esc(img(w.flag))}" alt=""
+              onerror="this.remove()">` : ''}
+         <span>${esc((w.observed || '').slice(11, 16))} ${esc(w.timezone || '')}</span>
+         <a href="https://open-meteo.com/" target="_blank"
+            rel="noopener noreferrer">${esc(w.source || 'open-meteo.com')}</a>
+       </div>`;
+  add(el); icons();
+  botTurn = null;
+}
+
+function renderCurrency(ci) {
+  const fmt = (x) => x >= 100 ? x.toLocaleString(undefined, { maximumFractionDigits: 2 })
+    : x >= 0.01 ? x.toFixed(4) : x.toPrecision(6).replace(/0+$/, '');
+  const pts = ci.series || [];
+  const up = (ci.change_pct || 0) >= 0;
+
+  let chart = '';
+  if (pts.length > 2) {
+    const W = 300, H = 62, P = 3;
+    const vs = pts.map(p => p.v);
+    const lo = Math.min(...vs), hi = Math.max(...vs), span = (hi - lo) || 1;
+    const xy = pts.map((p, i) => [
+      P + i * (W - 2 * P) / (pts.length - 1),
+      H - P - ((p.v - lo) / span) * (H - 2 * P)]);
+    const line = xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+    const area = `${P},${H - P} ${line} ${(W - P).toFixed(1)},${H - P}`;
+    chart = `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"
+       role="img" aria-label="rate over ${esc(ci.period || '')}">
+       <polygon points="${area}" class="${up ? 'au' : 'ad'}"/>
+       <polyline points="${line}" class="${up ? 'lu' : 'ld'}"/></svg>`;
+  }
+
+  const el = document.createElement('div');
+  el.className = 'fx';
+  el.innerHTML =
+    `<div class="fxhead"><span class="pair">${esc(ci.from)} → ${esc(ci.to)}</span>
+       <span class="per">${esc(ci.period || '')}</span></div>
+     <div class="fxmain">
+       <div class="big">${fmt(ci.converted)} <span class="cur">${esc(ci.to)}</span></div>
+       <div class="chg ${up ? 'up' : 'down'}">${up ? '+' : ''}${ci.change_pct}%</div>
+     </div>
+     <div class="fxsub">${fmt(ci.amount)} ${esc(ci.from)} ·
+       1 ${esc(ci.from)} = ${fmt(ci.rate)} ${esc(ci.to)}</div>`
+    + chart
+    + `<div class="fxfoot">
+         <span class="hl"><i data-lucide="arrow-up" class="svg-ico hi"></i>${fmt(ci.high)}</span>
+         <span class="hl"><i data-lucide="arrow-down" class="svg-ico lo"></i>${fmt(ci.low)}</span>
+         ${ci.url ? `<a href="${esc(ci.url)}" target="_blank"
+              rel="noopener noreferrer">${esc(ci.source || 'source')}</a>` : ''}
+       </div>`;
+  add(el); icons();
+  botTurn = null;
+}
+
+/** A football result card, built only from fields the tool actually returned. */
+function renderMatch(mm) {
+  const initials = n => (n || '?').split(/\s+/).map(w => w[0]).join('').slice(0, 3).toUpperCase();
+  const side = (name, logo) =>
+    `<div class="side">` + (logo
+      ? `<img src="${esc(img(logo))}" alt=""
+           onerror="this.outerHTML='<div class=\\'badge\\'>${esc(initials(name))}</div>'">`
+      : `<div class="badge">${esc(initials(name))}</div>`)
+    + `<span class="tname">${esc(name || '')}</span></div>`;
+
+  const teamName = s => s === 'home' ? mm.home : mm.away;
+
+  // A fixture has no score, goals or cards yet — a compact "schedule" card
+  // instead of the result layout.
+  if (mm.upcoming) {
+    const when = mm.kickoff
+      ? new Date(mm.kickoff * 1000).toLocaleString(undefined,
+          { weekday: 'short', day: 'numeric', month: 'short',
+            hour: '2-digit', minute: '2-digit' })
+      : 'date unconfirmed';
+    const el = document.createElement('div');
+    el.className = 'match';
+    el.innerHTML =
+      `<div class="mhead">
+         ${mm.comp_logo ? `<img src="${esc(img(mm.comp_logo))}" alt=""
+              onerror="this.remove()">` : ''}
+         <span class="comp">${esc(mm.tournament || 'Upcoming match')}</span>
+         <span class="when">${esc(when)}</span>
+       </div>
+       <div class="score">${side(mm.home, mm.home_logo)}
+         <span class="goalsnum">VS</span>
+         ${side(mm.away, mm.away_logo)}</div>`
+      + (mm.in_days != null
+        ? `<div class="countdown${mm.in_days <= 1 ? ' soon' : ''}">${
+             mm.in_days === 0 ? 'today' : mm.in_days === 1 ? 'tomorrow'
+             : `in ${mm.in_days} days`}</div>`
+        : '')
+      + (mm.venue
+        ? `<div class="venue"><i data-lucide="map-pin" class="svg-ico"
+             style="width:12px;height:12px"></i>${esc(mm.venue)}${mm.city ? ', ' + esc(mm.city) : ''}</div>`
+        : '')
+      + `<div class="mfoot">
+           ${mm.url ? `<a href="${esc(mm.url)}" target="_blank"
+                rel="noopener noreferrer">${esc(mm.source || 'source')}</a>` : ''}
+         </div>`;
+    add(el); icons();
+    botTurn = null;
+    return;
+  }
+
+  // Goals and shootout stay on the face of the card; cards go behind a toggle.
+  const rows = [];
+  for (const g of mm.goals || []) {
+    const pen = g.kind && g.kind !== 'regular' ? `<span class="pen">${esc(g.kind)}</span>` : '';
+    rows.push(`<div class="ev"><span class="min">${g.minute ?? ''}'</span>
+      <span class="ball"></span><span>${esc(g.player || '')} ${pen}</span>
+      <span class="team">${esc(teamName(g.side) || '')}</span></div>`);
+  }
+  for (const s of mm.shootout || []) {
+    rows.push(`<div class="ev"><span class="min">pen</span>
+      <span class="ball" style="${s.scored ? '' : 'opacity:.3'}"></span>
+      <span>${esc(s.player || '')} <span class="pen">${s.scored ? 'scored' : 'missed'}</span></span>
+      <span class="team">${esc(teamName(s.side) || '')}</span></div>`);
+  }
+  const cardRows = (mm.cards || []).map(c =>
+    `<div class="ev"><span class="min">${c.minute != null ? c.minute + "'" : ''}</span>
+       <span class="${c.kind === 'red' ? 'rc' : 'yc'}"></span>
+       <span>${esc(c.player || 'unknown')}${c.coach ? ' <span class="pen">coach</span>' : ''}
+         ${c.reason ? `<span class="pen">${esc(c.reason.toLowerCase())}</span>` : ''}</span>
+       <span class="team">${esc(teamName(c.side) || '')}</span></div>`);
+
+  const yellows = (mm.cards || []).filter(c => c.kind !== 'red').length;
+  const reds = (mm.cards || []).filter(c => c.kind === 'red').length;
+  const when = mm.kickoff
+    ? new Date(mm.kickoff * 1000).toLocaleString(undefined,
+        { day: 'numeric', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  const el = document.createElement('div');
+  el.className = 'match';
+  el.innerHTML =
+    `<div class="mhead">
+       ${mm.comp_logo ? `<img src="${esc(img(mm.comp_logo))}" alt=""
+            onerror="this.remove()">` : ''}
+       <span class="comp">${esc(mm.tournament || 'Match')}</span>
+       ${mm.round ? `<span>· round ${mm.round}</span>` : ''}
+       ${mm.finished === false && mm.status
+          ? `<span class="live"><span class="led"></span>${esc(mm.status)}</span>`
+          : `<span>· ${esc(mm.status || '')}</span>`}
+       ${when ? `<span class="when">${esc(when)}${mm.days_ago != null
+            ? ` · ${mm.days_ago === 0 ? 'today' : mm.days_ago + 'd ago'}` : ''}</span>` : ''}
+     </div>`
+    + (mm.maybe_not_latest
+      // Search will not reliably surface a club's newest fixture, so say so
+      // rather than letting an older match pass as "the latest".
+      ? `<div class="stale"><i data-lucide="triangle-alert" class="svg-ico"
+           style="width:12px;height:12px"></i>most recent match that could be
+           verified — a newer one may exist</div>`
+      : '')
+    + `<div class="score">${side(mm.home, mm.home_logo)}
+       <span class="goalsnum">${mm.home_score} – ${mm.away_score}</span>
+       ${side(mm.away, mm.away_logo)}</div>`
+    + (mm.half_time ? `<div class="ht">half time ${mm.half_time[0]} – ${mm.half_time[1]}</div>` : '')
+    + (mm.venue
+      ? `<div class="venue"><i data-lucide="map-pin" class="svg-ico"
+           style="width:12px;height:12px"></i>${esc(mm.venue)}${mm.city ? ', ' + esc(mm.city) : ''}</div>`
+      : '')
+    + (rows.length ? `<div class="events">${rows.join('')}</div>` : '')
+    + (cardRows.length ? `<div class="cardlist" hidden>${cardRows.join('')}</div>` : '')
+    + `<div class="mfoot">
+         ${mm.url ? `<a href="${esc(mm.url)}" target="_blank"
+              rel="noopener noreferrer">${esc(mm.source || 'source')}</a>` : ''}
+         ${cardRows.length ? `<button type="button" class="cardbtn">
+              ${yellows ? `<span class="yc"></span>${yellows}` : ''}
+              ${reds ? `<span class="rc"></span>${reds}` : ''}</button>` : ''}
+       </div>`;
+
+  const btn = el.querySelector('.cardbtn');
+  if (btn) {
+    const list = el.querySelector('.cardlist');
+    btn.title = 'Show bookings';
+    btn.addEventListener('click', () => {
+      list.hidden = !list.hidden;
+      btn.classList.toggle('open', !list.hidden);
+    });
+  }
+  add(el); icons();
+  botTurn = null;   // the spoken reply gets its own bubble under the card
+}
+
+/** A "N sources" label beside replay, expanding to the pages that were read. */
+function renderSources(el, items) {
+  if (!el || !items || !items.length) return;
+  const seen = new Map((el._sources || []).map(s => [s.url, s]));
+  for (const it of items) {
+    const o = typeof it === 'string' ? { url: it, title: '' } : it;
+    if (o.url && !seen.has(o.url)) seen.set(o.url, o);
+  }
+  el._sources = [...seen.values()];
+
+  const foot = footOf(el);
+  let btn = foot.querySelector('.srcbtn');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip srcbtn';
+    btn.addEventListener('click', () => {
+      const list = el.querySelector('.srclist');
+      if (list) list.hidden = !list.hidden;
+      btn.classList.toggle('open', list && !list.hidden);
+    });
+    foot.appendChild(btn);
+  }
+  const n = el._sources.length;
+  btn.innerHTML = `<i data-lucide="link" class="svg-ico" style="width:12px;height:12px"></i>`
+    + `${n} source${n > 1 ? 's' : ''}`;
+  btn.title = 'Show the pages this answer came from';
+
+  let list = el.querySelector('.srclist');
+  if (!list) {
+    list = document.createElement('div');
+    list.className = 'srclist';
+    list.hidden = true;
+    el.appendChild(list);
+  }
+  list.innerHTML = el._sources.map(s => {
+    let host = s.url;
+    try { host = new URL(s.url).hostname.replace(/^www\./, ''); } catch {}
+    return `<a class="srcitem" href="${esc(s.url)}" target="_blank"
+              rel="noopener noreferrer"><span class="st">${esc(s.title || host)}</span>
+              <span class="sh">${esc(host)}</span></a>`;
+  }).join('');
+  icons();
+}
+
+/** The speaker control for one reply: replays that reply's clips on click. */
+function refreshSay(el) {
+  if (!el || !el._clips.length) return;
+  let btn = el.querySelector('.say');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'say';
+    btn.addEventListener('click', () => {
+      if (playingTurn === el && playing) { stopAudio(); return; }
+      stopAudio();
+      playTurn(el);
+    });
+    footOf(el).prepend(btn);
+  }
+  const live = playingTurn === el && playing;
+  const secs = el._clips.reduce((a, c) => a + (c.seconds || 0), 0);
+  btn.classList.toggle('on', live);
+  btn.title = live ? 'Stop' : 'Replay this reply';
+  btn.innerHTML = live
+    ? '<span class="eq"><i></i><i></i><i></i><i></i></span> speaking'
+    : `<i data-lucide="volume-2" class="svg-ico" style="width:13px;height:13px"></i> replay${secs ? ' · ' + secs.toFixed(1) + 's' : ''}`;
+  icons();
+}
+function refreshAllSay() {
+  document.querySelectorAll('.turn.bot:not(.busy)').forEach(refreshSay);
+}
+function meta(text, ico) {
+  const d = document.createElement('div'); d.className = 'meta';
+  d.innerHTML = `<i data-lucide="${ico}" class="svg-ico"></i>`;
+  const s = document.createElement('span'); s.textContent = text; d.appendChild(s);
+  add(d); icons();
+}
+function sys(text) {
+  const d = document.createElement('div'); d.className = 'sys'; d.textContent = text; add(d);
+}
+
+// A live agent balloon saying what the pipeline is doing right now. Reasoning
+// can run for a minute with nothing spoken, and silence must never look like a
+// hang. Reuses one element so it updates in place rather than piling up.
+let busyEl = null;
+const PHASES = {
+  transcribing: ['ear', 'listening', 'turning your audio into text'],
+  loading:      ['loader', 'loading the model', 'weights are being read from disk'],
+  sent:         ['loader', 'thinking', 'prompt sent, waiting for the first token'],
+  reasoning:    ['brain', 'reasoning', 'working it out privately — this is not spoken'],
+  writing:      ['pencil', 'composing the reply', 'clauses are flushed to speech as they finish'],
+  tool:         ['globe', 'searching the web', 'its training data has a cutoff, so it is looking this up'],
+  reading:      ['book-open', 'reading a page', 'pulling the text out of one result'],
+  // The fetch itself takes about a second; reading the results back is the long
+  // part, so the deck stays up for it rather than flashing past.
+  digesting:    ['book-open', 'reading the results', 'working through what it found'],
+};
+
+function showBusy(phase, detail, tail) {
+  const [ico, title, blurb] = PHASES[phase] || ['loader', phase, ''];
+  if (!busyEl) {
+    busyEl = document.createElement('div');
+    busyEl.className = 'turn bot busy';
+    add(busyEl);
+  }
+  const anim = ico === 'loader' ? 'spin' : 'breathe';
+  const searchy = phase === 'tool' || phase === 'reading' || phase === 'digesting';
+  busyEl.innerHTML =
+    `<div class="who"><i data-lucide="${ico}" class="svg-ico ${anim}"></i>agent · ${title}</div>`
+    + (searchy
+      // Pages being flipped through, rather than a spinner.
+      ? `<div class="searching"><span class="deck"><i></i><i></i><i></i></span>
+           <span class="what">${esc(detail || blurb)}</span></div>`
+      : `<div class="busy-detail">${esc(detail || blurb)}</div>`)
+    + (tail ? `<div class="busy-tail"><div>${esc(tail)}</div></div>` : '')
+    + '<div class="bar"></div>';
+  icons();
+  if (atBottom()) log.scrollTop = log.scrollHeight;
+}
+function clearBusy() { if (busyEl) { busyEl.remove(); busyEl = null; } }
+
+// ---------- inspector ----------
+// Which sections the reader opened. renderSteps() rewrites the whole panel on
+// every event, which would otherwise snap every section shut mid-turn — the
+// one thing that makes a live view unusable.
+const openKeys = new Set();
+let openWired = false;
+function wireOpen() {
+  if (openWired) return;
+  openWired = true;
+  // "toggle" does not bubble; capture on the container catches it anyway.
+  stepsEl.addEventListener('toggle', e => {
+    const k = e.target.dataset?.k;
+    if (!k) return;
+    if (e.target.open) openKeys.add(k); else openKeys.delete(k);
+  }, true);
+}
+
+/** status: 'wait' | 'run' | 'done' | 'skip' | 'bad' */
+function step(n, key, ico, title, value, status, bodyHtml) {
+  const open = openKeys.has(key);
+  return `<details class="step ${status === 'run' ? 'run' : ''}"
+      data-k="${key}"${open ? ' open' : ''}>
+    <summary><span class="num">${n}</span><span class="pdot ${status}"></span>
+      <i data-lucide="${ico}" class="svg-ico"></i>
+      <span>${title}</span>
+      <span class="val${status === 'done' || status === 'run' ? '' : ' off'}">${value}</span></summary>
+    <div class="body">${bodyHtml}</div></details>`;
+}
+
+/** A nested expandable block whose open state also survives re-render. */
+function sub(key, label, bodyHtml) {
+  return `<details class="sub" data-k="${key}"${openKeys.has(key) ? ' open' : ''}>
+    <summary><i data-lucide="chevron-right" class="svg-ico"
+      style="width:12px;height:12px"></i>${esc(label)}</summary>
+    <div class="inner">${bodyHtml}</div></details>`;
+}
+
+const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
+
+function srcList(items) {
+  return items.map(it => {
+    const u = typeof it === 'string' ? it : it.url;
+    const t = (typeof it === 'string' ? '' : it.title) || '';
+    return `<div class="srcrow"><i data-lucide="link" class="svg-ico"
+        style="width:11px;height:11px;flex:0 0 auto"></i>
+      <span class="host">${esc(host(u))}</span>
+      <a href="${esc(u)}" target="_blank" rel="noopener noreferrer"
+         title="${esc(u)}">${esc(t || u)}</a></div>`;
+  }).join('');
+}
+function toggle(key, value, options) {
+  return '<div style="margin-top:7px;display:flex;gap:5px;align-items:center">'
+    + options.map(o =>
+        `<button type="button" class="opt${o === value ? ' primary' : ''}"
+           data-key="${key}" data-value="${o}"
+           style="padding:3px 9px;font-size:12px">${o}</button>`).join('')
+    + '<span style="font-size:11px;color:var(--muted)">restarts va-llm</span></div>';
+}
+
+function kv(pairs) {
+  return '<div class="kv">' + pairs.filter(p => p)
+    .map(([k, v]) => `<span>${k}</span><b>${esc(v)}</b>`).join('') + '</div>';
+}
+
+function renderSteps() {
+  const i = cur.input || {}, u = cur.usage || {}, d = cur.done || {}, r = cur.request || {};
+  const m = cfg.model || {};
+  const g = cur.grounding || {}, p = cur.prompt || {}, cl = cur.intent || {};
+  const audioTotal = cur.clips.reduce((a, c) => a + (c.seconds || 0), 0);
+  const tps = (u.completion_tokens && d.total) ? (u.completion_tokens / d.total).toFixed(1) : null;
+  // A turn is live from the moment it is heard until "done"/"empty" lands.
+  const live = !!cur.t0 && !cur.done;
+  const mic = i.source === 'microphone';
+
+  stepsEl.innerHTML = [
+    step(1, 'in', 'file-audio', 'Audio in',
+      mic ? num(i.audio_s, 's') : (i.source ? 'typed' : '—'),
+      i.source ? 'done' : (live ? 'run' : 'wait'),
+      mic
+        ? kv([['source', 'browser mic'], ['container', i.mime],
+              ['upload', (i.bytes / 1024).toFixed(0) + ' KiB'],
+              ['duration', num(i.audio_s, ' s')],
+              ['ffmpeg → 16k mono', num(i.decode_s, ' s')]])
+          + (i.url
+            ? `<div style="margin-top:7px;color:var(--text)">Replay exactly what
+                 whisper heard:</div>
+               <audio controls preload="none" src="${i.url}"
+                 style="width:100%;height:30px;margin-top:3px"></audio>`
+            : '<div class="note" style="margin-top:6px">Not retained — set VA_TTS_AUDIO_OUT to spool: to keep input clips.</div>')
+        : (i.text
+          ? kv([['source', 'typed in the browser'], ['characters', i.text.length]])
+            + `<div style="margin-top:7px;color:var(--text)">What was sent:</div>
+               <pre>${esc(i.text)}</pre>`
+            + '<div class="note" style="margin-top:6px">No audio stage for typed turns — it goes straight onto the utterance bus.</div>'
+          : '<div class="note">Waiting for input. Speak into the browser mic or type below; the Pi itself has no capture device.</div>')),
+
+    step(2, 'asr', 'ear', 'Transcription', mic ? num(i.asr_s, 's') : (i.source ? 'skipped' : '—'),
+      mic ? (i.text ? 'done' : 'run') : (i.source ? 'skip' : 'wait'),
+      mic
+        ? `<div style="color:var(--text)">Heard:</div>
+           <pre style="font-size:12px">${esc(i.text || '(nothing recognised)')}</pre>`
+          + kv([['engine', i.asr_engine], ['model', i.asr_model],
+                ['threads', i.asr_threads], ['wall time', num(i.asr_s, ' s')],
+                ['realtime factor', num(i.asr_rtf)],
+                ['characters', i.text ? i.text.length : 0]])
+          + '<div class="note" style="margin-top:6px">Chunked, not streaming: the clip is transcribed once the recording stops.</div>'
+        : '<div class="note">Nothing to transcribe — this turn was typed.</div>'),
+
+    step(3, 'now', 'calendar-clock', 'Date & time context', g.date || '—', g.date ? 'done' : (live ? 'run' : 'wait'),
+      (g.today
+        ? `<div class="nowline">${esc(g.today)}</div>
+           <div style="margin-top:2px">${esc(g.clock || '')} ${esc(g.tz || '')}</div>`
+        : '<div class="note">Not set yet for this turn.</div>')
+      + kv([['told to the model', g.grounded === false ? 'no (no tools offered)' : 'yes'],
+            ['ISO date', g.date], ['clock', g.clock], ['timezone', g.tz]])
+      + `<div class="why">“Latest”, “today” and “this week” are resolved against
+           <b>${esc(g.date || 'the clock on the Pi')}</b>, not against the
+           model's training cutoff. Without this line the model treats any
+           current date as the future and refuses to look it up — it answered
+           <code>I cannot search for events in 2026</code> before it was
+           added.</div>`),
+
+    step(4, 'intent', 'git-branch', 'Intent classification',
+      cl.kind ? (cl.category_label ? cl.category : cl.kind) : '—',
+      cl.kind ? 'done' : (live ? 'run' : 'wait'),
+      (cl.kind
+        ? `<div style="color:var(--text);font-size:13px">${esc(cl.category_label || '')}</div>`
+          + `<div class="why">Routed as <b>${esc(cl.kind)}</b>`
+            + (cl.evidence ? ` because the question contains <code>${esc(cl.evidence)}</code>` : '')
+            + (cl.kind === 'live'
+              ? '. Answering from memory is not allowed here, so a tool call is required.'
+              : cl.kind === 'creative'
+                ? '. Nothing to look up, so no tools are offered at all — which also keeps the schemas out of the prefill.'
+                : '. Nothing forced the issue; the model may look something up or answer directly.')
+            + '</div>'
+          + '<div class="chips">'
+            + [['race_result', 'F1 race result'], ['race_next', 'next F1 race'],
+               ['fixture', 'upcoming fixture'], ['match_result', 'football score'],
+               ['currency', 'currency'], ['market', 'market'],
+               ['weather', 'weather'], ['news', 'breaking news'],
+               ['recency', 'changes over time'], ['live_other', 'other live data'],
+               ['creative', 'make something'], ['knowledge', 'known knowledge']]
+              .map(([k, lbl]) => `<span class="cat${cl.category === k ? ' on' : ''}">${lbl}</span>`).join('')
+            + '</div>'
+          + kv([['decision', cl.kind], ['category', cl.category],
+                ['matched on', cl.evidence || '—'],
+                ['tools offered', (cl.offered && cl.offered.length)
+                  ? cl.offered.join(', ') : 'none'],
+                ['tool call required', cl.forced ? 'yes' : 'no'],
+                ['pinned to', cl.pinned || '—']])
+        : '<div class="note">Not classified yet.</div>')
+      + `<div class="note" style="margin-top:6px">The classifier is a keyword
+           rule, not a second model call — an extra LLM round costs 20–40s on
+           this board. The full category list is shown so a misroute is visible
+           instead of silent.</div>`
+      + (cl.pinned
+        ? `<div class="note" style="margin-top:6px">tool_choice is pinned to
+             <b>${esc(cl.pinned)}</b> and it is the only schema on offer:
+             llama.cpp honours a named tool_choice reliably only when it is the
+             sole tool, otherwise it has been seen call web_search anyway.</div>`
+        : '')),
+
+    step(5, 'prompt', 'file-text', 'Prompt assembly',
+      p.parts ? (r.body?.messages || []).length + ' msgs' : '—',
+      p.parts ? 'done' : (live ? 'run' : 'wait'),
+      (p.parts
+        ? p.parts.map(x => {
+            const ico = { system: 'shield', history: 'history',
+                          user: 'user', tools: 'wrench' }[x.role] || 'dot';
+            const amt = x.role === 'tools' ? `${x.count} schemas`
+              : x.role === 'history' ? `${x.msgs}/${x.of * 2} msgs · ${x.chars} chars`
+              : `${x.chars} chars`;
+            return `<div class="part${x.kept ? '' : ' out'}">
+                <i data-lucide="${x.kept ? ico : 'minus'}" class="svg-ico"></i>
+                <span><b>${esc(x.label)}</b>${x.text
+                  ? ` — ${esc(x.text.slice(0, 80))}${x.text.length > 80 ? '…' : ''}` : ''}</span>
+                <span class="amt">${x.kept ? amt : 'not included'}</span></div>`;
+          }).join('')
+          + kv([['total prefill', p.total_chars ? p.total_chars + ' chars' : '—'],
+                ['history window', (cfg.history_turns || '?') + ' turns'],
+                ['clause flush at', (cfg.flush_chars || '?') + ' chars']])
+        : '<div class="note">Not assembled yet.</div>')
+      + '<div class="note" style="margin-top:6px">The system prompt is what creates clause boundaries, so TTS has something to flush early. Without it the model emits one long comma-free sentence.</div>'),
+
+    step(6, 'json', 'braces', 'JSON sent to the LLM', r.bytes ? r.bytes + ' B' : '—',
+      r.bytes ? 'done' : (live ? 'run' : 'wait'),
+      kv([['endpoint', r.url], ['temperature', r.body?.temperature],
+          ['max_tokens', r.body?.max_tokens], ['stream', String(!!r.body?.stream)],
+          ['repeat_penalty', r.body?.repeat_penalty],
+          ['presence_penalty', r.body?.presence_penalty],
+          ['tool_choice', typeof r.body?.tool_choice === 'object'
+            ? (r.body.tool_choice.function?.name || 'function')
+            : (r.body?.tool_choice || 'none')],
+          ['messages', (r.body?.messages || []).length],
+          ['tools', (r.body?.tools || []).length]])
+      + (r.body
+        ? (r.body.messages || []).map((msg, n) =>
+            sub(`msg${n}`, `${n + 1}. ${msg.role}${msg.name ? ' · ' + msg.name : ''} — ${
+              (msg.content || (msg.tool_calls ? '[tool call]' : '')).length} chars`,
+              `<pre>${esc(msg.content || JSON.stringify(msg.tool_calls, null, 1))}</pre>`)).join('')
+          + sub('rawjson', `full request body (${r.bytes} B)`,
+                `<pre>${esc(JSON.stringify(r.body, null, 1))}</pre>`)
+        : '<div class="note">Nothing sent yet.</div>')),
+
+    step(7, 'model', 'cpu', 'Model', m.family || '—', m.family ? 'done' : 'wait',
+      kv([['file', m.name], ['family', m.family], ['quantisation', m.quant || 'n/a'],
+          ['QAT', m.qat ? 'yes' : 'no'], ['size', m.gib ? m.gib + ' GiB' : '—'],
+          ['context', cfg.props?.n_ctx || cfg.llm_ctx], ['threads', cfg.llm_threads]])),
+
+    step(8, 'tools', 'globe', 'Tools & evidence',
+      cur.tools.length
+        ? `${cur.tools.length} call${cur.tools.length > 1 ? 's' : ''}`
+        : (cl.kind === 'creative' ? 'none offered'
+           : cl.kind ? (cur.done ? 'none used' : 'standing by') : '—'),
+      cur.tools.length
+        ? (cur.tools.some(t => t.pending) ? 'run'
+           : cur.tools.some(t => t.ok === false) ? 'bad' : 'done')
+        : (cl.kind === 'creative' ? 'skip' : (live ? 'wait' : 'skip')),
+      (cur.tools.length
+        ? cur.tools.map((t, n) => {
+            const a = t.arguments || {};
+            const args = Object.entries(a).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join('  ');
+            const items = t.meta?.items
+              || (t.meta?.urls || []).map(x => ({ url: x, title: '' }))
+              || [];
+            const srcs = items.length ? items
+              : (t.meta?.url ? [{ url: t.meta.url, title: t.meta.source || '' }] : []);
+            return `<div class="tcall${t.ok === false ? ' bad' : ''}">
+              <div class="thead">
+                <span class="pdot ${t.pending ? 'run' : t.ok ? 'done' : 'bad'}"></span>
+                <span class="nm">${esc(t.name)}</span>
+                <span class="rt">${t.pending ? 'running…'
+                  : `${t.ok ? 'ok' : 'FAILED'} · ${t.took}s · ${t.chars} chars`}</span>
+              </div>
+              ${args ? `<div style="margin-top:4px;font-family:var(--mono);font-size:10.5px">${esc(args)}</div>` : ''}
+              ${t.meta?.results != null ? `<div style="margin-top:3px">${t.meta.results} result${t.meta.results === 1 ? '' : 's'}${t.meta.truncated ? ' · truncated' : ''}</div>` : ''}
+              ${srcs.length ? `<div style="margin-top:5px;color:var(--text)">Sources read:</div>${srcList(srcs)}` : ''}
+              ${t.content
+                ? sub(`ev${n}`, `evidence the model read back (${t.chars} chars${t.content_truncated ? ', showing first ' + t.content.length : ''})`,
+                      `<pre>${esc(t.content)}</pre>`)
+                : ''}
+            </div>`;
+          }).join('')
+        : `<div>${cl.kind === 'creative'
+            ? 'No tools were offered for this turn.'
+            : cl.kind === 'live'
+              ? 'A lookup is required — waiting for the model to pick a tool.'
+              : 'Nothing looked up. The answer comes from the model’s own weights, so it is only as current as its training data.'}</div>`)
+      + `<div class="note" style="margin-top:7px">Backend: ${esc(cfg.search_backend || '?')}, no API key and no headless browser — Chromium would starve the LLM on four cores. Capped at ${esc(cfg.search_results || '?')} hits and ${esc(cfg.fetch_chars || '?')} chars a page, because everything fetched becomes prefill the model must read back.</div>`
+      + '<div class="note" style="margin-top:6px">Fetched text is wrapped as untrusted data, and fetch_page refuses private and loopback addresses.</div>'),
+
+    step(9, 'mtp', 'zap', 'Speculative decoding (MTP)', cfg.mtp || 'off',
+      cfg.mtp === 'on' ? 'done' : 'skip',
+      '<div>MTP drafts several tokens, then verifies them in one forward pass. On a GPU that pass costs about what verifying a single token costs, because the tensor cores were idle anyway — so every accepted draft is free speed. On four already-saturated CPU cores there is no idle width: verifying N tokens costs roughly N times one token, so you pay full price for the drafts plus the drafter itself.</div>'
+      + `<div class="note" style="margin-top:6px">${esc(cfg.mtp_note || '')}</div>`
+      + toggle('mtp', cfg.mtp, ['off', 'on'])),
+
+    step(10, 'think', 'brain', 'Thinking',
+      d.think_chars ? d.think_chars + ' chars'
+        : (cur.think ? cur.think + ' chars' : (cfg.reasoning || 'off')),
+      d.think_chars ? 'done' : (cur.think ? 'run' : (cfg.reasoning === 'on' ? 'wait' : 'skip')),
+      '<div>Gemma 4 E-series does emit a reasoning channel through llama.cpp, and it measurably helps accuracy. The cost is that thinking tokens decode at exactly the same rate as speech, so they are pure delay before the first spoken word.</div>'
+      + `<div class="note" style="margin-top:6px">${esc(cfg.reasoning_note || '')}</div>`
+      + toggle('reasoning', cfg.reasoning, ['off', 'on', 'auto'])),
+
+    step(11, 'gen', 'timer', 'Generation',
+      d.first_clause != null ? num(d.total, 's')
+        : (cur.clauses.length ? 'writing…' : (live ? 'running…' : '—')),
+      d.first_clause != null ? 'done' : (live ? 'run' : 'wait'),
+      kv([['first clause', num(d.first_clause, ' s')], ['reply complete', num(d.total, ' s')],
+          ['clauses', num(d.clauses ?? (cur.clauses.length || null))],
+          ['prompt tokens', num(u.prompt_tokens)], ['output tokens', num(u.completion_tokens)],
+          ['decode rate', tps ? tps + ' tok/s' : '—'],
+          ['finish reason', d.finish],
+          d.interrupted ? ['interrupted', 'yes'] : null,
+          d.unverified ? ['cites a source with no search', 'yes'] : null])
+      + (cur.clauses.length
+        ? '<pre>' + cur.clauses.map((c, n) =>
+            `${n + 1}. +${c.at}s  ${esc(readable(c.text))}`).join('\n') + '</pre>'
+        : '')),
+
+    step(12, 'tts', 'volume-2', 'Speech synthesis',
+      cur.clips.length ? cur.clips.length + ' clips' : (live ? 'waiting…' : '—'),
+      cur.clips.length ? (live ? 'run' : 'done') : (live ? 'wait' : 'skip'),
+      kv([['voice', cfg.tts_voice], ['sink', cfg.tts_sink],
+          ['audio produced', audioTotal ? audioTotal.toFixed(2) + ' s' : '—']])
+      + (cur.clauses.length
+        ? '<pre>' + cur.clauses.map((c, n) =>
+            `${n + 1}. spoken +${c.at}s  ${c.ready != null ? `wav +${c.ready}s` : 'pending'}  ${esc(c.text)}`).join('\n') + '</pre>'
+        : '')
+      + '<div class="note" style="margin-top:6px">"wav" is when the clip for that clause appeared — the delay you actually hear before speech starts.</div>'
+      + '<div class="note" style="margin-top:6px">Shown verbatim as piper received it: numbers stay spelled out, because "2026" and "0–2" are read badly. The chat bubble converts them back to numerals for reading — same words, different rendering.</div>'),
+
+    step(13, 'voice', 'play', 'Generated voice', audioTotal ? audioTotal.toFixed(1) + 's' : '—',
+      audioTotal ? 'done' : (live ? 'wait' : 'skip'),
+      cur.clips.length
+        ? cur.clips.map((c, n) =>
+            `<div style="margin-bottom:5px">${n + 1}. ${(c.seconds ?? 0).toFixed(2)}s · ${(c.bytes / 1024).toFixed(0)} KiB
+             <audio controls preload="none" src="${c.url}" style="width:100%;height:30px;margin-top:2px"></audio></div>`).join('')
+        : '<div class="note">Nothing synthesised yet.</div>'),
+  ].join('');
+  wireOpen();
+  icons();
+}
+
+// ---------- playback ----------
+const player = new Audio();
+player.preload = 'auto';
+let audioQueue = [], playing = false, muted = false, unlocked = false;
+let playingTurn = null;   // which reply balloon the queue currently belongs to
+
+// Fetch each clip as soon as it is announced. Without this the element stalls
+// on the network when its turn comes, which is audible as a gap between clauses.
+function enqueue(url, turn) {
+  const slot = { url, turn, blobUrl: null };
+  // Resolve into the slot rather than awaiting later: play() must not be
+  // deferred past the click that triggered it, or autoplay policy blocks it.
+  fetch(url).then(r => r.blob())
+    .then(b => { slot.blobUrl = URL.createObjectURL(b); })
+    .catch(() => {});
+  audioQueue.push(slot);
+  playNext();
+}
+
+/** Replay every clip of one reply, in order. */
+function playTurn(el) {
+  el._clips.forEach(c => enqueue(c.url, el));
+}
+
+function playNext() {
+  if (muted || playing) return;
+  const slot = audioQueue.shift();
+  if (!slot) {
+    playingTurn = null;
+    refreshAllSay();
+    return;
+  }
+  playing = true;
+  playingTurn = slot.turn || playingTurn;
+  refreshAllSay();
+  // Prefetched blob if it landed, otherwise stream from the URL — either way
+  // no await sits between the user's click and play().
+  player.src = slot.blobUrl || slot.url;
+  player.play().catch(() => {
+    playing = false;
+    audioQueue.unshift(slot);
+    refreshAllSay();
+    hint.textContent = 'Click the page once to allow audio playback.';
+  });
+}
+player.addEventListener('ended', () => {
+  if (player.src.startsWith('blob:')) URL.revokeObjectURL(player.src);
+  playing = false; playNext();
+});
+player.addEventListener('error', () => { playing = false; playNext(); });
+
+// One-time autoplay unlock. Clicks on an <audio> control are excluded — the
+// inspector's own players must not also kick off the queue, which is what made
+// clips play twice on top of each other.
+document.addEventListener('click', (e) => {
+  if (e.target.closest('audio')) return;
+  if (unlocked) return;
+  unlocked = true;
+  if (!playing && audioQueue.length) playNext();
+}, { capture: true });
+
+// Pause the queue while an inspector clip is playing, so the two never overlap.
+document.addEventListener('play', (e) => {
+  if (e.target === player) return;
+  if (playing) { player.pause(); playing = false; }
+}, { capture: true });
+function stopAudio() {
+  audioQueue = []; playing = false; playingTurn = null;
+  player.pause(); player.removeAttribute('src');
+  document.querySelectorAll('audio').forEach(a => { if (a !== player) a.pause(); });
+  refreshAllSay();
+}
+function applyMute(persist) {
+  document.getElementById('soundIcon').setAttribute('data-lucide', muted ? 'volume-x' : 'volume-2');
+  document.getElementById('soundLabel').textContent = muted ? 'Muted' : 'Sound on';
+  if (persist) { try { localStorage.setItem('va-muted', muted ? '1' : '0'); } catch {} }
+  icons();
+}
+document.getElementById('sound').addEventListener('click', () => {
+  muted = !muted;
+  applyMute(true);
+  if (muted) stopAudio(); else playNext();
+});
+// Per-browser preference, so the mute state survives a reload.
+try { muted = localStorage.getItem('va-muted') === '1'; } catch {}
+applyMute(false);
+
+// ---------- events ----------
+const es = new EventSource('/events');
+es.onopen = () => { hint.textContent = 'Idle.'; };
+es.onerror = () => { hint.textContent = 'Disconnected — retrying…'; };
+es.onmessage = (e) => {
+  let m; try { m = JSON.parse(e.data); } catch { return; }
+  // A throw inside a card renderer used to abort this handler with no trace —
+  // the card just never appeared. Surface it instead of losing it.
+  try { handleEvent(m); }
+  catch (err) {
+    console.error('event handler failed', m.type, err);
+    sys(`UI error handling ${m.type}: ${err.message}`);
+  }
+};
+
+function handleEvent(m) {
+  switch (m.type) {
+    case 'input':
+      if (m.source === 'typed' && cur.input?.source === 'microphone') { cur.input.text = m.text; }
+      else { cur = blank(); cur.input = m; }
+      renderSteps(); break;
+    case 'heard':
+      userTurn(m.text); cur.t0 = Date.now();
+      showBusy('sent'); break;
+    case 'request': cur.request = m; renderSteps(); break;
+    case 'usage': cur.usage = m; renderSteps(); break;
+    case 'grounding': cur.grounding = m; renderSteps(); break;
+    case 'prompt': cur.prompt = m; renderSteps(); break;
+    case 'thinking':
+      cur.think = m.chars;
+      showBusy('reasoning', `${m.chars} characters so far · ${m.at}s elapsed`, m.tail);
+      hint.textContent = `Reasoning (${m.chars} chars) — not spoken, but it is working.`;
+      break;
+    case 'intent':
+      cur.intent = { kind: m.intent, forced: m.forced,
+                     anyOffered: m.tools_offered, offered: m.offered || [],
+                     category: m.category, category_label: m.category_label,
+                     evidence: m.evidence, pinned: m.pinned };
+      // Say plainly whether this question is being looked up or answered
+      // straight from the model, so a wrong classification is visible.
+      if (m.intent === 'live')
+        sys(`${m.category_label || 'needs live data'} — looking it up`
+            + (m.evidence ? ` (matched “${m.evidence}”)` : ''));
+      else if (m.intent === 'creative') sys('no lookup needed for this one');
+      renderSteps(); break;
+    case 'looping':
+      sys('cut off a repetition loop — the model started repeating itself');
+      break;
+    case 'preempted':
+      sys(`discarded a guessed answer before the lookup (${m.clauses} clause${m.clauses > 1 ? 's' : ''})`);
+      break;
+    case 'tool_call': {
+      const a = m.arguments || {};
+      const q = a.query || a.url
+        || (a.from && a.to ? `${a.from} → ${a.to}` : '')
+        || Object.values(a).join(' ') || m.name;
+      cur.tools.push({ ...m, pending: true });
+      showBusy(m.name === 'fetch_page' ? 'reading' : 'tool',
+               q ? `“${q}”` : m.name);
+      // A tool round means the agent visibly chose to look something up.
+      sys(`${m.name === 'fetch_page' ? 'reading'
+           : m.name === 'match_result' ? 'checking the score'
+           : m.name === 'currency_rate' ? 'checking the rate'
+           : m.name === 'f1_result' ? 'checking the race'
+           : m.name === 'weather_forecast' ? 'checking the forecast'
+           : 'searching'}: ${q || 'latest race'}`);
+      renderSteps(); break;
+    }
+    case 'tool_result': {
+      const t = [...cur.tools].reverse().find(x => x.pending && x.name === m.name);
+      if (t) Object.assign(t, m, { pending: false });
+      // Only collect here. The reply bubble does not exist yet, and lastBotTurn
+      // still points at the PREVIOUS reply — attaching now put the sources on
+      // the wrong bubble. They go on once this turn's bubble exists.
+      cur.sources.push(...(m.meta?.items
+        || m.meta?.urls?.map(u => ({ url: u, title: '' }))
+        || (m.meta?.url ? [{ url: m.meta.url, title: '' }] : [])));
+      if (botTurn) renderSources(botTurn, cur.sources);
+      // Structured results get a card. It is drawn from the tool payload only,
+      // so nothing on it can be something the model made up.
+      if (m.ok && m.meta?.match) { cur.match = m.meta.match; renderMatch(m.meta.match); }
+      if (m.ok && m.meta?.currency) renderCurrency(m.meta.currency);
+      if (m.ok && m.meta?.f1) renderF1(m.meta.f1);
+      if (m.ok && m.meta?.weather) renderWeather(m.meta.weather);
+      renderSteps(); break;
+    }
+    case 'clause':
+      clearBusy();
+      clause(m.text);
+      cur.clauses.push({ text: m.text, at: m.at, ready: null });
+      renderSteps(); break;
+    case 'audio': {
+      const target = botTurn || lastBotTurn || (botTurn = newBotTurn());
+      target._clips.push(m);
+      enqueue(m.url, target);
+      refreshSay(target);
+      cur.clips.push(m);
+      const pend = cur.clauses.find(c => c.ready == null);
+      if (pend && cur.t0) pend.ready = +((Date.now() - cur.t0) / 1000).toFixed(2);
+      renderSteps(); break;
+    }
+    case 'done':
+      clearBusy(); cur.done = m;
+      renderSources(botTurn || lastBotTurn, cur.sources);
+      // The model sometimes says "according to the search results" when nothing
+      // was searched. The orchestrator knows better; show the truth.
+      if (m.unverified && lastBotTurn) {
+        const f = footOf(lastBotTurn);
+        if (!f.querySelector('.warnchip')) {
+          const w = document.createElement('span');
+          w.className = 'chip warnchip';
+          w.title = 'This reply cites a source, but no search was run this '
+            + 'turn. It came from the model’s training data and may be out of date.';
+          w.innerHTML = '<i data-lucide="triangle-alert" class="svg-ico"'
+            + ' style="width:12px;height:12px"></i>no search ran';
+          f.appendChild(w); icons();
+        }
+      }
+      meta(`first clause ${m.first_clause}s · complete ${m.total}s`
+        + (m.think_chars ? ` · ${m.think_chars} chars of reasoning` : '')
+        + (m.interrupted ? ' · interrupted' : ''), 'timer');
+      botTurn = null; renderSteps(); break;
+    case 'empty':
+      clearBusy(); cur.done = m;
+      sys(`No answer after ${m.total}s — ${m.reason}`);
+      botTurn = null; renderSteps(); break;
+    case 'state':
+      if (m.state === 'digesting')
+        showBusy('digesting', cur.sources.length
+          ? `${new Set(cur.sources.map(u => { try { return new URL(u).hostname; } catch { return u; } })).size} sources found`
+          : undefined);
+      else if (m.state === 'thinking') showBusy('sent');
+      else if (m.state === 'writing') showBusy('writing');
+      else if (m.state === 'transcribing') showBusy('transcribing');
+      else if (m.state === 'loading') showBusy('loading');
+      else if (m.state === 'idle' && !playing) clearBusy();
+      hint.textContent = m.state === 'thinking' ? 'Agent is generating…'
+        : m.state === 'writing' ? 'Composing the reply…'
+        : m.state === 'transcribing' ? 'Transcribing audio…'
+        : m.state === 'loading' ? 'Model is loading — the turn is queued, not lost.'
+        : 'Idle.';
+      break;
+    case 'llm_wait':
+      showBusy('loading', `${m.reason} — retry ${m.attempt} of ${m.of}, your turn is queued`);
+      hint.textContent = `${m.reason} — waiting (${m.attempt}/${m.of}).`;
+      break;
+    case 'system': sys(m.text); loadConfig(); break;
+    case 'error': meta(m.message, 'triangle-alert'); break;
+  }
+};
+
+// ---------- controls ----------
+document.getElementById('f').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const inp = document.getElementById('t'), text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  try {
+    const r = await fetch('/say', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+    if (!r.ok) meta('could not inject: ' + (await r.text()), 'triangle-alert');
+  } catch { meta('network error', 'triangle-alert'); }
+});
+document.getElementById('stop').addEventListener('click', async () => {
+  stopAudio();
+  try { await fetch('/clear', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); }
+  catch { meta('network error', 'triangle-alert'); }
+  botTurn = null;
+});
+
+// ---------- microphone ----------
+const micBtn = document.getElementById('mic'), micIcon = document.getElementById('micIcon'),
+      micLabel = document.getElementById('micLabel');
+const canMic = window.isSecureContext && navigator.mediaDevices?.getUserMedia;
+let rec = null, chunks = [], stream = null;
+function setMic(s) {
+  micBtn.classList.toggle('rec', s === 'recording');
+  micIcon.setAttribute('data-lucide', s === 'recording' ? 'square' : s === 'busy' ? 'loader' : 'mic');
+  micLabel.textContent = s === 'recording' ? 'Stop & send' : s === 'busy' ? 'Transcribing…' : 'Record';
+  micBtn.disabled = s === 'busy'; icons();
+}
+if (!canMic) {
+  micBtn.disabled = true;
+  micIcon.setAttribute('data-lucide', 'mic-off');
+  micLabel.textContent = 'Mic blocked';
+  micBtn.title = 'Browser mic needs https or localhost';
+  icons();
+  sys('Microphone needs https or localhost. Run: ssh -L 8090:localhost:8090 MITLAB-EDGE — then open http://localhost:8090');
+} else {
+  micBtn.addEventListener('click', async () => {
+    if (rec && rec.state === 'recording') { rec.stop(); return; }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+    } catch { meta('microphone permission denied', 'mic-off'); return; }
+    chunks = []; rec = new MediaRecorder(stream);
+    rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+    rec.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      setMic('busy');
+      try {
+        const blob = new Blob(chunks, { type: chunks[0]?.type || 'audio/webm' });
+        const r = await fetch('/audio', { method: 'POST', headers: { 'Content-Type': blob.type || 'application/octet-stream' }, body: blob });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) meta(j.error || 'upload failed', 'triangle-alert');
+        else if (!j.text) meta('nothing recognised in that clip', 'ear-off');
+      } catch { meta('network error sending audio', 'triangle-alert'); }
+      setMic('idle');
+    };
+    rec.start(); setMic('recording');
+  });
+}
+
+// ---------- model + config ----------
+const sel = document.getElementById('modelSel');
+let knownModels = { current: '', models: [] };
+async function loadModels() {
+  try {
+    const d = await (await fetch('/models')).json();
+    knownModels = d;
+    sel.innerHTML = '';
+    for (const m of d.models) {
+      const o = document.createElement('option');
+      o.value = m.path;
+      o.textContent = `${m.family}${m.quant ? ' · ' + m.quant : ''}${m.gib ? ' · ' + m.gib + ' GiB' : ''}`;
+      if (m.path === d.current) o.selected = true;
+      sel.appendChild(o);
+    }
+    if (!d.models.length) { sel.innerHTML = '<option>no models found</option>'; sel.disabled = true; }
+  } catch {}
+}
+// Measured on this board, so the modal can say what the switch will cost.
+const SPEED = {
+  'Gemma 4 E2B': '8.2 tok/s decode · 67 tok/s prefill',
+  'Gemma 4 E4B': '3.7 tok/s decode · 32 tok/s prefill',
+  'Qwen3 4B': '4.7 tok/s decode · 22 tok/s prefill',
+};
+const scrim = document.getElementById('scrim');
+let pendingSwitch = null;
+
+function card(kind, m) {
+  if (!m) return `<div class="card"><div class="lbl">${kind}</div><div class="nm">unknown</div></div>`;
+  return `<div class="card ${kind === 'to' ? 'to' : ''}">
+      <div class="lbl">${kind === 'to' ? 'switching to' : 'currently loaded'}</div>
+      <div class="nm">${esc(m.family)}</div>
+      <div class="sub">${esc(m.quant || 'n/a')}${m.gib ? ' · ' + m.gib + ' GiB' : ''}</div>
+    </div>`;
+}
+
+function askSwitch(path, models, currentPath) {
+  const to = models.find(m => m.path === path);
+  const from = models.find(m => m.path === currentPath);
+  pendingSwitch = path;
+  document.getElementById('mBody').innerHTML =
+    `<div class="swap">${card('from', from)}
+       <i data-lucide="arrow-right" class="svg-ico"></i>${card('to', to)}</div>`
+    + (to && SPEED[to.family] ? `<div class="sub" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px">measured here: ${esc(SPEED[to.family])}</div>` : '')
+    + `<div class="warn">This restarts <b>va-llm</b>. Loading
+       ${to && to.gib ? to.gib + ' GiB' : 'the weights'} off the SD card takes
+       roughly ${to && to.gib ? Math.ceil(to.gib * 8) : 30}s, during which the
+       model reports <b>loading</b>. Anything you say meanwhile is queued, not
+       lost. The choice is remembered for next session.</div>`;
+  scrim.hidden = false;
+  icons();
+  document.getElementById('mOk').focus();
+}
+
+function closeModal(revert) {
+  scrim.hidden = true;
+  pendingSwitch = null;
+  if (revert) loadModels();
+}
+
+document.getElementById('mCancel').addEventListener('click', () => closeModal(true));
+scrim.addEventListener('click', (e) => { if (e.target === scrim) closeModal(true); });
+document.addEventListener('keydown', (e) => {
+  if (scrim.hidden) return;
+  // Escape cancels. Enter deliberately does NOT confirm: Enter is the send key,
+  // so a stray press would commit a model switch and restart the engine.
+  if (e.key === 'Escape') closeModal(true);
+});
+
+document.getElementById('mOk').addEventListener('click', async () => {
+  const path = pendingSwitch;
+  closeModal(false);
+  if (!path) return;
+  sel.disabled = true;
+  showBusy('loading', 'switching model — restarting va-llm');
+  try {
+    const r = await fetch('/model', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path })
+    });
+    const j = await r.json();
+    if (!j.ok) { meta('model switch failed: ' + j.message, 'triangle-alert'); clearBusy(); }
+  } catch { meta('network error', 'triangle-alert'); clearBusy(); }
+  setTimeout(() => { sel.disabled = false; loadModels(); loadConfig(); }, 4000);
+});
+
+sel.addEventListener('change', () => {
+  if (sel.value === knownModels.current) return;
+  askSwitch(sel.value, knownModels.models, knownModels.current);
+});
+async function loadConfig() {
+  try { cfg = await (await fetch('/config')).json(); renderSteps(); } catch {}
+}
+
+// Option buttons are re-rendered constantly, so delegate rather than re-bind.
+stepsEl.addEventListener('click', async (e) => {
+  const b = e.target.closest('button.opt');
+  if (!b) return;
+  const { key, value } = b.dataset;
+  if (value === (key === 'mtp' ? cfg.mtp : cfg.reasoning)) return;
+  stepsEl.querySelectorAll('button.opt').forEach(x => x.disabled = true);
+  try {
+    const r = await fetch('/option', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value })
+    });
+    const j = await r.json();
+    if (!j.ok) meta(`${key} -> ${value} failed: ${j.message}`, 'triangle-alert');
+  } catch { meta('network error', 'triangle-alert'); }
+  setTimeout(() => { loadConfig(); }, 3500);
+});
+
+async function poll() {
+  try {
+    const s = await (await fetch('/status')).json();
+    const label = { 'va-asr': 'ears', 'va-llm': 'brain', 'va-tts': 'voice',
+                    'va-tools': 'tools', 'va-orchestrator': 'flow' };
+    pills.innerHTML = '';
+    for (const [unit, state] of Object.entries(s)) {
+      const cls = state === 'active' ? 'ok' : state === 'loading' ? 'warn' : 'bad';
+      const p = document.createElement('span');
+      p.className = 'svc ' + cls;
+      p.title = `${unit}: ${state}`;
+      p.innerHTML = `<span class="led"></span><span class="nm">${label[unit] || unit}</span>`;
+      pills.appendChild(p);
+    }
+  } catch {}
+}
+loadModels(); loadConfig(); renderSteps(); poll(); setInterval(poll, 5000);
+</script>
+</body>
+</html>

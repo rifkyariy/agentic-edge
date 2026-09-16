@@ -1,0 +1,22 @@
+[Unit]
+# Mouth. Consumes clause lines on VA_TTS_SOCK. Swap the engine by pointing
+# ExecStart at a different script that honours the same line protocol
+# (sanoTTS and inflect_v2 are lighter alternatives if piper starves the LLM).
+Description=Voice agent: TTS (piper)
+After=network.target
+
+[Service]
+User=mitlab
+Group=mitlab
+EnvironmentFile=/etc/voice-agent/config.env
+ExecStart=/usr/bin/python3 /opt/voice-agent/tts_service.py
+RuntimeDirectory=voice-agent
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+Restart=on-failure
+RestartSec=5
+# Audio underruns are audible, so TTS gets priority over ASR.
+Nice=-5
+
+[Install]
+WantedBy=multi-user.target

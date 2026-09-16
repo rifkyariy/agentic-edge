@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# This project's own backup archive of an earlier, unrelated project —
+# 1.9GB, never belongs in git history.
+picoagent-backup-*.tar.gz
+
+# Generated audio samples / scratch output, not source.
+*.wav
+
+# Local editor/session state
+.claude/

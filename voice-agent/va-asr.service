@@ -1,0 +1,21 @@
+[Unit]
+# Ears. Publishes transcript lines on VA_ASR_SOCK. Swap the engine by pointing
+# ExecStart at a different script that honours the same line protocol.
+Description=Voice agent: ASR (whisper.cpp)
+After=network.target
+
+[Service]
+User=mitlab
+Group=mitlab
+EnvironmentFile=/etc/voice-agent/config.env
+ExecStart=/usr/bin/python3 /opt/voice-agent/asr_service.py
+RuntimeDirectory=voice-agent
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+Restart=on-failure
+RestartSec=5
+# Leave the LLM its cores; ASR is latency-tolerant, decode is not.
+Nice=5
+
+[Install]
+WantedBy=multi-user.target
