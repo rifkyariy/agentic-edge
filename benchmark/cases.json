@@ -1,0 +1,62 @@
+[
+  {
+    "id": "knowledge-capital",
+    "category": "knowledge",
+    "prompt": "What is the capital of Indonesia? Answer with just the city name.",
+    "expected_substring": "Jakarta"
+  },
+  {
+    "id": "knowledge-socket",
+    "category": "knowledge",
+    "prompt": "Explain in one or two sentences what a Unix domain socket is."
+  },
+  {
+    "id": "thinking-arithmetic",
+    "category": "thinking",
+    "prompt": "You buy seven pens at three dollars each and pay with a fifty dollar bill. How much change do you get? Reply with just the number.",
+    "expected_substring": "29",
+    "notes": "The exact case from gemma4-pi5-benchmarks.md: thinking off answered 25 (wrong), thinking on answered 29 (correct)."
+  },
+  {
+    "id": "creative-poem",
+    "category": "creative",
+    "prompt": "Write a short four-line poem about the rain.",
+    "notes": "No correctness check — this measures latency and, on manual review, whether a tool was wrongly triggered for something with nothing to look up."
+  },
+  {
+    "id": "weather-now",
+    "category": "weather",
+    "prompt": "What's the weather in Taipei right now?",
+    "expected_tool": "weather_forecast"
+  },
+  {
+    "id": "currency-convert",
+    "category": "currency",
+    "prompt": "Convert 5000 Taiwan dollars to Indonesian rupiah.",
+    "expected_tool": "currency_rate"
+  },
+  {
+    "id": "football-result",
+    "category": "match_result",
+    "prompt": "What was the result of Real Madrid's latest match?",
+    "expected_tool": "match_result"
+  },
+  {
+    "id": "football-fixture",
+    "category": "fixture",
+    "prompt": "When is Chelsea's next match?",
+    "expected_tool": "match_result"
+  },
+  {
+    "id": "f1-result",
+    "category": "race_result",
+    "prompt": "Who won the last Formula 1 race?",
+    "expected_tool": "f1_result"
+  },
+  {
+    "id": "news-current",
+    "category": "news",
+    "prompt": "What is the latest news about interest rate decisions this month?",
+    "expected_tool": "web_search"
+  }
+]

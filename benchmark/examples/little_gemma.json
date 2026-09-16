@@ -1,0 +1,12 @@
+{
+  "device": "raspi5",
+  "engine": "little_gemma",
+  "binary": "/home/mitlab/little-gemma/lg",
+  "model": { "name": "gemma4-e2b", "quant": "Q4_K_XL" },
+  "cuda": false,
+  "mtp": false,
+  "thinking": false,
+  "repeat": 3,
+  "timeout_s": 180,
+  "_note": "No server, no tool calling, no thinking flag — little-gemma is CLI-only. mtp/thinking stay false; this is the architecture-level floor everything else is measured against."
+}

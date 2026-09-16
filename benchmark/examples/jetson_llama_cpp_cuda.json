@@ -1,0 +1,13 @@
+{
+  "device": "jetson-orin-nano",
+  "engine": "llama_cpp",
+  "endpoint": "http://127.0.0.1:8080/v1/chat/completions",
+  "model": { "name": "gemma4-e4b", "quant": "Q4_K_XL",
+             "path": "/home/jetson/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf" },
+  "cuda": true,
+  "mtp": false,
+  "thinking": false,
+  "repeat": 3,
+  "timeout_s": 180,
+  "_note": "Same case suite, same model/quant as examples/llama_cpp.json on the Pi — only device and cuda differ. Diff the two rows in report.py's output for the CUDA-vs-no-CUDA comparison (f)."
+}
