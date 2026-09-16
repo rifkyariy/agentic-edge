@@ -1,0 +1,8 @@
+{
+  "condition": "E-mtp",
+  "label": "proposed orchestrator [MTP]",
+  "engine": "proposed",
+  "offer_tools": true,
+  "mtp": true,
+  "thinking": false
+}

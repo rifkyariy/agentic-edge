@@ -9,11 +9,29 @@ JSON result file per run.
 repo, copy an example config, point it at that device's model/engine, run.
 
 ```bash
-git clone <this repo>
-cd benchmark
-python3 run_benchmark.py examples/llama_cpp.json     # or litert_lm / little_gemma / proposed
-python3 report.py                                     # comparison table across every result so far
+git clone <this repo> && cd benchmark
+$EDITOR devices/pi5.json          # once per box: paths, endpoints, cuda, models
+./sweep.sh tier1 devices/pi5.json  # 10 runs: 5 architectures x 2 models
+python3 report.py t1               # the headline table
 ```
+
+Config is **two layers**, so nothing is ever duplicated:
+
+| layer | holds | written |
+|---|---|---|
+| `devices/<box>.json` | model paths, endpoints, binaries, `cuda`, power mode | **once per device** |
+| `conditions/<X>.json` | engine, `offer_tools`, `mtp`, `thinking` | once, shared by every device |
+
+A run is one of each plus a model key:
+
+```bash
+python3 run_benchmark.py --device devices/pi5.json \
+                        --condition conditions/E.json --model e4b
+```
+
+New device = one new file. New condition = one new file, applies everywhere.
+Moving the study to another box is `git pull` plus a device file — no code
+edits, no per-run config duplication.
 
 **The protocol** — what to build first, what to run in what order on which
 device, and what each table proves — is in
@@ -39,9 +57,27 @@ device, and what each table proves — is in
 | `little_gemma` | bare CLI (`lg "<prompt>"`), no server | not supported — always the floor case | none |
 | `proposed` | this repo's own [`voice-agent`](../voice-agent/), full pipeline | **toggled live** via `POST /option` before the run starts (`configure_proposed()` in `adapters.py`) — no manual step | intent classification + `match_result`/`f1_result`/`currency_rate`/`weather_forecast`/`web_search` |
 
-Config schema per engine is documented inline in `examples/*.json` — copy the
-one matching your architecture and edit `device`, `model`, and the
-engine-specific field (`endpoint`, `binary`, or `proposed_url`).
+## Conditions
+
+| cond | architecture | tools offered | orchestration |
+|---|---|---|---|
+| `A` | little-gemma | none | none — the floor. Auto-labelled `A-cpu` / `A-cuda` by the device's `cuda` flag, because little-gemma is C/CUDA by design and a GPU row is not the same condition as a CPU one. |
+| `B` | llama.cpp | none | none |
+| `C` | LiteRT-LM | none | none |
+| `D` | llama.cpp | **yes**, `tool_choice: auto` | none — the model decides alone |
+| `E` | **proposed** | yes | classify → pin → orchestrator-side fallback execution |
+| `B-mtp`, `E-think`, … | as above | | with MTP and/or thinking on (Tier 2) |
+
+**D vs E is the claim.** A/B/C have no tool access at all, so beating them
+proves only that a system with internet access beats one without. D is the
+same engine with the same schemas offered naively — the thing the
+orchestration layer has to actually improve on.
+
+Unsupported combinations skip themselves and **record why**
+(`little_gemma` + `mtp` → "no speculative-decoding flag"), so an `n/a` cell
+in the report has a reason attached instead of being a mysteriously missing
+row. LiteRT-LM's MTP support is marked *unverified* rather than
+false — confirm on the box before claiming a number either way.
 
 ## Test cases (`cases.json`)
 
@@ -65,11 +101,17 @@ open-ended answers is out of scope here).
 ## Running
 
 ```bash
-python3 run_benchmark.py examples/llama_cpp.json          # config's own "repeat"
-python3 run_benchmark.py examples/llama_cpp.json --repeat 5
-python3 run_benchmark.py examples/llama_cpp.json --cases my_cases.json
-python3 run_benchmark.py examples/llama_cpp.json --out my_run.json
+./sweep.sh tier1 devices/pi5.json     # 5 conditions x 2 models, full case suite
+./sweep.sh tier2 devices/jetson.json  # MTP x thinking, conditions B and E only
+./sweep.sh tier3 devices/pi5.json     # quant sweep
+./sweep.sh all   devices/pi5.json
+COOLDOWN=60 ./sweep.sh tier1 devices/pi5.json   # longer gap between runs
 ```
+
+Tiers 2 and 3 use reduced case files (`cases_t2.json`, `cases_t3.json`) —
+that is most of the wall-clock saving, and neither tier needs all five tool
+categories to make its point. `sweep.sh` continues past a failed run rather
+than aborting the tier, since the gap is visible in the report anyway.
 
 Each run writes one file to `results/<timestamp>-<tag>.json`: the config
 used, host/Python version, best-effort GPU info (`nvidia-smi`, null when
@@ -80,17 +122,38 @@ code change produces a second data point rather than replacing the first.
 ## Comparing
 
 ```bash
-python3 report.py                 # reads ./results
-python3 report.py path/to/other   # reads any directory of result JSON files
+python3 report.py          # all four tables
+python3 report.py t1       # architecture comparison — the headline
+python3 report.py t2       # MTP x thinking x CUDA
+python3 report.py t3       # quant sweep
+python3 report.py t4       # per-category classifier behaviour
+python3 report.py t1 --results path/to/other
 ```
 
-One markdown table, one row per run, every axis from the table above as a
-column plus avg total time, avg tokens/sec, tool-call accuracy, and answer
-accuracy. Copy straight into a doc or PR description.
+Three objective metrics, no live ground truth required:
 
-For (e) specifically: run `examples/llama_cpp.json` unmodified on the Pi,
-then `examples/jetson_llama_cpp_cuda.json` (same model, same quant, only
-`device` and `cuda` differ) on the Jetson, and diff those two rows.
+- **tool selection** — did it call the right tool
+- **fabrication** — answered a live-data question with a substantive claim
+  and *no* tool call. Bare engines should be ~100%, `proposed` ~0%. This is
+  the metric that carries the reliability argument without needing to know
+  what the weather actually was at run time. Refusals and hedges do not
+  count as fabrication: declining is correct behaviour for a model that
+  cannot look anything up.
+- **static answers** — the fixed-ground-truth cases (Jakarta, the arithmetic
+  29), which is where thinking mode's value shows up
+
+Latency is **warm median with cold reported separately**, never a mean across
+repeats: turn 1 is ~1.7–2.2× slower than turn 2 from system-prompt prefill
+caching (measured again during development: 80.5s cold vs 47.6s warm), so a
+mean over `repeat: 4` describes neither state. For `proposed`, `model time`
+excludes tool network I/O (Sofascore/Open-Meteo round trips), which is not
+the architecture's cost and varies with the internet.
+
+For (e) specifically: the same `conditions/B.json` and `--model e4b` on both
+`devices/pi5.json` and `devices/jetson.json` — identical condition, identical
+model and quant, only the device file differs. Then diff those two rows in
+`report.py t2`. The `A-cpu` vs `A-cuda` pair is the sharper version of the
+same comparison, since little-gemma is the one engine designed around CUDA.
 
 ## Honest limitations
 

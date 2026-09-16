@@ -1,0 +1,9 @@
+{
+  "condition": "A",
+  "label": "little-gemma (bare)",
+  "engine": "little_gemma",
+  "offer_tools": false,
+  "mtp": false,
+  "thinking": false,
+  "_note": "The floor: no server, no tools, no thinking. On a CUDA device the harness labels this A-cuda, because little-gemma is C/CUDA by design and a GPU row is not the same condition as a CPU one."
+}

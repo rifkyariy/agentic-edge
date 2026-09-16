@@ -1,0 +1,8 @@
+{
+  "condition": "E-think",
+  "label": "proposed orchestrator [thinking]",
+  "engine": "proposed",
+  "offer_tools": true,
+  "mtp": false,
+  "thinking": true
+}

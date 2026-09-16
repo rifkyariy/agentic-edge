@@ -1,0 +1,25 @@
+{
+  "device": "jetson-orin-nano",
+  "cuda": true,
+  "hardware": "Jetson Orin Nano Super 8GB, 1024-core Ampere GPU",
+  "power_mode": "SET THIS — nvpmodel -q, e.g. 25W. A 15W run is not the same experiment.",
+  "proposed_url": "http://127.0.0.1:8090",
+  "endpoints": {
+    "llama_cpp": "http://127.0.0.1:8080/v1/chat/completions",
+    "litert_lm": "http://127.0.0.1:9379/v1/chat/completions"
+  },
+  "binaries": {
+    "little_gemma": "/home/jetson/little-gemma/lg"
+  },
+  "models": {
+    "e2b": {
+      "name": "gemma4-e2b", "quant": "Q4_K_XL",
+      "path": "/home/jetson/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf"
+    },
+    "e4b": {
+      "name": "gemma4-e4b", "quant": "Q4_K_XL",
+      "path": "/home/jetson/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf"
+    }
+  },
+  "_note": "Fill in the real paths and power mode on the box, commit, done. little_gemma here is the CUDA build — the harness labels it A-cuda so it is never conflated with the Pi's CPU rows."
+}

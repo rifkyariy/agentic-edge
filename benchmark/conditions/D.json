@@ -1,0 +1,9 @@
+{
+  "condition": "D",
+  "label": "llama.cpp + naive function calling",
+  "engine": "llama_cpp",
+  "offer_tools": true,
+  "mtp": false,
+  "thinking": false,
+  "_note": "The same engine as B with tool_schemas.json offered and tool_choice auto — the model alone decides whether and what to call. This is what everyone else does, and the condition E has to beat for the study to mean anything."
+}

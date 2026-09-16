@@ -10,6 +10,7 @@
 #   ./deploy.sh asr tts web     deploy + restart just those targets
 #   ./deploy.sh units           push systemd/*.service, then daemon-reload
 #                                (does NOT enable or restart anything)
+#   DEPLOY_HOST=jetson ./deploy.sh   deploy to a different box entirely
 #   ./deploy.sh config          push config/config.env -> /etc/voice-agent/
 #                                (does NOT restart anything: every service
 #                                reads this file, and runtime.env holds the
@@ -21,7 +22,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-HOST=MITLAB-EDGE
+# Override for a second device: DEPLOY_HOST=jetson ./deploy.sh
+# (condition E in the benchmark needs this stack on every device under test)
+HOST="${DEPLOY_HOST:-MITLAB-EDGE}"
 OPT=/opt/voice-agent
 ETC=/etc/voice-agent
 CODE_TARGETS="asr tts tools orchestrator web ui prompt"

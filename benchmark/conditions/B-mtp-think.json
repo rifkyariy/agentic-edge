@@ -1,0 +1,8 @@
+{
+  "condition": "B-mtp-think",
+  "label": "llama.cpp (bare) [MTP, thinking]",
+  "engine": "llama_cpp",
+  "offer_tools": false,
+  "mtp": true,
+  "thinking": true
+}

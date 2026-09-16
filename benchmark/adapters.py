@@ -14,6 +14,7 @@ place that has to know the difference. Stdlib only: no pip install needed to
 clone this repo and run it on a fresh device.
 """
 import json
+import os
 import queue
 import re
 import subprocess
@@ -28,13 +29,34 @@ def _now():
 
 
 # ---------------------------------------------------------------- llama.cpp / LiteRT-LM
+_SCHEMAS = None
+
+
+def tool_schemas():
+    """The same six schemas va-tools offers, dumped to a file so condition D
+    can offer them on a device where va-tools is not running at all."""
+    global _SCHEMAS
+    if _SCHEMAS is None:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "tool_schemas.json")
+        with open(path) as f:
+            _SCHEMAS = json.load(f)
+    return _SCHEMAS
+
+
 def run_openai_compat(cfg, case):
-    """llama.cpp and LiteRT-LM both speak /v1/chat/completions. MTP and
-    thinking are server-launch flags for these two (`--spec-type draft-mtp`,
-    `-rea on`), not per-request fields — cfg["mtp"]/cfg["thinking"] here are
-    just labels for the report, so make sure the server behind cfg["endpoint"]
-    was actually started that way. ("proposed" is the one engine that can
-    toggle these live — see configure_proposed() below.)
+    """llama.cpp and LiteRT-LM both speak /v1/chat/completions.
+
+    cfg["offer_tools"] is the B-vs-D switch: false sends a bare messages
+    array (no tool access at all), true offers the full schema set with
+    tool_choice "auto" and lets the model decide alone — naive function
+    calling, the thing condition E has to beat.
+
+    MTP and thinking are server-LAUNCH flags for these two engines
+    (`--spec-type draft-mtp`, `-rea on`), not per-request fields, so
+    cfg["mtp"]/cfg["thinking"] are labels here. Launch the server with
+    serve_llama_cpp.sh, which reads the same config, rather than by hand —
+    a mismatch silently mislabels the row.
     """
     body = {
         "model": cfg.get("model", {}).get("name", "local"),
@@ -43,6 +65,9 @@ def run_openai_compat(cfg, case):
         "temperature": 0,
         "max_tokens": cfg.get("max_tokens", 500),
     }
+    if cfg.get("offer_tools"):
+        body["tools"] = tool_schemas()
+        body["tool_choice"] = "auto"
     data = json.dumps(body).encode()
     req = urllib.request.Request(cfg["endpoint"], data=data,
                                   headers={"Content-Type": "application/json"})
@@ -96,8 +121,9 @@ def run_little_gemma(cfg, case):
     timing lines. No server, no tool calling, no thinking flag — the plainest
     possible adapter, and the baseline everything else is measured against."""
     t0 = _now()
+    argv = [cfg["binary"]] + list(cfg.get("binary_args") or []) + [case["prompt"]]
     try:
-        r = subprocess.run([cfg["binary"], case["prompt"]], capture_output=True,
+        r = subprocess.run(argv, capture_output=True,
                            text=True, timeout=cfg.get("timeout_s", 180))
     except (OSError, subprocess.TimeoutExpired) as e:
         return {"ok": False, "error": str(e), "total_s": _now() - t0}
@@ -188,6 +214,7 @@ def run_proposed(cfg, case):
         return {"ok": False, "error": str(e), "total_s": _now() - t0}
 
     first_clause, intent, category, tools_used, done = None, None, None, [], None
+    tool_time = 0.0
     deadline = t0 + cfg.get("timeout_s", 180)
     while True:
         remaining = deadline - _now()
@@ -206,6 +233,11 @@ def run_proposed(cfg, case):
             intent, category = ev.get("intent"), ev.get("category")
         elif t == "tool_call":
             tools_used.append(ev.get("name"))
+        elif t == "tool_result":
+            # Sofascore/Open-Meteo round-trip time. Not the architecture's
+            # cost and it varies with the internet, so it is recorded
+            # separately and subtracted to get model_time.
+            tool_time += ev.get("took") or 0.0
         elif t == "clause" and first_clause is None:
             first_clause = ev.get("at")
         elif t in ("done", "empty"):
@@ -217,11 +249,14 @@ def run_proposed(cfg, case):
         return {"ok": False, "error": "timed out waiting for done/empty",
                 "total_s": total, "intent": intent, "category": category,
                 "tool_called": tools_used[0] if tools_used else None,
-                "tools_all": tools_used}
+                "tools_all": tools_used, "tool_time_s": round(tool_time, 3)}
     ok = bool(done.get("reply"))
+    total_s = done.get("total", total)
     return {
         "ok": ok, "text": done.get("reply", ""), "ttft_s": first_clause,
-        "total_s": done.get("total", total),
+        "total_s": total_s,
+        "tool_time_s": round(tool_time, 3),
+        "model_time_s": round(total_s - tool_time, 3) if total_s else None,
         "prompt_tokens": None, "completion_tokens": None, "tokens_per_s": None,
         "thinking_chars": done.get("think_chars"),
         "tool_called": tools_used[0] if tools_used else None,
@@ -237,3 +272,49 @@ ENGINES = {
     "little_gemma": run_little_gemma,
     "proposed": run_proposed,
 }
+
+# What each engine can actually do. An unsupported toggle is not a failure to
+# hide — it is an "n/a" cell that needs a reason attached, so the writeup can
+# say why rather than showing a mysteriously missing row.
+CAPABILITIES = {
+    "llama_cpp": {
+        "offer_tools": True, "mtp": True, "thinking": True,
+        "live_toggle": False,
+    },
+    "litert_lm": {
+        "offer_tools": True, "mtp": None, "thinking": True,
+        "live_toggle": False,
+        "unknown": {"mtp": "LiteRT-LM speculative-decoding support on this "
+                           "board is unverified — confirm before claiming a "
+                           "number either way"},
+    },
+    "little_gemma": {
+        "offer_tools": False, "mtp": False, "thinking": False,
+        "live_toggle": False,
+        "why": {"offer_tools": "CLI inference binary, no function-calling "
+                               "interface at all",
+                "mtp": "no speculative-decoding flag",
+                "thinking": "no reasoning-channel flag"},
+    },
+    "proposed": {
+        "offer_tools": True, "mtp": True, "thinking": True,
+        "live_toggle": True,
+    },
+}
+
+
+def unsupported(engine, cfg):
+    """[(toggle, reason)] for every requested toggle this engine cannot do."""
+    caps = CAPABILITIES.get(engine, {})
+    out = []
+    for toggle in ("offer_tools", "mtp", "thinking"):
+        if not cfg.get(toggle):
+            continue
+        supported = caps.get(toggle)
+        if supported is False:
+            out.append((toggle, (caps.get("why") or {}).get(
+                toggle, f"{engine} does not support {toggle}")))
+        elif supported is None:
+            out.append((toggle, (caps.get("unknown") or {}).get(
+                toggle, f"{engine} {toggle} support unverified")))
+    return out

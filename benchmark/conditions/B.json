@@ -1,0 +1,8 @@
+{
+  "condition": "B",
+  "label": "llama.cpp (bare)",
+  "engine": "llama_cpp",
+  "offer_tools": false,
+  "mtp": false,
+  "thinking": false
+}

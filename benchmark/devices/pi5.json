@@ -1,0 +1,37 @@
+{
+  "device": "raspi5",
+  "cuda": false,
+  "hardware": "Raspberry Pi 5, 8GB, 4x Cortex-A76, no GPU",
+  "power_mode": "stock, active cooler",
+  "proposed_url": "http://127.0.0.1:8090",
+  "endpoints": {
+    "llama_cpp": "http://127.0.0.1:8080/v1/chat/completions",
+    "litert_lm": "http://127.0.0.1:9379/v1/chat/completions"
+  },
+  "binaries": {
+    "little_gemma": "/home/mitlab/little-gemma/lg"
+  },
+  "models": {
+    "e2b": {
+      "name": "gemma4-e2b", "quant": "Q4_K_XL",
+      "path": "/home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf"
+    },
+    "e4b": {
+      "name": "gemma4-e4b", "quant": "Q4_K_XL",
+      "path": "/home/mitlab/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf"
+    },
+    "e4b-q4km": {
+      "name": "gemma4-e4b", "quant": "Q4_K_M",
+      "path": "/home/mitlab/models/gemma-4-E4B-it-Q4_K_M.gguf"
+    },
+    "e4b-q5km": {
+      "name": "gemma4-e4b", "quant": "Q5_K_M",
+      "path": "/home/mitlab/models/gemma-4-E4B-it-Q5_K_M.gguf"
+    },
+    "e4b-q8": {
+      "name": "gemma4-e4b", "quant": "Q8_0",
+      "path": "/home/mitlab/models/gemma-4-E4B-it-Q8_0.gguf"
+    }
+  },
+  "_note": "Written once for this box. Nothing here is experiment-specific — conditions/ holds that. Tier-3 quant entries only need to exist on whichever device runs the sweep."
+}

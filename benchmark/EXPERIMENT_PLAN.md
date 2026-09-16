@@ -18,14 +18,19 @@ the identical model and draft head.
 
 ## Phase 0 — Prerequisites
 
-### 0.1 Harness changes (must land before any real run)
+### 0.1 Harness changes — **DONE**
+
+All eight landed and were verified against the live Pi (condition E, real
+tool call, `tool_selection 100%`, `fabrication 0%`, `tool_time 1.0s` split
+out of `model_time 46.5s`, cold 80.5s vs warm 47.6s). Kept here as the record
+of what changed and why.
 
 | # | change | file | why |
 |---|---|---|---|
 | 1 | `offer_tools` config flag → include tool schemas + `tool_choice: auto` in the request | `adapters.py` (`run_openai_compat`) | Condition D does not exist yet. Without it the headline comparison is "system with internet vs system without", which proves nothing. |
 | 2 | Static `tool_schemas.json`, dumped once from `va-tools` | new file | Condition D must offer *the same* schemas on the Jetson, where `va-tools` may not be running. Generate with `{"op":"list"}` over the tools socket on the Pi, commit the result. |
 | 3 | `fabricated` per-case metric | `run_benchmark.py` | The metric that carries the argument without needing live ground truth. `fabricated = (case has expected_tool) AND (no tool called) AND (answer is substantive, i.e. not a refusal/hedge)`. Needs a small `REFUSAL` regex — reuse the shape of `PROMISE` in `orchestrator.py`. |
-| 4 | `condition` label in config (`"A"`…`"E"`) | `examples/*.json` | Tables group by condition. Inferring it from `engine` + flags breaks the moment two conditions share an engine (B and D both use llama.cpp). |
+| 4 | `condition` label in config (`"A"`…`"E"`) | `conditions/*.json` | Tables group by condition. Inferring it from `engine` + flags breaks the moment two conditions share an engine (B and D both use llama.cpp). |
 | 5 | Median + cold/warm split | `run_benchmark.py` summary, `report.py` | `mean` over `repeat: 3` averages one cold and two warm turns and describes neither — this project's own README documents turn 1 being ~2.2× slower from system-prompt prefill caching. Report `cold` (repeat 0) and `median_warm` (repeats 1+) separately. Default `repeat: 4` → n=3 warm. |
 | 6 | Capture per-tool `took` and subtract it | `adapters.py` (`run_proposed`) | `proposed`'s total includes network I/O to Sofascore/Open-Meteo, which is not the architecture's cost and varies with the internet. The `tool_result` event already carries `took`; record it so `model_time = total − tool_time` can be reported. Without this, network variance dominates the comparison and the result is not defensible. |
 | 7 | `report.py` subcommands `t1 t2 t3 t4` | `report.py` | Four different tables, four different groupings. One flat table cannot serve all of them. |
@@ -82,22 +87,26 @@ Fixed quant (`Q4_K_XL` QAT), MTP off, thinking off, `repeat: 4`, all 10 cases.
 
 5 conditions × 2 models × 2 devices = **20 runs**.
 
-Order of execution — group by device, then by model, to avoid reloading
-weights more than necessary:
+One command per device — `sweep.sh` groups by model then condition so
+weights are not reloaded more than necessary:
 
 ```bash
-# on the Pi, E2B first (smaller, faster feedback if something is wrong)
-python3 run_benchmark.py configs/pi-e2b-A.json
-python3 run_benchmark.py configs/pi-e2b-B.json
-python3 run_benchmark.py configs/pi-e2b-C.json
-python3 run_benchmark.py configs/pi-e2b-D.json
-python3 run_benchmark.py configs/pi-e2b-E.json
-# then E4B, same five; then repeat the ten on the Jetson
+./sweep.sh tier1 devices/pi5.json      # on the Pi
+./sweep.sh tier1 devices/jetson.json   # on the Jetson
 ```
 
-**Run A-E2B-Pi first and read the result file by hand before queueing the
-rest.** If `fabricated` is not ~1.0 for condition A on the tool cases, the
-metric is wrong and every later run is wasted.
+**Before queueing the whole tier, run condition A alone and read the result
+file by hand:**
+
+```bash
+python3 run_benchmark.py --device devices/pi5.json \
+                        --condition conditions/A.json --model e2b
+```
+
+If `fabrication.pct` is not ~100 for a no-tools engine on the tool-requiring
+cases, the metric is wrong and all 55 later runs are wasted. (Condition E was
+already verified to give 0% on the same metric, so both ends of the scale
+have a known-good reference.)
 
 ---
 
@@ -108,11 +117,18 @@ actually support both toggles. `cases_t2.json`, `repeat: 4`.
 
 2 devices × 2 models × 2 MTP × 2 thinking × 2 conditions = **32 runs**.
 
+```bash
+./sweep.sh tier2 devices/pi5.json
+./sweep.sh tier2 devices/jetson.json
+```
+
 For condition E the harness flips the toggles itself (`configure_proposed()`
 → `POST /option` → waits for `va-llm`). For condition B **the server must be
 relaunched with matching flags** (`--spec-type draft-mtp …`, `-rea on`) —
 the config field is only a label, and a mismatch silently mislabels the row.
-Script the relaunch; do not do it by hand 16 times.
+This is the one remaining manual step: write a `serve_llama_cpp.sh` that
+reads the same device+condition JSON so the server and the harness cannot
+disagree, rather than relaunching by hand 16 times.
 
 **The cell to look at:** Jetson × E4B × MTP on/off. Pi already measured 1.7×
 *slower* with MTP at 100% draft acceptance. If it wins on the Jetson with the
@@ -185,8 +201,10 @@ everywhere would roughly double it for no additional claim.
 
 ## Definition of done
 
-- [ ] All eight Phase-0 changes landed, condition A verified to produce
-      `fabricated ≈ 1.0` on tool cases
+- [x] All eight Phase-0 changes landed
+- [ ] Condition A verified to produce `fabrication ≈ 100%` on tool cases
+- [ ] `serve_llama_cpp.sh` so condition B's MTP/thinking labels cannot
+      disagree with how the server was launched
 - [ ] 20 Tier-1 runs complete on both devices (or Pi-complete + documented
       Jetson gap)
 - [ ] 32 Tier-2 runs complete, MTP sign compared across devices

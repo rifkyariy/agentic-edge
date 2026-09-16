@@ -1,0 +1,139 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "web_search",
+      "description": "Search the web for current or recent information. Use this whenever the answer depends on events, prices, versions or anything that may have changed since training, or when you are not confident. Returns short result snippets.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "the search terms"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "match_result",
+      "description": "Get a football (soccer) match's result OR its next fixture. Use this instead of web_search for ANY question about a football score, result, or upcoming match \u2014 search snippets do not contain scores or reliable schedules. Works with two teams or with one club. Set when=\"past\" (default) for a score/result question ('latest result', 'what happened in...'); set when=\"next\" for a schedule question ('next match', 'when do they play', 'this week', 'upcoming'). Both are resolved against today's date, so neither needs a date from you.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "two teams ('Roma vs Torino') or one club ('Real Madrid')"
+          },
+          "when": {
+            "type": "string",
+            "enum": [
+              "past",
+              "next"
+            ],
+            "description": "\"past\" for the most recent played match (default), \"next\" for the next upcoming fixture"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "f1_result",
+      "description": "Formula 1 race classification: podium, full finishing order, gaps, points, grid, fastest lap and retirements. Use for any question about an F1 race, grand prix result, or who won. Defaults to the most recent race.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "race": {
+            "type": "string",
+            "description": "optional grand prix, circuit or country, e.g. 'Monaco'. Omit for the latest race."
+          },
+          "season": {
+            "type": "string",
+            "description": "optional year, e.g. 2025. Omit for the current season."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "currency_rate",
+      "description": "Current exchange rate between two currencies, with recent history. Use for any question about exchange rates or converting money, e.g. 'IDR to TWD' or '5000 NTD to IDR'. Everyday abbreviations are accepted and normalised: NTD means TWD, RMB means CNY, Rp means IDR.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "3-letter code, e.g. IDR"
+          },
+          "to": {
+            "type": "string",
+            "description": "3-letter code, e.g. TWD"
+          },
+          "amount": {
+            "type": "number",
+            "description": "optional amount to convert"
+          },
+          "period": {
+            "type": "string",
+            "description": "history window: 1w, 1m, 3m, 6m or 1y"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "weather_forecast",
+      "description": "Current weather and the next few hours for a place. Use this instead of web_search for ANY question about weather, temperature or forecast \u2014 it returns real measurements, and your own memory of the weather is always stale.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "place": {
+            "type": "string",
+            "description": "city or place name, e.g. 'Taipei'"
+          }
+        },
+        "required": [
+          "place"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "fetch_page",
+      "description": "Fetch one web page and return its readable text. Use only after web_search, on a URL it returned, and only when the snippet was not enough.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "the http(s) URL to read"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      }
+    }
+  }
+]

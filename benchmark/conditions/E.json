@@ -1,0 +1,9 @@
+{
+  "condition": "E",
+  "label": "proposed orchestrator",
+  "engine": "proposed",
+  "offer_tools": true,
+  "mtp": false,
+  "thinking": false,
+  "_note": "Tools are inherent here (classify -> pin -> fallback-execute), so offer_tools is descriptive rather than a switch. mtp/thinking ARE live-toggled by the harness for this engine."
+}

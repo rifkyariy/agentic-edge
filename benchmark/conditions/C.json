@@ -1,0 +1,8 @@
+{
+  "condition": "C",
+  "label": "LiteRT-LM (bare)",
+  "engine": "litert_lm",
+  "offer_tools": false,
+  "mtp": false,
+  "thinking": false
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "knowledge-capital",
+    "category": "knowledge",
+    "prompt": "What is the capital of Indonesia? Answer with just the city name.",
+    "expected_substring": "Jakarta"
+  },
+  {
+    "id": "thinking-arithmetic",
+    "category": "thinking",
+    "prompt": "You buy seven pens at three dollars each and pay with a fifty dollar bill. How much change do you get? Reply with just the number.",
+    "expected_substring": "29",
+    "notes": "The exact case from gemma4-pi5-benchmarks.md: thinking off answered 25 (wrong), thinking on answered 29 (correct)."
+  },
+  {
+    "id": "weather-now",
+    "category": "weather",
+    "prompt": "What's the weather in Taipei right now?",
+    "expected_tool": "weather_forecast"
+  },
+  {
+    "id": "knowledge-socket",
+    "category": "knowledge",
+    "prompt": "Explain in one or two sentences what a Unix domain socket is."
+  }
+]
