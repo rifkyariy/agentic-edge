@@ -15,6 +15,10 @@ python3 run_benchmark.py examples/llama_cpp.json     # or litert_lm / little_gem
 python3 report.py                                     # comparison table across every result so far
 ```
 
+**The protocol** — what to build first, what to run in what order on which
+device, and what each table proves — is in
+[EXPERIMENT_PLAN.md](EXPERIMENT_PLAN.md).
+
 ## What this answers
 
 | # | question | how |
