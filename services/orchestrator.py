@@ -792,6 +792,9 @@ def main():
         if reply:
             history += [{"role": "user", "content": text},
                         {"role": "assistant", "content": reply}]
+            # Trim here: history[-0:] is the whole list, so HISTORY_TURNS=0
+            # (the benchmark's single-turn mode) would otherwise keep everything.
+            history = history[-2 * HISTORY_TURNS:] if HISTORY_TURNS > 0 else []
             log(f"orchestrator: first clause at {first:.2f}s, "
                 f"reply complete at {time.time() - t0:.2f}s")
             publish("done", first_clause=round(first, 2),
