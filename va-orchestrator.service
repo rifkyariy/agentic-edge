@@ -1,0 +1,20 @@
+[Unit]
+# The flow. The only component that knows about all three others.
+Description=Voice agent: orchestrator
+After=va-asr.service va-tts.service va-llm.service va-tools.service
+Wants=va-asr.service va-tts.service va-llm.service va-tools.service
+
+[Service]
+User=mitlab
+Group=mitlab
+EnvironmentFile=/etc/voice-agent/config.env
+EnvironmentFile=-/etc/voice-agent/runtime.env
+ExecStart=/usr/bin/python3 /opt/voice-agent/orchestrator.py
+RuntimeDirectory=voice-agent
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,20 @@
+[Unit]
+# Web UI. An observer plus an utterance injector — it uses the same sockets as
+# everything else, so removing it changes nothing about how the agent runs.
+Description=Voice agent: web UI
+After=va-orchestrator.service
+Wants=va-orchestrator.service
+
+[Service]
+User=mitlab
+Group=mitlab
+EnvironmentFile=/etc/voice-agent/config.env
+ExecStart=/usr/bin/python3 /opt/voice-agent/web_service.py
+RuntimeDirectory=voice-agent
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
