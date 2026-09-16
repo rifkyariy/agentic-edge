@@ -1,15 +1,21 @@
 # Voice agent — modular services
 
-Four independent systemd services. Each speaks one dumb text protocol, so any
+Six independent systemd services. Each speaks one dumb text protocol, so any
 one can be replaced without touching the others.
 
 ```
 mic/wav ──► va-asr ──asr.sock──► va-orchestrator ──tts.sock──► va-tts ──► speaker/file
-                                        │
-                                   HTTP │ OpenAI /v1/chat/completions
-                                        ▼
-                                     va-llm
+                                    │        │
+                               HTTP │        │ Unix socket
+                                    ▼        ▼
+                                 va-llm   va-tools ──► DuckDuckGo, Sofascore,
+                                                        Jolpica, Open-Meteo,
+                                                        Yahoo Finance
 ```
+
+`va-web` sits outside this diagram entirely — it is an observer plus an
+utterance injector, wired to the same sockets as everything else. Remove it
+and the agent runs exactly as before.
 
 Config lives in **one file**: `/etc/voice-agent/config.env`. Code lives in
 `/opt/voice-agent/`. Change a value, restart that one service.
@@ -27,12 +33,16 @@ tests/        node tests/test-readable.js — checks web/ui.html directly
 deploy.sh     ./deploy.sh [target...]  — see the script header for targets
 ```
 
-## Tools (web search)
+## Tools
 
-`va-tools` executes what the model asks for. Two tools: `web_search` and
-`fetch_page`. Backend is **DuckDuckGo HTML — no API key, no browser.** A headless
-Chromium would starve the LLM on four shared cores, so pages are fetched over
-HTTP and reduced to text. `VA_SEARCH_BACKEND=searx` + `VA_SEARX_URL` swaps it.
+`va-tools` executes what the model asks for. Six tools: `web_search`,
+`fetch_page`, `match_result` (football), `f1_result`, `currency_rate`, and
+`weather_forecast`. `web_search`'s backend is **DuckDuckGo HTML — no API key,
+no browser.** A headless Chromium would starve the LLM on four shared cores,
+so pages are fetched over HTTP and reduced to text.
+`VA_SEARCH_BACKEND=searx` + `VA_SEARX_URL` swaps it. The other four call a
+real structured-data source directly and never touch search at all — see
+their own sections below.
 
 Verified working: *"Charlie Kirk, the conservative activist, died on September 10,
 2025 … assassinated while speaking at Utah Valley University"* — a fact well past
@@ -60,14 +70,43 @@ Every turn is classified before the model sees it:
 
 | intent | what happens |
 |---|---|
-| **live** | scores, news, rates, prices, weather, "latest/today/currently" → `tool_choice: "required"` |
+| **live** | scores, fixtures, F1, currency, weather, news, "latest/today/currently" → a tool call is required |
 | **creative** | poem, story, joke, translate, summarise, rewrite → **no tools offered at all** |
 | **open** | everything else → tools offered, model decides |
 
 It is a keyword rule, not another model call: an LLM classification round costs a
-full prefill, 20–40s on this board. The UI states which branch a turn took, so a
-misclassification is visible rather than silent. `creative` also keeps the tool
-schema out of the prefill entirely.
+full prefill, 20–40s on this board. `creative` also keeps the tool schema out of
+the prefill entirely.
+
+**`live` also picks a category** — `race_result`, `race_next`, `fixture`,
+`match_result`, `currency`, `weather`, `market`, `news`, `recency`, or
+`live_other` — purely to explain the decision; the UI shows the full category
+set with the matched one lit and the exact words that triggered it
+(`matched on: "upcoming football match"`), so a misclassification is visible
+rather than silent. A category that maps to exactly one tool
+(`race_result`/`race_next` → `f1_result`, `fixture`/`match_result` →
+`match_result`, `currency` → `currency_rate`, `weather` → `weather_forecast`)
+**pins `tool_choice` to that function specifically**, and offers the model
+only that one schema.
+
+**Why only one schema, not "required" plus all five:** llama.cpp does not
+reliably honour a *named* `tool_choice` when several tools are on offer —
+replaying a request pinned to `weather_forecast` with all six tools present
+came back as plain text inventing "scattered thunderstorms, 31.7°C" for a
+city with no thunderstorm that day. Pinned with `weather_forecast` as the
+*only* tool on offer, the same request reliably called it. Requiring "any
+tool" (no category match) does not have this problem — only a named pin does.
+
+**The orchestrator calls the tool itself if the model still won't.** Even with
+a single schema offered, the model has been seen answer in plain text anyway —
+once by inventing weather, once by re-reading its own stale reply out of the
+conversation history for "Real Madrid's latest result" instead of calling
+`match_result` again. When a category-pinned round ends with no tool call, the
+orchestrator derives the arguments from the question itself
+(`fallback_args()`) and calls the tool directly rather than accepting an
+unlookup'd answer — logged as `model skipped the pinned tool, calling
+match_result directly`. The classifier's decision that a lookup is mandatory
+is enforced structurally, not left to the model's cooperation.
 
 **Pre-tool guesses are discarded.** On a `live` turn the model sometimes answers
 first and calls the tool second — it once said "one hundred seventy nine point
@@ -88,27 +127,56 @@ coloured up/down, the rate line, a sparkline, and high/low with arrows.
 turns IDR/USD 0.0000567 into 0.0001 and made 1,000,000 IDR come out as $100
 instead of $57. The last point of the series carries full precision.
 
-### Football results: `match_result`
+### Football results and fixtures: `match_result`
 
 Search snippets **do not contain scores** — every result page renders them in
 JS. Asked for "latest score of AS Roma vs Torino", the model had the fixture date
 from a snippet and invented "Roma zero, Torino one". The real result was Torino
-0–2 Roma; it got the scoreline and the teams wrong.
+0–2 Roma; it got the scoreline and the teams wrong. So scores get their own
+tool, with `when: "past"` (default) or `when: "next"` for an upcoming fixture.
 
-So scores get their own tool. It finds the Sofascore match page and reads the
-`__NEXT_DATA__` payload the page embeds, which carries real structured data:
-teams and IDs, full-time and half-time score, status, goal scorers with minutes,
-cards, and penalty shootouts. Crests come from `img.sofascore.com`
-(`api.sofascore.app` returns 403 for images — wrong host).
+**The club's own fixture list is the primary source, not search.** Sofascore's
+team-schedule API (`team/{id}/events/last/0` and `.../events/next/0`) is not
+blocked for a normal User-Agent — only the client-rendered team *page* is —
+and it is authoritative: no ranking, no staleness, just that club's actual
+last or next match. This replaced an earlier DuckDuckGo-search-and-scrape
+approach that could not be trusted to surface a club's *newest* fixture:
+identical calls for "real madrid latest result" once returned a 6-day-old
+Champions League match and a 2-day-old league match minutes apart. A team
+resolves via Sofascore's own `search/all`, matched confidently (name must
+actually contain the query, not just fuzzy-rank first — "Real Madrid Inter"
+briefly matched a fourth-tier Dutch reserve side before this was tightened).
+Search-and-scrape remains as a fallback when the club cannot be resolved.
+
+**Two API calls, not one, for a played match.** The fixture-list endpoint
+returns the score but not the goals or cards — that was a separate field
+(`incidents`) bundled into the old scraped match-page payload. A match
+resolved via the API now makes one extra call, `event/{id}/incidents`, to
+get scorers, minutes, and bookings; an upcoming fixture never needs it, since
+nothing has happened yet.
+
+**"Next" always means chronologically nearest.** A guessed second team name
+must never override that: the model has added an opponent the user never
+said (`"Chelsea vs Newcastle United"` for a plain "what's Chelsea's next
+match") and, when opponent-matching was still in scope for "next", a real
+but months-away fixture against that guessed opponent won over the actual
+next match. Opponent-matching only applies to `when: "past"` now, where a
+named head-to-head is a real, answerable request.
+
+**Accented names silently broke driver-style ID matching.** Same lesson
+applies more narrowly to `f1_result` below, but it started here: a bare
+`[^a-z]` strip turns "Hülkenberg" into "hlkenberg", not "hulkenberg" — the
+umlaut is deleted, not folded to its ASCII base letter. Fixed with a proper
+Unicode NFKD fold before stripping.
 
 The UI renders a card from **that payload only**, so nothing on it can be
-something the model made up, and rows with no data are simply absent rather than
-guessed. The spoken reply now matches: "The score was two to zero, Roma won."
-
-The card shows the competition logo, round, status, kickoff time, both crests,
-the scoreline, half-time, venue and city, and goal scorers on its face.
-**Bookings are not on the face** — a count sits bottom-right next to the source
-link and opens an accordion. Penalty shootouts, when present, list beside goals.
+something the model made up, and rows with no data are simply absent rather
+than guessed. The spoken reply now matches: "The score was two to zero, Roma
+won." A played match shows the competition logo, round, status, kickoff
+time, both crests, the scoreline, half-time, venue and city, and goal
+scorers on its face; bookings sit behind an accordion bottom-right. An
+upcoming fixture shows the two crests either side of "VS", kickoff date and
+time, and a countdown ("in 3 days" / "tomorrow" / "today").
 
 Two traps worth remembering. Logos: `img.sofascore.com` serves crests and
 competition badges (`/unique-tournament/{id}/image`); `api.sofascore.app` 403s
@@ -119,16 +187,57 @@ made the model-switch modal impossible to close.
 
 Filler words break the page lookup: "sofascore Torino **against** Roma" returns a
 preview article, while "sofascore Torino Roma" returns the match. The tool strips
-vs/against/score/result/latest and tries several query forms before giving up.
+vs/against/score/result/latest and question words like what/next/upcoming/play
+(a bare stopword list once let "what match will chelsea play next" fuzzy-match
+"will" to a Dutch club, Willem II) before trying several query forms.
 
-This is scraping, not an API. If they change the markup the tool returns "no
-readable match data" and the model falls back to `web_search` — it degrades to
-no answer, never to a fabricated one.
+Scraping is now only the fallback path. If Sofascore's markup changes on that
+path specifically, the tool returns "no readable match data" and the model
+falls back to `web_search` — it degrades to no answer, never a fabricated one.
 
-**History poisons itself.** Once the model had stated the wrong score, later
-turns repeated it confidently without calling any tool. The system prompt now
-says a score always requires `match_result` and that a score stated earlier in
-the conversation must not be trusted.
+**History poisons itself.** Once the model had stated a wrong score — or
+simply re-read an *old but real* score out of its own conversation history
+instead of calling the tool again — later turns repeated it confidently. The
+system prompt says a score always requires `match_result`, a score stated
+earlier in the conversation must not be trusted, and (see Intent
+classification above) the orchestrator now runs the tool itself if the model
+answers without calling it on a turn the classifier has already pinned.
+
+### Formula 1: `f1_result`
+
+Real classification data from Jolpica, the Ergast-compatible successor
+(Ergast itself is shut down): podium, full finishing order, gaps, points,
+grid, fastest lap, retirements. `race` matches by name, circuit, or country —
+loosely, which caused its own bug: a country can host more than one race a
+season (Spain: Barcelona in June, Madring in September), and matching
+whichever race sorts first chronologically returned a three-month-stale
+result for "spanish gp" once Madring had actually happened. Fixed by
+preferring the most recently *run* match among same-country candidates.
+
+The card mirrors the F1 broadcast look: hero photo and result for the
+winner, a circuit layout (from `julesr0y/f1-circuits-svg`, matched on
+Jolpica's own circuit slug — no fuzzy search needed), a top-3 podium
+expandable to 10, team logos as small colour-filled circles in each team's
+own livery colour, and national flags next to every name. Driver
+photos/logos/team come from a once-a-day scrape of formula1.com's drivers
+page (their own API is not public); flags are 39 pre-resolved
+`upload.wikimedia.org` URLs, not a live Commons lookup per name — a full
+grid calling Wikimedia ~20 times back to back reliably tripped Commons' own
+per-IP rate limit (confirmed: HTTP 429 roughly every other request even
+spaced 0.5s apart), and a failed live lookup was briefly cached as a
+permanent miss, turning a few seconds of throttling into a flag staying
+broken for the rest of the process.
+
+### Weather: `weather_forecast`
+
+Open-Meteo — geocoding plus current conditions and an hourly forecast, no
+API key. The place name is geocoded after stripping the question around it
+("what's the weather for taipei today?"); punctuation has to be stripped
+too, not just stopwords, or "taipei ?" reaches the geocoder and fails. The
+card is a single coloured panel in the style of a phone weather widget —
+gradient picked from the actual WMO condition code (clear, wet, storm,
+night), big temperature, a hairline hour strip along the bottom with the
+next sunrise/sunset slotted in at its correct place in time order.
 
 ### Repetition loops
 
@@ -137,35 +246,26 @@ Greedy decoding (`temperature: 0`) with no penalty degenerates: one turn ended
 the token budget ran out. llama.cpp leaves `repeat_penalty` **off** by default,
 and little-gemma's own docs record 8,098 tokens of the same sentence from this.
 
-Three guards: `repeat_penalty 1.12` + `repeat_last_n 256` +
+Guards, in the order they act: `repeat_penalty 1.12` + `repeat_last_n 256` +
 `presence_penalty 0.4` on every request; the system prompt forbids sign-offs and
-offers of further help, which is the filler these loops feed on; and the
+offers of further help, which is the filler these loops feed on; the
 orchestrator cuts the turn off after a clause repeats twice, publishing
-`looping` so the UI says so rather than reading it aloud twenty times.
+`looping`; and a hard, unconditional cap (`MAX_SPOKEN_CLAUSES`, 14) cuts off
+any reply that runs that long regardless of whether anything repeats
+detectably, because the model has another way to loop that dodges all three
+of the above.
 
-### Knowing what "latest" means
-
-The tool resolves "latest" against the clock, not the model's guess: it fetches
-every candidate match page, keeps those already kicked off with a score, and
-takes the most recent. It reports `days_ago` against today and sets
-`maybe_not_latest` beyond 4 days, which the card shows as "most recent match
-that could be verified — a newer one may exist".
-
-**This is best-effort, not authoritative, and it is the weakest part of the
-build.** The candidate set comes from DuckDuckGo, whose index does not reliably
-rank a club's newest fixture: "real madrid latest result" returned the 6-day-old
-Inter match and the 2-day-old Rayo Vallecano match on two identical calls minutes
-apart. Widening to five query variants found more fixtures but tripped DDG's rate
-limit, after which every query — including "python programming" — came back as an
-HTTP 202 challenge page.
-
-Everything else was tried and blocked: Sofascore's own search and API (403),
-ESPN's public API (403), team pages carry no fixture list, match pages carry no
-schedule. **Correct "latest result for team X" needs a fixture feed**, e.g.
-`football-data.org`'s free tier (`/teams/{id}/matches?status=FINISHED&limit=1`).
-That needs a key, which the current design deliberately avoids. Swapping it in
-would touch only the tool; the card, classifier and UI stay as they are.
-
+**Self-correction is its own loop, and it does not repeat text.** Once, after
+a complete correct answer, the model kept going: "Let me know if you want
+details. (Self correction: do not offer further help.) My apologies, I
+cannot add extra sentences like that. Let me rephrase my answer. …" —
+restating the same fact in different words each time while grading its own
+obedience out loud. No two clauses were near-identical, so the repeat
+detector never fired. A dedicated pattern (`META`) recognises the
+self-grading language itself — "self correction", "let me rephrase", "wait,
+I must" — and ends the turn there, keeping the real answer that came before
+it. The banned sign-off phrases end a turn the same way, since the model was
+then also noticing and apologising for those.
 ### Cost
 
 Every tool round re-prefills the whole growing context, which is the expensive
@@ -229,6 +329,8 @@ locally if you want it fully offline.
 | `POST /model` | `{"path": "..."}` — switch model and restart `va-llm` |
 | `GET /config` | effective config for the inspector |
 | `GET /audio/<name>` | a spooled clip — `in-*.wav` is input, the rest is speech out |
+| `GET /img?u=<url>` | proxies a card's remote image (crest, driver photo, flag) through an allowlisted host set |
+| `POST /option` | `{"key": "...", "value": "..."}` — toggle MTP/reasoning, writes `runtime.env` |
 
 ### Where state lives
 
@@ -316,14 +418,43 @@ stare at an idle screen.
 
 ### Pipeline inspector
 
-The right-hand panel breaks the last turn into ten steps, each showing measured
-values rather than estimates: input audio (with a player for the exact 16 kHz wav
-whisper received), transcription time and realtime factor, prompt assembly, the
-verbatim JSON request body, the loaded model, speculative decoding, thinking,
-generation timings and token counts, per-clause synthesis with "audio ready"
-deltas, and players for every generated clip.
+The right-hand panel breaks the current turn into 13 stages, live — each
+carries a status dot (waiting/running/done/skipped/failed), updates as the
+turn actually progresses rather than only once it finishes, and a section
+you have open stays open across the panel's re-renders instead of snapping
+shut on the next event:
 
-Steps 6 and 7 are **switchable from the panel** (each restarts `va-llm`), and both
+| # | stage | shows |
+|---|---|---|
+| 1 | Audio in | mic: a player for the exact 16 kHz wav whisper received. Typed: the text itself |
+| 2 | Transcription | transcript, engine/model/threads, realtime factor — `skipped` for typed turns |
+| 3 | Date & time context | the exact date/clock/timezone string told to the model, and why it exists |
+| 4 | Intent classification | category, the words that matched, the full category set with the hit one lit, which tool (if any) is pinned |
+| 5 | Prompt assembly | itemised: system prompt / date grounding / history / this question / tool schemas, each with a char count |
+| 6 | JSON sent to the LLM | expandable per-message, plus the full request body |
+| 7 | Model | file, family, quantisation, context, threads |
+| 8 | Tools & evidence | per call: status, arguments, timing, sources with hostnames, and an expandable "evidence the model read back" — the actual tool output text, not just that a call happened |
+| 9 | Speculative decoding (MTP) | on/off, switchable |
+| 10 | Thinking | reasoning channel char count, on/off/auto, switchable |
+| 11 | Generation | first-clause and total time, token counts, decode rate, finish reason |
+| 12 | Speech synthesis | per-clause "spoken at" / "wav ready at" deltas |
+| 13 | Generated voice | a player for every clip |
+
+Numbers a model reads aloud are spelled out for piper ("two thousand twenty
+six", "ten fifteen") — right for the ear, wrong for the eye. The chat bubble
+and the Generation/Speech-synthesis steps above convert that same text back
+to numerals for display only (`2026`, `10:15 PM`) — a small parser (word
+runs → digits, with explicit rules for ordinals, decimals, clock times, and
+score lines like "2 to 1") that never touches what TTS actually receives.
+`node tests/test-readable.js` runs it against real logged replies, pulling
+the function straight out of `web/ui.html` so the check cannot drift from
+what ships. One rule needed two passes: the same "two number words merge
+into one figure" logic that turns "twenty twenty six" into `2026` also
+turned a clock time, "ten fifteen", into `1,015` — both are two number-words
+in the same range, and only the presence of "PM" right after the run tells
+them apart.
+
+Stages 9 and 10 are **switchable from the panel** (each restarts `va-llm`), and both
 defaults are measured on this exact stack, same prompt, both warm:
 
 | MTP | first clause | complete |
@@ -350,9 +481,6 @@ than waiting. Full numbers in `gemma4-pi5-benchmarks.md`.
 `VA_LLM_REASONING` and `VA_LLM_SPEC_ARGS` in config.env hold the state. The MTP
 draft head is selected to match the loaded model (`mtp-gemma-4-{E2B,E4B,12B}-it.gguf`)
 and switching models clears a now-mismatched head automatically.
-
-It is an observer plus an injector — it consumes the same contracts as
-everything else. Stop it and the agent runs exactly as before.
 
 ### Browser microphone
 
