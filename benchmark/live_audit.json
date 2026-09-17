@@ -1,0 +1,39 @@
+{
+  "_method": "SimpleQA-style 3-way grading (Wei et al. 2024): correct / incorrect / not_attempted, applied by rules then audited by hand (2026-09-18) over every distinct answer to a live-data case. 'correct' means specific and faithful to the tool result that turn; ground truth is the tool output, cross-checked for consistency across runs (e.g. every match_result call returned Elche 2-3 Real Madrid), not an independent world lookup. Answers with no retrieval that decline or ask for context are not_attempted. Condition D emits a call and never answers, so it is not graded on this axis. Keys: case_id -> answer prefix -> label.",
+  "football-result": {
+    "Real Madrid lost their latest match": "incorrect",
+    "Real Madrid beat Elche by three goals to two": "correct",
+    "Real Madrid won their last match against Elche three to two": "correct",
+    "The latest result was Elche two to three Real Madrid": "correct",
+    "The result of the latest match was Elche two to three": "correct"
+  },
+  "football-fixture": {
+    "I could not find an upcoming fixture": "not_attempted",
+    "The next match for Chelsea is against Brentford": "correct"
+  },
+  "currency-convert": {
+    "I need to know the current exchange rate": "not_attempted",
+    "Five thousand Taiwan dollars converts to": "correct"
+  },
+  "f1-result": {
+    "Andrea Kimi Antonelli of Mercedes won": "correct",
+    "The winner of the most recent Formula One race": "correct"
+  },
+  "news-current": {
+    "The Federal Reserve has been raising interest rates recently": "incorrect",
+    "The Federal Reserve has made decisions regarding interest rates recently": "incorrect",
+    "Federal Reserve raised its key interest rate by twenty five basis points": "correct",
+    "The European Central Bank increased its key interest rates": "correct",
+    "The Federal Reserve raised its key rate by twenty five basis points": "correct",
+    "The Federal Reserve raised rates by twenty five basis points": "correct"
+  },
+  "weather-now": {
+    "It is currently clear": "correct",
+    "It's currently clear": "correct",
+    "The weather in Taipei": "correct"
+  },
+  "_notes": {
+    "news-current E/e2b": "graded incorrect: a generic, undated claim that does not answer 'this month' although search results were retrieved",
+    "football-result E-think/e2b": "the tool said Elche 2-3 Real Madrid; the answer inverts the outcome"
+  }
+}

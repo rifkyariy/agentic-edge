@@ -1,0 +1,231 @@
+{
+ "irrelevance": {
+  "n": 240,
+  "classes": {
+   "open": 185,
+   "live": 52,
+   "creative": 3
+  },
+  "pinned": {
+   "currency_rate": 15,
+   "offer-all(recency)": 9,
+   "weather_forecast": 3,
+   "offer-all(live_other)": 8,
+   "match_result": 17
+  },
+  "live_examples": [
+   [
+    null,
+    "Find the definite integral of f(x)=x^2 from x=1 to x=3."
+   ],
+   [
+    null,
+    "What are the latest movie releases?"
+   ],
+   [
+    null,
+    "What's the time right now?"
+   ],
+   [
+    null,
+    "How much gas is generated from heating a 2 m\u00b3 closed chamber with air at a temperature of 25\u00b0C to 100\u00b0C?"
+   ]
+  ],
+  "hand_audit": {
+   "_method": "Each of the 52 BFCL irrelevance prompts E's classify() routes to a lookup was judged by hand: does answering it need current data? BFCL marks relevance against its OWN offered function, not E's six tools, so some 'irrelevant' prompts are legitimate live-data questions for E. 2026-09-18.",
+   "needs_live_data_ids": [
+    "irrelevance_15",
+    "irrelevance_17",
+    "irrelevance_40",
+    "irrelevance_78",
+    "irrelevance_79",
+    "irrelevance_84",
+    "irrelevance_92",
+    "irrelevance_102",
+    "irrelevance_124",
+    "irrelevance_180",
+    "irrelevance_187",
+    "irrelevance_190",
+    "irrelevance_191",
+    "irrelevance_202",
+    "irrelevance_225",
+    "irrelevance_227",
+    "irrelevance_233"
+   ],
+   "false_lookup": 35,
+   "static_prompts": 223,
+   "false_lookup_rate_pct": 15.7,
+   "notable": [
+    "irrelevance_75 'How many kilograms are in a pound?' -> currency_rate",
+    "irrelevance_134 'Who won the World Cup 2022?' -> match_result",
+    "irrelevance_26/27 physics with 'temperature' -> weather_forecast",
+    "irrelevance_9 'definite integral' matched 'definite' (recency pattern)"
+   ]
+  }
+ },
+ "live_irrelevance": {
+  "n": 884,
+  "classes": {
+   "open": 758,
+   "creative": 13,
+   "live": 113
+  },
+  "pinned": {
+   "weather_forecast": 44,
+   "match_result": 21,
+   "currency_rate": 34,
+   "offer-all(recency)": 11,
+   "offer-all(live_other)": 3
+  },
+  "live_examples": [
+   [
+    null,
+    "I want to go to whistler for skiing. Can you give me the 5 day forecast for both the top and bottom of the mou"
+   ],
+   [
+    null,
+    "Using 'api_key_2', retrieve the IDs of graphs containing IP 145.34.45.56 on VirusTotal. Don't forget to set th"
+   ],
+   [
+    null,
+    "Can you fetch me the weather data for the coordinates 37.8651 N, 119.5383 W, including the hourly forecast for"
+   ],
+   [
+    null,
+    "I'm looking to retrieve the IDs (and context attributes, if any) of files that communicate with domain 'exampl"
+   ]
+  ]
+ },
+ "simple_python": {
+  "n": 400,
+  "classes": {
+   "open": 323,
+   "live": 75,
+   "creative": 2
+  },
+  "pinned": {
+   "currency_rate": 36,
+   "weather_forecast": 8,
+   "match_result": 14,
+   "offer-all(market)": 3,
+   "offer-all(live_other)": 9,
+   "offer-all(recency)": 4,
+   "offer-all(news)": 1
+  },
+  "live_examples": [
+   [
+    null,
+    "Calculate the final velocity of an object, knowing that it started from rest, accelerated at a rate of 9.8 m/s"
+   ],
+   [
+    null,
+    "Calculate the final temperature when 20 kg of water at 30 degree Celsius is mixed with 15 kg of water at 60 de"
+   ],
+   [
+    null,
+    "Calculate the entropy change for a certain process given an initial temperature of 300K, a final temperature o"
+   ],
+   [
+    null,
+    "Calculate the heat capacity at constant pressure for air, given its temperature is 298K and volume is 10 m^3."
+   ]
+  ]
+ },
+ "multiple": {
+  "n": 200,
+  "classes": {
+   "open": 162,
+   "live": 35,
+   "creative": 3
+  },
+  "pinned": {
+   "weather_forecast": 5,
+   "match_result": 4,
+   "currency_rate": 16,
+   "offer-all(live_other)": 6,
+   "offer-all(market)": 1,
+   "offer-all(recency)": 3
+  },
+  "live_examples": [
+   [
+    null,
+    "What is the wind speed and temperature in location given by coordinates 46.603354,1.8883340 on December 13, 20"
+   ],
+   [
+    null,
+    "Calculate the average grade for student John who has these scores {'math':90, 'science':75, 'history':82, 'mus"
+   ],
+   [
+    null,
+    "Calculate the depreciated value of a property costing $200,000 with an annual depreciation rate of 3% for 5 ye"
+   ],
+   [
+    null,
+    "How much is the potential of the Solar farm at location with coordinates [43.653225, -79.383186] in December, "
+   ]
+  ]
+ },
+ "live_simple": {
+  "n": 258,
+  "classes": {
+   "open": 171,
+   "live": 84,
+   "creative": 3
+  },
+  "pinned": {
+   "currency_rate": 25,
+   "weather_forecast": 43,
+   "match_result": 10,
+   "offer-all(recency)": 5,
+   "offer-all(live_other)": 1
+  },
+  "live_examples": [
+   [
+    null,
+    "I want to see the star history of ShishirPatil/gorilla and gorilla-llm/gorilla-cli, with the timelines aligned"
+   ],
+   [
+    null,
+    "What are the current weather conditions in Tel Aviv, and could you provide that in Fahrenheit, please?"
+   ],
+   [
+    null,
+    "Can you tell me the weather in fahrenheit so that I decide if I need to wear a jacket today? San Francisco"
+   ],
+   [
+    null,
+    "Im at Riga, Latvia, Can you tell me the current temperature?"
+   ]
+  ]
+ },
+ "live_relevance": {
+  "n": 16,
+  "classes": {
+   "open": 9,
+   "live": 7
+  },
+  "pinned": {
+   "match_result": 1,
+   "weather_forecast": 3,
+   "offer-all(recency)": 3
+  },
+  "live_examples": [
+   [
+    null,
+    "Can you find the top 5 search results for the capital of the United States in French?"
+   ],
+   [
+    null,
+    "Could you tell me the current temperature in New York, using its latitude and longitude coordinates?"
+   ],
+   [
+    null,
+    "What is the weather like today? Can you help me search it up?"
+   ],
+   [
+    null,
+    "I am going to Antioch today, can you look for any unisex salon there?"
+   ]
+  ]
+ }
+}

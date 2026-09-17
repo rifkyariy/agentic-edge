@@ -1,0 +1,38 @@
+{
+  "config": {
+    "device": "raspi5",
+    "hardware": "Raspberry Pi 5, 8GB, 4x Cortex-A76, no GPU",
+    "power_mode": "stock, active cooler, cpufreq governor ondemand",
+    "cuda": false,
+    "engine": "litert_lm",
+    "condition": "C",
+    "label": "LiteRT-LM (bare)",
+    "offer_tools": false,
+    "mtp": false,
+    "thinking": false,
+    "model": {
+      "name": "gemma4-e2b",
+      "quant": "Q4_K_XL",
+      "path": "/home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf"
+    },
+    "model_key": "e2b",
+    "repeat": 4,
+    "timeout_s": 600,
+    "endpoint": "http://127.0.0.1:9379/v1/chat/completions",
+    "request_model": null,
+    "llama_props_url": "http://127.0.0.1:8080/props",
+    "proposed_url": "http://127.0.0.1:8090",
+    "litert_models": {
+      "e4b": "gemma-4-E4B-it.litertlm",
+      "_note": "E2B is NOT imported on this box, so condition C is E4B-only. Serve with: /home/mitlab/litert-venv/bin/litert-lm serve --host 127.0.0.1 --port 9379 (no model argument; the request's model id picks the bundle)"
+    }
+  },
+  "skipped": [
+    {
+      "toggle": "model",
+      "reason": "E2B is NOT imported on this box, so condition C is E4B-only. Serve with: /home/mitlab/litert-venv/bin/litert-lm serve --host 127.0.0.1 --port 9379 (no model argument; the request's model id picks the bundle)"
+    }
+  ],
+  "started_at": "2026-09-17T09:51:56",
+  "results": []
+}

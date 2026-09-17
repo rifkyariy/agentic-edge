@@ -1,0 +1,11 @@
+{
+  "_note": "thinking-arithmetic answers graded by hand (2026-09-18): correct = the first result the model commits to is 29. The automatic check cannot handle the orchestrator's spoken numbers or its self-correcting rambles. Keys are answer prefixes.",
+  "thinking-arithmetic": {
+    "fifty minus twenty-one is twenty-nine": true,
+    "twenty nine.": true,
+    "29.00$": true,
+    "Twenty five dollars": false,
+    "Twenty one dollars": false,
+    "Forty-one": false
+  }
+}

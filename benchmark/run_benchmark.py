@@ -39,7 +39,30 @@ REFUSAL = re.compile(
     r"|\bas of my\b|\bmay be out of date\b|\bcheck a (?:live|current)\b"
     r"|\bi have no\b|\brecommend checking\b|\bplease check\b"
     # Asking for clarification states nothing either.
-    r"|\bplease provide\b|\bmore context\b|\bcould you (?:please )?(?:tell|specify|clarify)\b")
+    r"|\bplease provide\b|\bmore context\b|\bcould you (?:please )?(?:tell|specify|clarify)\b"
+    # So is promising a lookup that never happened (a tool failure, not a claim).
+    r"|\bi (?:will|'ll|am going to) (?:search|look|check)\b")
+
+_ONES = "zero one two three four five six seven eight nine ten eleven twelve " \
+        "thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split()
+_TENS = "_ _ twenty thirty forty fifty sixty seventy eighty ninety".split()
+
+
+def spoken(n):
+    """0-99 as words. va-tts-bound replies spell numbers ("twenty nine")."""
+    return _ONES[n] if n < 20 else _TENS[n // 10] + ("" if n % 10 == 0 else
+                                                    " " + _ONES[n % 10])
+
+
+_SPOKEN = sorted(((spoken(n), n) for n in range(100)), key=lambda p: -len(p[0]))
+
+
+def first_number(text):
+    text = re.sub(r"[-\s]+", " ", text.lower())
+    for words, n in _SPOKEN:  # longest first: "twenty nine" before "twenty"
+        text = re.sub(rf"\b{words}\b", str(n), text)
+    m = re.search(r"\d+", text)
+    return int(m.group()) if m else None
 
 
 def merge_config(device_path, condition_path, model_key, overrides):
@@ -158,7 +181,13 @@ def score(case, r):
     fabrication rate carries the factual-reliability argument without needing
     to know what the weather actually was at run time."""
     if case.get("expected_substring") is not None:
-        r["correct"] = case["expected_substring"].lower() in (r.get("text") or "").lower()
+        want, text = case["expected_substring"].lower(), (r.get("text") or "").lower()
+        if want.isdigit():
+            # A numeric answer is its FIRST number, spelled or not — otherwise
+            # a ramble listing twenty candidates "contains" the right one.
+            r["correct"] = first_number(text) == int(want)
+        else:
+            r["correct"] = want in text
     if case.get("expected_tool") is not None:
         r["tool_correct"] = r.get("tool_called") == case["expected_tool"]
         text = (r.get("text") or "").strip()

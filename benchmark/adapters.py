@@ -191,7 +191,7 @@ def configure_proposed(cfg):
             res = json.loads(r.read())
         if not res.get("ok"):
             raise RuntimeError(f"/option {key}={value} failed: {res.get('message')}")
-    deadline = _now() + 120
+    deadline = _now() + 600
     while _now() < deadline:
         try:
             with urllib.request.urlopen(base + "/status", timeout=5) as r:
@@ -201,7 +201,7 @@ def configure_proposed(cfg):
         if status.get("va-llm") == "active":
             return
         time.sleep(2)
-    raise RuntimeError("va-llm did not come back within 120s of the option change")
+    raise RuntimeError("va-llm did not come back within 600s of the option change")
 
 
 def run_proposed(cfg, case):
