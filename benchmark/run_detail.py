@@ -32,6 +32,7 @@ def _rows(csv_path):
         return []
     t0 = min(float(r["start_epoch"]) for r in rows)
     return [{"i": i, "t": round(float(r["start_epoch"]) - t0, 1),
+             "start_epoch": float(r["start_epoch"]), "end_epoch": float(r["end_epoch"] or 0),
              "pt": int(r["prompt_tokens"] or 0), "pms": float(r["prompt_ms"] or 0),
              "gt": int(r["gen_tokens"] or 0), "gms": float(r["gen_ms"] or 0),
              "pts": float(r["prompt_tok_s"] or 0), "gts": float(r["gen_tok_s"] or 0)}
@@ -87,6 +88,109 @@ def timeline(run_dir, run, model, subset):
         except (OSError, ValueError):
             pass
     return []
+
+
+def telemetry_for(run, model, subset):
+    """The 1Hz device samples belonging to this run, matched the same way the
+    request timings are: by model and subset, never just the newest."""
+    for d in sorted(glob.glob(f"{ROOT}/measured/*"), key=os.path.getmtime, reverse=True):
+        base = os.path.basename(d).lower()
+        if model not in base:
+            continue
+        got = re.search(r"-(s\d)-\d{8}", base)
+        if (got[1] if got else "s1") != subset:
+            continue
+        path = os.path.join(d, "telemetry.csv")
+        if not os.path.exists(path):
+            continue
+        rows = []
+        for r in csv.DictReader(open(path)):
+            t = _f(r.get("ts_epoch"))
+            if t is None:
+                continue
+            rows.append({"t": t, "w": _f(r.get("power_w")), "cpu": _f(r.get("cpu_pct")),
+                         "temp": _f(r.get("temp_c")), "gpu": _f(r.get("gpu_pct")),
+                         "mem": _f(r.get("mem_used_mb")), "rss": _f(r.get("proc_rss_mb")),
+                         "mhz": _f(r.get("cpu0_mhz")),
+                         "thr": (r.get("throttled") or "") not in ("", "0x0")})
+        summary = None
+        sp = os.path.join(d, "summary.json")
+        if os.path.exists(sp):
+            try:
+                summary = json.load(open(sp))
+            except ValueError:
+                pass
+        return rows, summary, os.path.basename(d)
+    return [], None, None
+
+
+def _f(x):
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return None
+
+
+def attach_device(tl, tele):
+    """Per-request device conditions: what the board was doing while it answered.
+
+    Energy is the trapezoidal integral of power across the request's own window,
+    so J/token here is a real per-question measurement rather than a run average."""
+    if not tl or not tele:
+        return tl
+    tele = sorted(tele, key=lambda r: r["t"])
+    times = [r["t"] for r in tele]
+    import bisect
+    for q in tl:
+        lo = bisect.bisect_left(times, q["start_epoch"])
+        hi = bisect.bisect_right(times, q["end_epoch"])
+        win = tele[max(0, lo - 1):hi + 1]
+        if not win:
+            continue
+        w = [r["w"] for r in win if r["w"] is not None]
+        energy = 0.0
+        for a, b in zip(win, win[1:]):
+            if a["w"] is not None and b["w"] is not None and 0 < b["t"] - a["t"] < 30:
+                energy += (a["w"] + b["w"]) / 2 * (b["t"] - a["t"])
+        vals = lambda k: [r[k] for r in win if r[k] is not None]
+        cpu, temp, gpu, rss = vals("cpu"), vals("temp"), vals("gpu"), vals("rss")
+        q["dev"] = {
+            "w_mean": round(sum(w) / len(w), 2) if w else None,
+            "w_max": round(max(w), 2) if w else None,
+            "j": round(energy, 1) if energy else None,
+            "j_per_token": round(energy / q["gt"], 2) if energy and q.get("gt") else None,
+            "cpu": round(sum(cpu) / len(cpu), 1) if cpu else None,
+            "temp_max": round(max(temp), 1) if temp else None,
+            "gpu": round(sum(gpu) / len(gpu), 1) if gpu else None,
+            "rss_mb": round(max(rss)) if rss else None,
+            "throttled": any(r["thr"] for r in win),
+            "samples": len(win),
+        }
+    return tl
+
+
+def downsample(tele, t0, limit=700):
+    """Telemetry for charting, thinned to at most `limit` points but keeping
+    peaks: each bucket reports its max power and temperature, mean cpu/gpu."""
+    if not tele:
+        return []
+    step = max(1, len(tele) // limit)
+    out = []
+    for i in range(0, len(tele), step):
+        chunk = tele[i:i + step]
+        pick = lambda k, f: (f([r[k] for r in chunk if r[k] is not None])
+                             if any(r[k] is not None for r in chunk) else None)
+        mean = lambda v: sum(v) / len(v)
+        out.append({
+            "t": round(chunk[0]["t"] - t0, 1),
+            "w": round(pick("w", max), 2) if pick("w", max) is not None else None,
+            "cpu": round(pick("cpu", mean), 1) if pick("cpu", mean) is not None else None,
+            "temp": round(pick("temp", max), 1) if pick("temp", max) is not None else None,
+            "gpu": round(pick("gpu", mean), 1) if pick("gpu", mean) is not None else None,
+            "mem": round(pick("mem", max)) if pick("mem", max) is not None else None,
+            "thr": any(r["thr"] for r in chunk),
+        })
+    return out
 
 
 def finished(run_dir):
@@ -208,11 +312,27 @@ def main():
             summary = {"score": round(100 * sum(q["ok"] for q in graded) / len(graded), 1),
                        "graded": len(graded), "provisional": True}
 
+    tl = timeline(run_dir, args.run, model, sub)
+    tele, tsummary, tdir = telemetry_for(args.run, model, sub)
+    tl = attach_device(tl, tele)
+    t0 = tl[0]["start_epoch"] if tl else (tele[0]["t"] if tele else 0)
+    device = None
+    if tsummary:
+        device = {"energy_wh": tsummary["power"]["energy_wh"],
+                  "idle_w": tsummary["power"]["idle_w"],
+                  "mean_w": tsummary["power"]["work_mean_w"],
+                  "peak_w": tsummary["power"]["work_peak_w"],
+                  "j_per_token": tsummary["efficiency"]["j_per_generated_token"],
+                  "tok_s_per_w": tsummary["efficiency"]["decode_tok_s_per_w"],
+                  "temp_max": (tsummary["thermal"]["temp_c"] or {}).get("max"),
+                  "throttled": tsummary["thermal"]["throttled_nonzero_samples"],
+                  "cpu_mean": (tsummary["utilisation"]["cpu_pct"] or {}).get("mean"),
+                  "dir": tdir}
     print(json.dumps({
         "run": args.run, "subset": sub, "status": status, "note": note,
         "summary": summary, "n": len(qs),
         "questions": qs[:args.max_questions],
-        "timeline": timeline(run_dir, args.run, model, sub),
+        "timeline": tl, "telemetry": downsample(tele, t0), "device": device,
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
     }))
 

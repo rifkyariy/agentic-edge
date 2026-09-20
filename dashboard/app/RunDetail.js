@@ -5,6 +5,50 @@ const fmt = (n, d = 0) =>
   n === null || n === undefined || Number.isNaN(n) ? "—"
     : Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
 
+/* Device conditions during the run, on the same x geometry as the request
+   timeline above so a spike lines up with the question that caused it. */
+function DeviceTrack({ points, timeline, field, color, unit, label, max, decimals = 0 }) {
+  const vals = points.map((p) => p[field]).filter((v) => v !== null && v !== undefined);
+  if (!vals.length) return null;
+  const W = 900, H = 74, ml = 46, mr = 44, mt = 8, mb = 14;
+  const iw = W - ml - mr, ih = H - mt - mb;
+  const span = timeline.length ? (timeline[timeline.length - 1].t + timeline[timeline.length - 1].pms / 1000
+    + timeline[timeline.length - 1].gms / 1000) : (points[points.length - 1]?.t || 1);
+  const hi = max ?? (Math.max(...vals) * 1.15 || 1);
+  const X = (t) => ml + Math.min(1, t / span) * iw;
+  const Y = (v) => mt + ih - (Math.min(v, hi) / hi) * ih;
+  let d = "", open = false;
+  for (const p of points) {
+    const v = p[field];
+    if (v === null || v === undefined) { open = false; continue; }
+    d += `${open ? "L" : "M"}${X(p.t).toFixed(1)} ${Y(v).toFixed(1)} `;
+    open = true;
+  }
+  return (
+    <div className="track-row">
+      <div className="track-head">
+        <span>{label}</span>
+        <b style={{ color }}>
+          mean {fmt(vals.reduce((a, b) => a + b, 0) / vals.length, decimals)}{unit} ·
+          peak {fmt(Math.max(...vals), decimals)}{unit}
+        </b>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="tl">
+        {[0, 1].map((f) => (
+          <g key={f}>
+            <line x1={ml} x2={ml + iw} y1={Y(hi * f)} y2={Y(hi * f)} className="gridline" />
+            <text x={ml - 7} y={Y(hi * f) + 3.5} className="tick" textAnchor="end">{fmt(hi * f, decimals)}</text>
+          </g>
+        ))}
+        <path d={d} fill="none" stroke={color} strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
+        {points.filter((p) => p.thr).map((p, i) => (
+          <line key={i} x1={X(p.t)} x2={X(p.t)} y1={mt} y2={mt + ih} stroke="var(--warn)" strokeWidth="1" />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 /* Per-request timeline: prefill vs decode per question, decode tok/s overlaid. */
 function Timeline({ rows }) {
   if (!rows?.length) return <p className="sub">No per-request timings recorded for this run.</p>;
@@ -53,6 +97,47 @@ function Timeline({ rows }) {
         <span className="tl-sum">{rows.length} requests · {fmt(total / 60)} min of model time · median {fmt(med, 2)} tok/s</span>
       </div>
     </>
+  );
+}
+
+function RequestTable({ rows }) {
+  const [open, setOpen] = useState(false);
+  if (!rows?.length) return null;
+  const shown = open ? rows : rows.slice(0, 8);
+  const anyGpu = rows.some((r) => r.dev?.gpu !== null && r.dev?.gpu !== undefined);
+  return (
+    <div className="reqtable">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>in</th><th>out</th><th>prefill</th><th>decode</th><th>tok/s</th>
+            <th>mean W</th><th>peak W</th><th>energy</th><th>J/tok</th>
+            <th>cpu</th>{anyGpu && <th>gpu</th>}<th>temp</th><th>rss</th>
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((r, i) => (
+            <tr key={i} className={r.dev?.throttled ? "thr" : ""}>
+              <td>{r.i + 1}</td>
+              <td>{fmt(r.pt)}</td><td>{fmt(r.gt)}</td>
+              <td>{fmt(r.pms / 1000, 1)}s</td><td>{fmt(r.gms / 1000, 1)}s</td>
+              <td>{fmt(r.gts, 2)}</td>
+              <td>{fmt(r.dev?.w_mean, 2)}</td><td>{fmt(r.dev?.w_max, 2)}</td>
+              <td>{fmt(r.dev?.j, 0)}J</td><td>{fmt(r.dev?.j_per_token, 2)}</td>
+              <td>{fmt(r.dev?.cpu, 0)}%</td>
+              {anyGpu && <td>{fmt(r.dev?.gpu, 0)}%</td>}
+              <td>{fmt(r.dev?.temp_max, 1)}°</td>
+              <td>{fmt(r.dev?.rss_mb)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {rows.length > 8 && (
+        <button type="button" className="more" onClick={() => setOpen(!open)}>
+          {open ? "show fewer" : `show all ${rows.length} requests`}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -108,9 +193,42 @@ export default function RunDetail({ boxId, boxLabel, run, onClose }) {
           <div className="sheet-body">
             {data.note && <p className="note-partial">{data.note}</p>}
 
+            {data.device && (
+              <div className="devstrip">
+                <span>energy <b>{fmt(data.device.energy_wh, 2)} Wh</b></span>
+                <span>idle <b>{fmt(data.device.idle_w, 2)} W</b></span>
+                <span>working <b>{fmt(data.device.mean_w, 2)} W</b></span>
+                <span>peak <b>{fmt(data.device.peak_w, 2)} W</b></span>
+                <span>J/token <b>{fmt(data.device.j_per_token, 2)}</b></span>
+                <span>tok/s/W <b>{fmt(data.device.tok_s_per_w, 3)}</b></span>
+                <span>cpu <b>{fmt(data.device.cpu_mean, 0)}%</b></span>
+                <span>peak temp <b>{fmt(data.device.temp_max, 1)}°C</b></span>
+                <span className={data.device.throttled ? "warnspan" : ""}>
+                  throttling <b>{data.device.throttled ? `${data.device.throttled} samples` : "none"}</b>
+                </span>
+              </div>
+            )}
+
             <section>
-              <h3>Request timeline</h3>
+              <h3>Request timeline <em>and device conditions through the run</em></h3>
               <Timeline rows={data.timeline} />
+              {data.telemetry?.length > 0 && (
+                <div className="tracks">
+                  <DeviceTrack points={data.telemetry} timeline={data.timeline} field="w"
+                    color="var(--power)" unit="W" label="board power" decimals={2} />
+                  <DeviceTrack points={data.telemetry} timeline={data.timeline} field="cpu"
+                    color="var(--cpu)" unit="%" label="cpu" max={100} />
+                  <DeviceTrack points={data.telemetry} timeline={data.timeline} field="gpu"
+                    color="var(--gpu)" unit="%" label="gpu" max={100} />
+                  <DeviceTrack points={data.telemetry} timeline={data.timeline} field="temp"
+                    color="var(--temp)" unit="°C" label="temperature" decimals={1} />
+                </div>
+              )}
+            </section>
+
+            <section>
+              <h3>Per request <em>tokens and what the board was doing</em></h3>
+              <RequestTable rows={data.timeline} />
             </section>
 
             <section>
