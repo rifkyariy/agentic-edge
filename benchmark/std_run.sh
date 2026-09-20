@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Standard benchmarks on the Pi, replacing the hand-written static cases:
 #   tinyGSM8k (Polo et al. 2024) and IFEval (Zhou et al. 2023) via
-#   lm-evaluation-harness, against the same servers conditions B and C use.
+#   lm-evaluation-harness, against the same server condition B uses.
 #
-#   ./std_run.sh queue    # tinyGSM8k on B, E2B then E4B (current focus)
-#   ./std_run.sh full     # deferred: IFEval (B) + BFCL (D) per model, then C
-#   ./std_run.sh litert   # C only
+#   ./std_run.sh queue    # tinyGSM8k on B, E2B then E4B
+#   ./std_run.sh full     # deferred: IFEval (B) + BFCL (D) per model
+#
+# MMLU-Pro runs from std_mmlupro.sh instead (it needs -c 8192).
+# LiteRT-LM (condition C) was dropped on 2026-09-20 and removed from the box.
 #
 # BFCL (Patil et al., ICML 2025) runs through its generic OpenAI-compatible
 # chat-completions function-calling handler (OpenAICompletionsHandler, borrowed
@@ -54,7 +56,7 @@ bfcl_run() {  # bfcl_run <label>
   ) || log "(bfcl failed)"
 }
 case "${1:-}" in
-  queue)   # tinyGSM8k only for now; IFEval, BFCL and LiteRT (C) deferred
+  queue)   # tinyGSM8k only for now; IFEval and BFCL deferred
     for m in E2B E4B; do
       l=$(echo $m | tr A-Z a-z)
       [ -f "$OUT/B-$l/.tinyGSM8k.done" ] && continue
@@ -69,17 +71,7 @@ case "${1:-}" in
       evaluate "B-$l" "$LLAMA" "gemma4-$m" ifeval
       bfcl_run "D-$l"
     done
-    "$0" litert ;;
-  litert)
-    sudo -n systemctl stop va-llm
-    nohup /home/mitlab/litert-venv/bin/litert-lm serve --host 127.0.0.1 --port 9379 \
-      > /tmp/litert.log 2>&1 < /dev/null &
-    for _ in $(seq 60); do curl -sf localhost:9379/v1/models >/dev/null && break; sleep 2; done
-    for task in tinyGSM8k ifeval; do
-      evaluate C-e4b http://127.0.0.1:9379/v1/chat/completions gemma-4-E4B-it.litertlm "$task"
-    done
-    pgrep -f "[l]itert-lm serve" | xargs -r kill
-    sudo -n systemctl start va-llm ;;
-  *) echo "usage: $0 {queue|full|litert}" >&2; exit 1 ;;
+    ;;
+  *) echo "usage: $0 {queue|full}" >&2; exit 1 ;;
 esac
 log "done"

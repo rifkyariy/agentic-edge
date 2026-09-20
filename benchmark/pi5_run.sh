@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # Pi 5 driver: sweep.sh plus the server juggling this box needs.
 # The engines share 8GB and four cores, so each condition gets its server
-# alone: little-gemma (A) and LiteRT-LM (C) run with va-llm stopped.
+# alone: little-gemma (A) runs with va-llm stopped.
+#
+# Condition C (LiteRT-LM) was DROPPED from the study on 2026-09-20 and its
+# runtime removed from the box; the phase that ran it is gone with it. The
+# results it produced stay in results/ unreported.
 #
 #   ./pi5_run.sh sanity    # A/e2b only — check fabrication ~100% first
 #   ./pi5_run.sh tier1     # A B D E x {e2b,e4b}
 #   ./pi5_run.sh tier2     # MTP x thinking, B and E
 #   ./pi5_run.sh tier3     # E4B quant sweep, B
-#   ./pi5_run.sh litert    # condition C, run after everything else
 #
 # Condition E runs single-turn (VA_HISTORY_TURNS=0), like B and D: with
 # history on, repeat n sees repeat n-1's answer and can copy it instead of
@@ -91,14 +94,6 @@ case "${1:-}" in
       run B "$model" --cases cases_t3.json
       ps -o rss= -C llama-server | awk '{printf "  llama-server RSS %.2f GiB\n", $1/2^20}'
     done ;;
-  litert)   # last, as asked: its own server, va-llm out of the way
-    sudo -n systemctl stop va-llm
-    nohup /home/mitlab/litert-venv/bin/litert-lm serve --host 127.0.0.1 --port 9379 \
-      > /tmp/litert.log 2>&1 < /dev/null &
-    for _ in $(seq 60); do curl -sf localhost:9379/v1/models >/dev/null && break; sleep 2; done
-    for model in e2b e4b; do run C "$model"; done
-    pgrep -f "[l]itert-lm serve" | xargs -r kill
-    sudo -n systemctl start va-llm && wait_llama ;;
-  *) echo "usage: $0 {sanity|tier1|tier2|tier3|litert}" >&2; exit 1 ;;
+  *) echo "usage: $0 {sanity|tier1|tier2|tier3}" >&2; exit 1 ;;
 esac
 log "done"

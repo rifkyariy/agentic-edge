@@ -166,13 +166,43 @@ Recorded because they invalidate any earlier numbers taken from this harness:
 
 ---
 
-## 6. Status
+## 6. Capability coverage
+
+Paper 1 claims three capability areas. Only one is covered so far.
+
+| Capability | Benchmark | Pi 5 | Jetson |
+|---|---|---|---|
+| a. General knowledge / reasoning | MMLU-Pro, GSM8K | done, both models | not started |
+| b. Instruction following + tool calling | own 10-case suite + classifier audit; **no standard benchmark run** | partial | not started |
+| c. Safety / security | none chosen | — | — |
+
+MMLU-Pro does not touch tool calling, so (b) currently rests on the custom
+suite. IFEval (541 prompts, rule-graded) and BFCL (AST-graded, with an
+`irrelevance` split that maps onto the over-triggering finding) are installed on
+the box and deliberately **kept** for that reason — BFCL can score condition D
+directly; condition E needs its prompts replayed through the classifier, as in
+§2.3, because the orchestrator executes tools rather than returning them.
+
+## 7. Machine state (2026-09-20)
+
+`MITLAB-EDGE` after cleanup: 38GB used of 117GB, 75GB free.
+
+Installed and needed: llama.cpp, little-gemma, the voice-agent stack (six `va-*`
+units, all active), `~/Research/eval-venv` (lm-eval), `~/Research/bfcl-venv`
+(kept for (b) above), Gemma 4 GGUFs — E2B/E4B Q4_K_XL QAT, E4B Q4_K_M, Q5_K_M,
+Q8_0, and both MTP heads.
+
+Deleted, 21GB: `~/.litert-lm` and `~/litert-venv` (condition C dropped),
+`~/.cache/pip`, an unrelated Qwen3-4B GGUF. The raw Sep-14 engine comparison
+scratch files were archived to `findings/early-engine-benchmarks/` first.
+
+## 8. Status
 
 Done: MMLU-Pro both models · tinyGSM8k E2B (256/1024) and E4B (256) · Tier 1–3
 own suite · MTP × thinking · quant sweep · live-answer audit · classifier audit.
 
-Not done: MMLU-Pro thinking-on rows · MMLU-Pro repeat for run-to-run variance ·
-quantization control (Q8_0 through the same harness) · tinyGSM8k E4B at 1024 ·
-everything on the Jetson Orin Nano · safety and security capability (no
-benchmark chosen) · standard benchmark for instruction following / tool calling
-(IFEval and BFCL installed but dropped).
+Not done, in rough priority order: MMLU-Pro thinking-on rows (E2B ~6–8h, E4B
+~12–15h) · MMLU-Pro repeat for run-to-run variance (~3h) · quantization control,
+Q8_0 through the same harness (~7h) · tinyGSM8k E4B at 1024 (~3h) · Jetson Orin
+Nano, all of it · safety and security benchmark selection · IFEval and BFCL for
+capability (b).

@@ -4,5 +4,6 @@
   "engine": "litert_lm",
   "offer_tools": false,
   "mtp": false,
-  "thinking": false
+  "thinking": false,
+  "_dropped": "Dropped 2026-09-20. Runs in results/ (raspi5-C-*) are kept but unreported; the LiteRT runtime is no longer installed."
 }

@@ -5,8 +5,7 @@
   "power_mode": "stock, active cooler, cpufreq governor ondemand",
   "proposed_url": "http://127.0.0.1:8090",
   "endpoints": {
-    "llama_cpp": "http://127.0.0.1:8080/v1/chat/completions",
-    "litert_lm": "http://127.0.0.1:9379/v1/chat/completions"
+    "llama_cpp": "http://127.0.0.1:8080/v1/chat/completions"
   },
   "binaries": {
     "little_gemma": "/usr/local/bin/lg"
@@ -46,8 +45,7 @@
     "e4b": "/home/mitlab/models/mtp-gemma-4-E4B-it.gguf"
   },
   "litert_models": {
-    "e4b": "gemma-4-E4B-it.litertlm",
-    "_note": "E2B is NOT imported on this box, so condition C is E4B-only. Serve with: /home/mitlab/litert-venv/bin/litert-lm serve --host 127.0.0.1 --port 9379 (no model argument; the request's model id picks the bundle)"
+    "_dropped": "Condition C (LiteRT-LM) was dropped from the study on 2026-09-20; ~/.litert-lm and ~/litert-venv were deleted from the box (21GB cleanup). Re-adding it means re-importing the 3.4GB bundle."
   },
   "_verified": "2026-09-17: paths confirmed on the box. lg is at /usr/local/bin/lg (not under ~/little-gemma). Tier-3 quant files are absent and must be fetched before Tier 3.",
   "timeout_s": 600,
