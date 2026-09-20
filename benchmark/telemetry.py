@@ -8,17 +8,23 @@ frequencies, temperature, throttle flags, memory, disk I/O, the inference
 process's own CPU/RSS, and **board power** derived from the PMIC's per-rail
 current and voltage readings.
 
-Power method: `vcgencmd pmic_read_adc` exposes a current and a voltage channel
-per rail; power is the sum of V*I over all rails. That is the board's own DC
-consumption, so it excludes PSU conversion loss — an external meter would read
-perhaps 10-20% higher. It is consistent across runs, which is what the
-efficiency comparison needs, but do not report it as wall power.
+Power method, per board:
+  Pi 5      `vcgencmd pmic_read_adc` gives a current and a voltage channel per
+            rail; power is the sum of V*I over all rails.
+  Jetson    the INA3221 hwmon exposes VDD_IN (whole board) plus VDD_CPU_GPU_CV
+            and VDD_SOC; VDD_IN is the total and the other two are subsets of
+            it, so they are logged but not added.
+Either way this is the board's own DC consumption and excludes PSU conversion
+loss — an external meter would read perhaps 10-20% higher. It is consistent
+across runs, which is what the efficiency comparison needs, but it is not wall
+power. The two boards use the same method, so the comparison holds.
 
 Stdlib only, reads /proc directly (the box has no mpstat/pidstat). One sample
 costs ~15ms, dominated by the two vcgencmd calls.
 """
 import argparse
 import csv
+import glob
 import os
 import re
 import signal
@@ -83,11 +89,16 @@ def freqs():
 
 
 def temp_c():
-    try:
-        with open("/sys/class/thermal/thermal_zone0/temp") as f:
-            return round(int(f.read()) / 1000, 1)
-    except OSError:
-        return None
+    """Hottest readable zone: the Pi has one, the Jetson has cpu/gpu/soc."""
+    best = None
+    for z in sorted(glob.glob("/sys/class/thermal/thermal_zone*")):
+        try:
+            t = int(open(f"{z}/temp").read()) / 1000
+        except (OSError, ValueError):
+            continue
+        if 0 < t < 200 and (best is None or t > best):
+            best = t
+    return round(best, 1) if best is not None else None
 
 
 def vcgencmd(*args):
@@ -99,12 +110,53 @@ def vcgencmd(*args):
 
 
 def rails():
-    """{rail: (amps, volts)} from the PMIC."""
-    out = {}
-    for name, kind, val in _ADC.findall(vcgencmd("pmic_read_adc")):
-        a, v = out.get(name, (None, None))
-        out[name] = (float(val), v) if kind == "A" else (a, float(val))
-    return out
+    """{rail: watts} for whichever sensor this board has, plus the total.
+
+    Returns (watts_by_rail, total_w, source)."""
+    adc = vcgencmd("pmic_read_adc")
+    if adc:
+        pairs = {}
+        for name, kind, val in _ADC.findall(adc):
+            a, v = pairs.get(name, (None, None))
+            pairs[name] = (float(val), v) if kind == "A" else (a, float(val))
+        w = {k: round(a * v, 4) for k, (a, v) in pairs.items() if a is not None and v is not None}
+        return w, round(sum(w.values()), 3), "pmic"
+    for h in glob.glob("/sys/class/hwmon/hwmon*"):
+        try:
+            if open(f"{h}/name").read().strip() != "ina3221":
+                continue
+        except OSError:
+            continue
+        w, total = {}, None
+        for i in (1, 2, 3):
+            try:
+                label = open(f"{h}/in{i}_label").read().strip()
+                mv = int(open(f"{h}/in{i}_input").read())
+                ma = int(open(f"{h}/curr{i}_input").read())
+            except (OSError, ValueError):
+                continue
+            w[label] = round(mv * ma / 1e6, 4)
+            if label == "VDD_IN":   # board total; the others are subsets of it
+                total = w[label]
+        return w, round(total if total is not None else sum(w.values()), 3), "ina3221"
+    return {}, None, "none"
+
+
+def gpu():
+    """(load_pct, MHz) on the Jetson; (None, None) on the Pi."""
+    load = freq = None
+    for p in ("/sys/devices/platform/gpu.0/load",
+              "/sys/class/devfreq/17000000.gpu/device/load"):
+        try:
+            load = int(open(p).read().strip()) / 10.0   # per-mille
+            break
+        except (OSError, ValueError):
+            continue
+    try:
+        freq = int(open("/sys/class/devfreq/17000000.gpu/cur_freq").read()) // 10**6
+    except (OSError, ValueError):
+        pass
+    return load, freq
 
 
 def pid_of(name):
@@ -125,13 +177,13 @@ def main():
                          "server restart mid-run is followed rather than lost")
     args = ap.parse_args()
 
-    rail_names = sorted(rails())
+    rail_names = sorted(rails()[0])
     ncpu = os.cpu_count() or 4
     cols = (["ts_epoch", "ts_iso", "cpu_pct"] + [f"cpu{i}_pct" for i in range(ncpu)]
             + [f"cpu{i}_mhz" for i in range(ncpu)]
             + ["temp_c", "throttled", "mem_used_mb", "mem_avail_mb", "swap_used_mb",
                "disk_read_kbs", "disk_write_kbs", "proc_pid", "proc_cpu_pct",
-               "proc_rss_mb", "power_w"]
+               "proc_rss_mb", "gpu_pct", "gpu_mhz", "power_w"]
             + [f"w_{r}" for r in rail_names])
 
     prev_cpu, prev_disk, prev_proc, prev_t = cpu_times(), diskstats(), None, time.time()
@@ -177,10 +229,8 @@ def main():
                     prss = round(rss / 2**20, 1) if rss else None
 
             m = meminfo()
-            rl = rails()
-            watts = {r: (a * v if a is not None and v is not None else None)
-                     for r, (a, v) in rl.items()}
-            total = round(sum(x for x in watts.values() if x), 3)
+            watts, total, _src = rails()
+            gload, gmhz = gpu()
             thr = (vcgencmd("get_throttled").strip().split("=") + [""])[1]
 
             w.writerow([round(now, 3), time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -190,8 +240,10 @@ def main():
                         round(m["MemAvailable"] / 1024),
                         round((m.get("SwapTotal", 0) - m.get("SwapFree", 0)) / 1024),
                         *disk, pid or "", pcpu if pcpu is not None else "",
-                        prss if prss is not None else "", total]
-                       + [round(watts.get(r) or 0, 4) for r in rail_names])
+                        prss if prss is not None else "",
+                        gload if gload is not None else "",
+                        gmhz if gmhz is not None else "", total]
+                       + [watts.get(r, "") for r in rail_names])
             fh.flush()
             prev_t = now
     return 0

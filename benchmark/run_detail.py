@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""Everything the dashboard needs about one benchmark run, as JSON.
+
+    python3 run_detail.py --run mmlupro100-e2b-s1
+
+Finished runs come straight from lm-eval's per-question samples. A run still in
+flight has no samples file yet, so answers are recovered from lm-eval's response
+cache and matched back to their question by the option text they quote — a
+best-effort mapping, flagged as such, so progress can be inspected without
+waiting hours for the run to end.
+
+Run it with the eval venv's python (it needs `datasets` for the partial path);
+the finished path is stdlib only.
+"""
+import argparse
+import csv
+import glob
+import json
+import os
+import re
+import sqlite3
+import time
+
+HOME = os.path.expanduser("~")
+ROOT = next((p for p in (f"{HOME}/Research", f"{HOME}/research") if os.path.isdir(p)), HOME)
+ANS = re.compile(r"answer is \(?([A-J])\)?", re.I)
+
+
+def _rows(csv_path):
+    rows = [r for r in csv.DictReader(open(csv_path)) if r.get("start_epoch")]
+    if not rows:
+        return []
+    t0 = min(float(r["start_epoch"]) for r in rows)
+    return [{"i": i, "t": round(float(r["start_epoch"]) - t0, 1),
+             "pt": int(r["prompt_tokens"] or 0), "pms": float(r["prompt_ms"] or 0),
+             "gt": int(r["gen_tokens"] or 0), "gms": float(r["gen_ms"] or 0),
+             "pts": float(r["prompt_tok_s"] or 0), "gts": float(r["gen_tok_s"] or 0)}
+            for i, r in enumerate(sorted(rows, key=lambda r: float(r["start_epoch"])))]
+
+
+def timeline(run_dir, run, model, subset):
+    """Per-request timings for THIS run, in order of preference:
+    its own requests.csv, the measured run that produced it (matched on model
+    and subset, never just the newest), its own server log, or the journal
+    window reconstructed from the results file and the run's duration."""
+    own = os.path.join(run_dir, "requests.csv")
+    if os.path.exists(own):
+        rows = _rows(own)
+        if rows:
+            return rows
+    for d in sorted(glob.glob(f"{ROOT}/measured/*"), key=os.path.getmtime, reverse=True):
+        base = os.path.basename(d).lower()
+        if model not in base:
+            continue
+        got = re.search(r"-(s\d)-\d{8}", base)
+        if (got[1] if got else "s1") != subset:
+            continue
+        csv_path = os.path.join(d, "requests.csv")
+        if os.path.exists(csv_path):
+            rows = _rows(csv_path)
+            if rows:
+                return rows
+    here = os.path.dirname(os.path.abspath(__file__))
+    log = os.path.join(run_dir, "server.log")
+    if os.path.exists(log):
+        os.system(f"python3 {here}/parse_llama_log.py --file {log} --out /tmp/_rt.csv >/dev/null 2>&1")
+        if os.path.exists("/tmp/_rt.csv"):
+            rows = _rows("/tmp/_rt.csv")
+            os.remove("/tmp/_rt.csv")
+            if rows:
+                return rows
+    res = sorted(glob.glob(f"{run_dir}/*/results_*.json"))
+    if res:
+        try:
+            end = os.path.getmtime(res[-1])
+            secs = float(json.load(open(res[-1])).get("total_evaluation_time_seconds", 0))
+            if secs:
+                fmt = "%Y-%m-%d %H:%M:%S"
+                since = time.strftime(fmt, time.localtime(end - secs - 120))
+                until = time.strftime(fmt, time.localtime(end + 120))
+                os.system(f'python3 {here}/parse_llama_log.py --since "{since}" '
+                          f'--until "{until}" --out /tmp/_rt.csv >/dev/null 2>&1')
+                if os.path.exists("/tmp/_rt.csv"):
+                    rows = _rows("/tmp/_rt.csv")
+                    os.remove("/tmp/_rt.csv")
+                    return rows
+        except (OSError, ValueError):
+            pass
+    return []
+
+
+def finished(run_dir):
+    """Questions and answers from lm-eval's own samples files."""
+    out = []
+    for f in sorted(glob.glob(f"{run_dir}/*/samples_mmlu_pro_*.jsonl")):
+        for line in open(f):
+            r = json.loads(line)
+            doc, resp = r["doc"], r["resps"][0][0]
+            m = ANS.findall(resp)
+            out.append({"subject": doc.get("category"), "q": doc["question"],
+                        "options": doc["options"], "gold": "ABCDEFGHIJ"[doc["answer_index"]],
+                        "got": (m[0].upper() if m else None), "ok": bool(r["exact_match"]),
+                        "resp": resp, "chars": len(resp)})
+    return out
+
+
+def partial(run_dir, subset):
+    """Answers from the response cache, matched to questions by quoted options."""
+    db = os.path.join(run_dir, "cache", "cache_rank0.db")
+    if not os.path.exists(db):
+        db = os.path.join(run_dir, "cache_rank0.db")
+    if not os.path.exists(db):
+        return [], "no cache yet"
+    import pickle
+    try:
+        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        resps = []
+        for (v,) in con.execute("select value from unnamed order by rowid"):
+            r = pickle.loads(v)
+            resps.append(r[0] if isinstance(r, (list, tuple)) else r)
+    except sqlite3.Error as e:
+        return [], f"cache unreadable: {e}"
+    if not resps:
+        return [], "cache empty"
+    try:
+        from datasets import load_dataset
+    except ImportError:
+        return ([{"q": None, "resp": r, "got": (ANS.findall(r) or [None])[0],
+                  "chars": len(r), "ok": None} for r in resps],
+                "answers only — datasets not importable, so no question mapping")
+
+    samples = json.load(open(f"{ROOT}/stdbench/mmlupro_subset100_{subset}_samples.json"))
+    test = load_dataset("TIGER-Lab/MMLU-Pro", split="test")
+    by_cat = {}
+    for i, c in enumerate(test["category"]):
+        by_cat.setdefault(c, []).append(i)
+    docs = []
+    for task, picks in samples.items():
+        cat = task.replace("mmlu_pro_", "").replace("_", " ")
+        for p in picks:
+            docs.append(test[by_cat[cat][p]])
+
+    def score(doc, text):
+        low = text.lower()
+        opts = [o for o in doc["options"] if isinstance(o, str) and len(o) > 12]
+        hit = sum(1 for o in opts if o.lower()[:40] in low)
+        words = set(re.findall(r"[a-z]{6,}", doc["question"].lower()))
+        return hit * 3 + sum(1 for w in words if w in low)
+
+    out, used = [], set()
+    for text in resps:
+        cands = sorted(((score(d, text), i) for i, d in enumerate(docs) if i not in used),
+                       reverse=True)
+        got = (ANS.findall(text) or [None])[0]
+        if not cands or cands[0][0] < 4 or (len(cands) > 1 and cands[0][0] == cands[1][0]):
+            out.append({"subject": None, "q": None, "options": [], "gold": None,
+                        "got": got and got.upper(), "ok": None, "resp": text,
+                        "chars": len(text)})
+            continue
+        i = cands[0][1]; used.add(i); d = docs[i]
+        gold = "ABCDEFGHIJ"[d["answer_index"]]
+        out.append({"subject": d["category"], "q": d["question"], "options": d["options"],
+                    "gold": gold, "got": got and got.upper(),
+                    "ok": (got or "").upper() == gold if got else False,
+                    "resp": text, "chars": len(text)})
+    return out, ("partial: answers matched to questions by the option text they "
+                 "quote, so a few may be unmatched")
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--run", required=True, help="directory name under stdbench/")
+    ap.add_argument("--max-questions", type=int, default=400)
+    args = ap.parse_args()
+
+    run_dir = os.path.join(ROOT, "stdbench", args.run)
+    if not os.path.isdir(run_dir):
+        print(json.dumps({"error": f"no such run: {args.run}"})); return
+    sub = (re.search(r"-(s\d)$", args.run) or [None, "s1"])[1]
+    model = "e4b" if "e4b" in args.run.lower() else "e2b"
+
+    res_files = glob.glob(f"{run_dir}/*/results_*.json")
+    summary, note = {}, None
+    qs = finished(run_dir)
+    if qs:
+        try:
+            j = json.load(open(sorted(res_files)[-1]))
+            r = j["results"]["mmlu_pro"]
+            # lm-eval writes "N/A" rather than a number when n is tiny.
+            def num(x):
+                try:
+                    return float(x)
+                except (TypeError, ValueError):
+                    return None
+            se = num(r.get("exact_match_stderr,custom-extract"))
+            summary = {"score": round(100 * num(r["exact_match,custom-extract"]), 1),
+                       "stderr": round(100 * se, 1) if se is not None else None,
+                       "minutes": round(num(j.get("total_evaluation_time_seconds")) / 60)}
+        except (OSError, KeyError, ValueError, IndexError):
+            pass
+        status = "done"
+    else:
+        qs, note = partial(run_dir, sub)
+        status = "running"
+        graded = [q for q in qs if q.get("ok") is not None]
+        if graded:
+            summary = {"score": round(100 * sum(q["ok"] for q in graded) / len(graded), 1),
+                       "graded": len(graded), "provisional": True}
+
+    print(json.dumps({
+        "run": args.run, "subset": sub, "status": status, "note": note,
+        "summary": summary, "n": len(qs),
+        "questions": qs[:args.max_questions],
+        "timeline": timeline(run_dir, args.run, model, sub),
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+    }))
+
+
+if __name__ == "__main__":
+    main()

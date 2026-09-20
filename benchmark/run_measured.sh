@@ -3,8 +3,11 @@
 #
 #   ./run_measured.sh mmlupro-e2b -- ./std_mmlupro.sh e2b
 #   IDLE=60 ./run_measured.sh tinygsm-e4b -- ./std_run.sh queue
+#   SRVLOG=~/research/stdbench/mmlupro100-e2b-s1/server.log \
+#     ./run_measured.sh mmlupro-e2b-s1 -- ./std_mmlupro_jetson.sh e2b
 #
-# Produces ~/Research/measured/<label>-<stamp>/ containing:
+# Produces <MEASURED_ROOT>/<label>-<stamp>/ (default ~/Research/measured on the
+# Pi, ~/research/measured on the Jetson) containing:
 #   telemetry.csv  1 Hz device samples (CPU per core, MHz, temp, throttle,
 #                  memory, disk, process RSS/CPU, per-rail and total power)
 #   requests.csv   per-request prompt/generation tokens and timings, from
@@ -24,7 +27,10 @@ LABEL="${1:?usage: $0 <label> -- <command...>}"; shift
 [ "${1:-}" = "--" ] && shift
 [ $# -gt 0 ] || { echo "no command given" >&2; exit 1; }
 
-OUT=~/Research/measured/$LABEL-$(date +%Y%m%d-%H%M%S)
+# Pi keeps its tree in ~/Research, Jetson in ~/research (a symlink to the SSD).
+ROOT="${MEASURED_ROOT:-}"
+[ -n "$ROOT" ] || { [ -d ~/Research ] && ROOT=~/Research/measured || ROOT=~/research/measured; }
+OUT=$ROOT/$LABEL-$(date +%Y%m%d-%H%M%S)
 mkdir -p "$OUT"
 SINCE=$(date "+%Y-%m-%d %H:%M:%S")
 
@@ -65,7 +71,13 @@ sleep "$IDLE"
 kill $TELE 2>/dev/null; wait $TELE 2>/dev/null
 UNTIL=$(date "+%Y-%m-%d %H:%M:%S")
 
-python3 parse_llama_log.py --since "$SINCE" --until "$UNTIL" --out "$OUT/requests.csv"
+# The Pi reads llama-server's timings from the journal; the Jetson has no unit,
+# so SRVLOG points at a stamp.py-prefixed server log written by the run script.
+if [ -n "${SRVLOG:-}" ] && [ -f "$SRVLOG" ]; then
+  python3 parse_llama_log.py --file "$SRVLOG" --out "$OUT/requests.csv"
+else
+  python3 parse_llama_log.py --since "$SINCE" --until "$UNTIL" --out "$OUT/requests.csv"
+fi
 python3 - "$OUT" "$WORK_START" "$WORK_END" "$RC" <<'PY'
 import json, sys
 out, ws, we, rc = sys.argv[1], float(sys.argv[2]), float(sys.argv[3]), int(sys.argv[4])

@@ -41,16 +41,24 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--unit", default="va-llm")
-    ap.add_argument("--since", required=True)
+    ap.add_argument("--file", default=None,
+                    help="read a stamp.py-prefixed server log instead of the journal")
+    ap.add_argument("--since", default=None)
     ap.add_argument("--until", default=None)
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
 
-    cmd = ["journalctl", "-u", args.unit, "--since", args.since,
-           "-o", "short-iso", "--no-pager"]
-    if args.until:
-        cmd += ["--until", args.until]
-    log = subprocess.run(cmd, capture_output=True, text=True).stdout
+    if args.file:
+        with open(args.file, errors="replace") as f:
+            log = f.read()
+    else:
+        if not args.since:
+            sys.exit("--since is required when reading the journal")
+        cmd = ["journalctl", "-u", args.unit, "--since", args.since,
+               "-o", "short-iso", "--no-pager"]
+        if args.until:
+            cmd += ["--until", args.until]
+        log = subprocess.run(cmd, capture_output=True, text=True).stdout
 
     tasks = {}
     for line in log.splitlines():

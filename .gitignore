@@ -17,3 +17,7 @@ picoagent-backup-*.tar.gz
 
 # Third-party benchmark data, reproducible from `pip install bfcl-eval`
 findings/bfcl_data/
+
+# Node dashboard
+dashboard/node_modules/
+dashboard/.next/
