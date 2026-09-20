@@ -48,10 +48,13 @@ benchmark/          the harness (stdlib only on the devices, no pip needed)
 
 dashboard/          Next.js live monitor (runs on the Mac, not the devices)
   app/page.js         queue matrix, device cards, live charts
-  app/RunDetail.js    drill-down sheet: timeline, device tracks, Q&A
+  app/RunDetail.js    drill-down sheet: device tab + questions tab
+  app/Charts.js       every chart (recharts): live metric, telemetry track, timeline
   app/lib/plan.js     which runs exist, and run-name matching rules
+  app/lib/hosts.js    the two boxes, overridable from .env.local
   app/api/status      ssh -> probe_status.py on both boxes, every 5s
   app/api/run         ssh -> run_detail.py for one run
+  scripts/check-ssh.mjs  `npm run check` — preflight before a fresh clone runs
 
 findings/           results and analysis (committed)
   RESULTS.md          the write-up of everything measured
@@ -99,7 +102,9 @@ SRVLOG=~/research/stdbench/mmlupro100-e2b-s1/server.log SUBSET=s1 \
 ./pi5_run.sh tier1 ; python3 report.py t1
 
 # dashboard, on the Mac
-cd dashboard && npm install && npm run dev     # http://localhost:3939
+cd dashboard && npm install
+npm run check      # can this Mac ssh to both boards? fix anything it flags
+npm run dev        # http://localhost:3939
 
 # rebuild the static results page from whatever data is on disk
 python3 benchmark/build_viz.py
@@ -135,6 +140,9 @@ per-question samples.
    `sudo systemctl start va-llm va-asr va-tts va-orchestrator va-web`.
 9. **One job per device.** Both boards are single-resource; a second concurrent
    run invalidates the telemetry of both.
+10. **Never `next build` in `dashboard/` while `npm run dev` is running.** The
+   build wipes `.next` under the dev server and every request 500s until it is
+   restarted. Stop the dev server first, or just don't build — dev compiles.
 
 ## 5. Methodology invariants
 

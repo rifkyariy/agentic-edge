@@ -39,7 +39,35 @@ def _rows(csv_path):
             for i, r in enumerate(sorted(rows, key=lambda r: float(r["start_epoch"])))]
 
 
-def timeline(run_dir, run, model, subset):
+def measured_dir(model, subset):
+    """The measured run that produced this benchmark run, matched on model and
+    subset — never just the newest, since both boards work through a queue."""
+    for d in sorted(glob.glob(f"{ROOT}/measured/*"), key=os.path.getmtime, reverse=True):
+        base = os.path.basename(d).lower()
+        if model not in base:
+            continue
+        got = re.search(r"-(s\d)-\d{8}", base)
+        if (got[1] if got else "s1") != subset:
+            continue
+        return d
+    return None
+
+
+def _journal(since, until, here):
+    """Per-request rows out of the llama-server journal for a time window."""
+    fmt = "%Y-%m-%d %H:%M:%S"
+    cmd = (f'python3 {here}/parse_llama_log.py '
+           f'--since "{time.strftime(fmt, time.localtime(since))}" '
+           f'--until "{time.strftime(fmt, time.localtime(until))}" --out /tmp/_rt.csv')
+    os.system(cmd + " >/dev/null 2>&1")
+    if not os.path.exists("/tmp/_rt.csv"):
+        return []
+    rows = _rows("/tmp/_rt.csv")
+    os.remove("/tmp/_rt.csv")
+    return rows
+
+
+def timeline(run_dir, run, model, subset, mdir=None):
     """Per-request timings for THIS run, in order of preference:
     its own requests.csv, the measured run that produced it (matched on model
     and subset, never just the newest), its own server log, or the journal
@@ -49,14 +77,8 @@ def timeline(run_dir, run, model, subset):
         rows = _rows(own)
         if rows:
             return rows
-    for d in sorted(glob.glob(f"{ROOT}/measured/*"), key=os.path.getmtime, reverse=True):
-        base = os.path.basename(d).lower()
-        if model not in base:
-            continue
-        got = re.search(r"-(s\d)-\d{8}", base)
-        if (got[1] if got else "s1") != subset:
-            continue
-        csv_path = os.path.join(d, "requests.csv")
+    if mdir:
+        csv_path = os.path.join(mdir, "requests.csv")
         if os.path.exists(csv_path):
             rows = _rows(csv_path)
             if rows:
@@ -70,6 +92,21 @@ def timeline(run_dir, run, model, subset):
             os.remove("/tmp/_rt.csv")
             if rows:
                 return rows
+    # Still in flight: requests.csv is only written when run_measured.sh
+    # finishes, so read the journal from the run's own start up to now.
+    if mdir:
+        try:
+            meta = json.load(open(os.path.join(mdir, "meta.json")))
+            start = meta.get("work_start_epoch") or meta.get("start_epoch")
+            if start:
+                # no slack backwards: it would pull in the tail of whatever
+                # run this one replaced on the queue.
+                rows = _journal(start, time.time() + 60, here)
+                if rows:
+                    return rows
+        except (OSError, ValueError):
+            pass
+
     res = sorted(glob.glob(f"{run_dir}/*/results_*.json"))
     if res:
         try:
@@ -93,16 +130,11 @@ def timeline(run_dir, run, model, subset):
 def telemetry_for(run, model, subset):
     """The 1Hz device samples belonging to this run, matched the same way the
     request timings are: by model and subset, never just the newest."""
-    for d in sorted(glob.glob(f"{ROOT}/measured/*"), key=os.path.getmtime, reverse=True):
-        base = os.path.basename(d).lower()
-        if model not in base:
-            continue
-        got = re.search(r"-(s\d)-\d{8}", base)
-        if (got[1] if got else "s1") != subset:
-            continue
+    d = measured_dir(model, subset)
+    if d:
         path = os.path.join(d, "telemetry.csv")
         if not os.path.exists(path):
-            continue
+            return [], None, None
         rows = []
         for r in csv.DictReader(open(path)):
             t = _f(r.get("ts_epoch"))
@@ -271,6 +303,38 @@ def partial(run_dir, subset):
                  "quote, so a few may be unmatched")
 
 
+def live_device(tele, tl, tdir):
+    """Energy and efficiency so far, for a run that has not written summary.json.
+
+    Idle is the lowest 5% of samples, which on both boards is the pre-run
+    baseline the wrapper records before work starts."""
+    w = [(r["t"], r["w"]) for r in tele if r["w"] is not None]
+    if not w:
+        return None
+    joules = sum((a[1] + b[1]) / 2 * (b[0] - a[0])
+                 for a, b in zip(w, w[1:]) if 0 < b[0] - a[0] < 30)
+    ws = sorted(v for _, v in w)
+    idle = sum(ws[:max(1, len(ws) // 20)]) / max(1, len(ws) // 20)
+    work = [v for _, v in w if v > idle * 1.15] or [v for _, v in w]
+    gen_tok = sum(q.get("gt") or 0 for q in tl)
+    gen_s = sum((q.get("gms") or 0) for q in tl) / 1000
+    cpu = [r["cpu"] for r in tele if r["cpu"] is not None]
+    temp = [r["temp"] for r in tele if r["temp"] is not None]
+    mean_w = sum(work) / len(work)
+    return {
+        "energy_wh": round(joules / 3600, 2),
+        "idle_w": round(idle, 2),
+        "mean_w": round(mean_w, 2),
+        "peak_w": round(max(v for _, v in w), 2),
+        "j_per_token": round(joules / gen_tok, 2) if gen_tok else None,
+        "tok_s_per_w": round((gen_tok / gen_s) / mean_w, 3) if gen_s and mean_w else None,
+        "temp_max": round(max(temp), 1) if temp else None,
+        "throttled": sum(1 for r in tele if r["thr"]),
+        "cpu_mean": round(sum(cpu) / len(cpu), 1) if cpu else None,
+        "dir": tdir, "provisional": True,
+    }
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -312,7 +376,8 @@ def main():
             summary = {"score": round(100 * sum(q["ok"] for q in graded) / len(graded), 1),
                        "graded": len(graded), "provisional": True}
 
-    tl = timeline(run_dir, args.run, model, sub)
+    mdir = measured_dir(model, sub)
+    tl = timeline(run_dir, args.run, model, sub, mdir)
     tele, tsummary, tdir = telemetry_for(args.run, model, sub)
     tl = attach_device(tl, tele)
     t0 = tl[0]["start_epoch"] if tl else (tele[0]["t"] if tele else 0)
@@ -328,6 +393,10 @@ def main():
                   "throttled": tsummary["thermal"]["throttled_nonzero_samples"],
                   "cpu_mean": (tsummary["utilisation"]["cpu_pct"] or {}).get("mean"),
                   "dir": tdir}
+    elif tele:
+        # summary.json only appears when the run ends; compute the same figures
+        # from the telemetry so far and mark them provisional.
+        device = live_device(tele, tl, tdir)
     print(json.dumps({
         "run": args.run, "subset": sub, "status": status, "note": note,
         "summary": summary, "n": len(qs),

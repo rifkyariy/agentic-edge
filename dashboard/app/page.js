@@ -2,72 +2,17 @@
 import { useEffect, useRef, useState } from "react";
 import { PLAN, cell, BATCH_START } from "./lib/plan";
 import RunDetail from "./RunDetail";
+import { MetricChart, fmt } from "./Charts";
 
 const POLL_MS = 5000;
 const WINDOW_MIN = 20;                       // charted history
 const HISTORY = (WINDOW_MIN * 60) / (POLL_MS / 1000);
 
-const fmt = (n, d = 0) =>
-  n === null || n === undefined || Number.isNaN(n) ? "—"
-    : Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
 const dur = (s) => {
   if (s === null || s === undefined) return "—";
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
   return h ? `${h}h ${m}m` : `${m}m`;
 };
-
-/* One metric over the shared time window: area + line, axis ticks, live value.
-   Observability-panel conventions — recessive grid, one emphasised endpoint. */
-function Panel({ series, color, unit, label, max, decimals = 0, warnAt }) {
-  const W = 520, H = 92, ml = 42, mr = 52, mt = 10, mb = 18;
-  const iw = W - ml - mr, ih = H - mt - mb;
-  const vals = series.filter((v) => v !== null && v !== undefined);
-  const hi = max ?? ((Math.max(...vals, 0) * 1.25) || 1);
-  const n = Math.max(series.length, 2);
-  const X = (i) => ml + (i / (n - 1)) * iw;
-  const Y = (v) => mt + ih - (Math.min(v, hi) / hi) * ih;
-
-  let d = "", area = "", open = false, firstX = null;
-  series.forEach((v, i) => {
-    if (v === null || v === undefined) { open = false; return; }
-    if (firstX === null) firstX = X(i);
-    d += `${open ? "L" : "M"}${X(i).toFixed(1)} ${Y(v).toFixed(1)} `;
-    open = true;
-  });
-  const lastIdx = series.length - 1;
-  const last = vals.length ? vals[vals.length - 1] : null;
-  if (d && firstX !== null) {
-    area = `${d}L${X(lastIdx).toFixed(1)} ${(mt + ih).toFixed(1)} L${firstX.toFixed(1)} ${(mt + ih).toFixed(1)} Z`;
-  }
-  const hot = warnAt && last !== null && last >= warnAt;
-
-  return (
-    <div className="panel">
-      <div className="panel-head">
-        <span className="panel-label">{label}</span>
-        <span className="panel-stats">
-          {vals.length > 1 && <em>min {fmt(Math.min(...vals), decimals)} · max {fmt(Math.max(...vals), decimals)}</em>}
-          <b className={hot ? "hot" : ""} style={{ color: hot ? "var(--danger)" : color }}>
-            {fmt(last, decimals)}<i>{unit}</i>
-          </b>
-        </span>
-      </div>
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-label={`${label} over the last ${WINDOW_MIN} minutes`}>
-        {[0, 0.5, 1].map((f) => (
-          <g key={f}>
-            <line x1={ml} x2={ml + iw} y1={Y(hi * f)} y2={Y(hi * f)} className="gridline" />
-            <text x={ml - 6} y={Y(hi * f) + 3.5} className="tick" textAnchor="end">{fmt(hi * f, decimals)}</text>
-          </g>
-        ))}
-        {area && <path d={area} fill={color} opacity="0.12" />}
-        {d && <path d={d} fill="none" stroke={color} strokeWidth="1.6" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />}
-        {last !== null && <circle cx={X(lastIdx)} cy={Y(last)} r="2.6" fill={color} />}
-        <text x={ml} y={H - 5} className="tick">-{WINDOW_MIN}m</text>
-        <text x={ml + iw} y={H - 5} className="tick" textAnchor="end">now</text>
-      </svg>
-    </div>
-  );
-}
 
 function Matrix({ boxes, onOpen }) {
   return (
@@ -83,7 +28,7 @@ function Matrix({ boxes, onOpen }) {
             <h3>{box.label}</h3>
             <table>
               <thead>
-                <tr><th /> {PLAN.subsets.map((s) => <th key={s}>{s}</th>)}</tr>
+                <tr><th />{PLAN.subsets.map((s) => <th key={s}>{s}</th>)}</tr>
               </thead>
               <tbody>
                 {PLAN.models.map((m) => (
@@ -135,6 +80,9 @@ function Device({ box, hist, onOpen }) {
           <h2>{box.label}</h2><span className="pill danger">unreachable</span>
         </div>
         <pre className="err">{box.error}</pre>
+        {box.hint && (
+          <p className="setup-hint">{box.hint}</p>
+        )}
       </section>
     );
   }
@@ -201,12 +149,16 @@ function Device({ box, hist, onOpen }) {
       </div>
 
       <div className="panels">
-        <Panel series={hist.power} color="var(--power)" unit="W" label="board power" decimals={2} />
-        <Panel series={hist.cpu} color="var(--cpu)" unit="%" label="cpu utilisation" max={100} />
-        {hist.gpu?.some((v) => v !== null && v !== undefined) && (
-          <Panel series={hist.gpu} color="var(--gpu)" unit="%" label="gpu utilisation" max={100} />
+        <MetricChart data={hist} dataKey="power" color="var(--power)" unit="W"
+          label="board power" decimals={2} windowMin={WINDOW_MIN} />
+        <MetricChart data={hist} dataKey="cpu" color="var(--cpu)" unit="%"
+          label="cpu utilisation" domainMax={100} windowMin={WINDOW_MIN} />
+        {hist.some((r) => r.gpu !== null && r.gpu !== undefined) && (
+          <MetricChart data={hist} dataKey="gpu" color="var(--gpu)" unit="%"
+            label="gpu utilisation" domainMax={100} windowMin={WINDOW_MIN} />
         )}
-        <Panel series={hist.temp} color="var(--temp)" unit="°C" label="soc temperature" decimals={1} warnAt={80} />
+        <MetricChart data={hist} dataKey="temp" color="var(--temp)" unit="°C"
+          label="soc temperature" decimals={1} warnAt={80} windowMin={WINDOW_MIN} />
       </div>
 
       {d.rails && Object.keys(d.rails).length > 1 && (
@@ -258,13 +210,18 @@ export default function Page() {
         const r = await fetch("/api/status", { cache: "no-store" });
         const j = await r.json();
         if (!alive) return;
+        const now = j.ts ? new Date(j.ts).getTime() : Date.now();
         for (const b of j.boxes) {
-          const h = (hist.current[b.id] ||= { power: [], cpu: [], temp: [], gpu: [] });
-          h.power.push(b.data?.power_w ?? null);
-          h.cpu.push(b.data?.cpu_pct ?? null);
-          h.temp.push(b.data?.temp_c ?? null);
-          h.gpu.push(b.data?.gpu_pct ?? null);
-          for (const k of ["power", "cpu", "temp", "gpu"]) while (h[k].length > HISTORY) h[k].shift();
+          // a fresh array each tick: Recharts holds on to the one it was
+          // handed, and mutating that one throws in dev.
+          const h = [...(hist.current[b.id] || []), {
+            t: now,
+            power: b.data?.power_w ?? null,
+            cpu: b.data?.cpu_pct ?? null,
+            temp: b.data?.temp_c ?? null,
+            gpu: b.data?.gpu_pct ?? null,
+          }];
+          hist.current[b.id] = h.slice(-HISTORY);
         }
         setState(j); setErr(null);
       } catch (e) { if (alive) setErr(String(e)); }
@@ -300,7 +257,7 @@ export default function Page() {
 
       <div className="grid">
         {state.boxes.map((b) => (
-          <Device key={b.id} box={b} hist={hist.current[b.id] || { power: [], cpu: [], temp: [], gpu: [] }}
+          <Device key={b.id} box={b} hist={hist.current[b.id] || []}
                   onOpen={(box, run) => setDetail({ box, run })} />
         ))}
         {!state.boxes.length && <p className="sub">Polling both devices over SSH…</p>}

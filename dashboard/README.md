@@ -1,41 +1,78 @@
-# Experiment monitor
+# Live experiment monitor
 
-Live view of the Agentic Edge benchmark runs on both boards: current run and
-ETA, board power, CPU and GPU utilisation, temperature, memory, the queue of
-MMLU-Pro subsets, and a drill-down into any run's per-request timeline and
-per-question answers.
+A Next.js page that watches both boards over SSH while they work through the
+MMLU-Pro queue: what is running, how far along, what the board is drawing, and —
+per run — the request timeline, the device conditions behind each request, and
+every question and answer.
+
+It runs on your Mac. Nothing is installed on the boards; it calls two scripts
+that already live in the repo there:
+
+| | |
+|---|---|
+| `benchmark/probe_status.py` | one-shot status, polled every 5s |
+| `benchmark/run_detail.py` | one run in full, on demand |
+
+## Setup
 
 ```bash
 cd dashboard
 npm install
-npm run dev          # http://localhost:3939
+npm run check      # can this Mac reach both boards?
+npm run dev        # http://localhost:3939
 ```
 
-**No agent runs on the devices.** One API route shells out to
-`ssh <host> 'python3 benchmark/probe_status.py'` for each box every 5 seconds
-and a second route calls `benchmark/run_detail.py` when you open a run. It
-reuses your existing SSH config, so the only requirement is that
-`ssh MITLAB-EDGE` and `ssh MITLAB-JETSON` already work.
+`npm run check` is the important step on a fresh clone. It verifies, per board:
+ssh works with key auth, the repo is where the dashboard expects it,
+`probe_status.py` runs, and the eval venv's python exists. Every failure prints
+the command that fixes it. `npm run dev` runs it first too, but does not block
+on it.
 
-Hosts are listed in `app/api/status/route.js`; the paths differ per box because
-the Pi keeps its tree in `~/Research` and the Jetson in `~/research` (a symlink
-to its SSD).
+### SSH
 
-## What the cells mean
+The dashboard reaches each board by name, using your own `~/.ssh/config` and
+agent — it never asks for a password (`BatchMode=yes`), so key auth has to work
+before the page shows anything.
 
-| cell | meaning |
-|---|---|
-| green, with score | finished in the current batch, with telemetry |
-| blue, with % and ETA | running now |
-| grey dotted, with a date | an earlier batch, before telemetry — not part of this rerun |
-| dashed | queued |
+```
+Host MITLAB-EDGE
+  HostName 192.168.1.233
+  User mitlab
 
-Click any finished or running cell (or the run name on a device card) for the
-request timeline and every question with the model's full answer. A run still
-in flight has no samples file yet, so its answers are recovered from lm-eval's
-response cache and matched to questions by the option text they quote — the
-sheet says so when that is what you are looking at.
+Host MITLAB-JETSON
+  HostName mitlab-orin-nano
+  User ari
+```
 
-Power is board DC draw: the Pi's PMIC rails summed, the Jetson's INA3221
-`VDD_IN`. It excludes power-supply conversion loss, so it is comparable between
-runs and between the two boards, but it is not wall power.
+Then `ssh-copy-id MITLAB-EDGE` (and the Jetson) if the key is not there yet.
+
+Different machines? Copy `.env.example` to `.env.local` and set `PI_HOST` /
+`JETSON_HOST` to an alias or `user@host`, plus `*_REPO` and `*_PY` if the paths
+differ. Note the case convention the boards use: `~/Research` on the Pi,
+`~/research` on the Jetson.
+
+## Reading the page
+
+**Queue matrix** — model × subset per board. Green is finished this batch,
+blue is running, dotted is the earlier batch before telemetry existed. Click a
+finished or running cell to open it.
+
+**Device cards** — live power, CPU, temperature and GPU over the last 20
+minutes, plus progress and ETA for whatever is running.
+
+**Run detail** has two tabs:
+
+- **Device** — prefill and decode seconds per request as stacked bars with
+  decode tok/s over them, then board power, CPU, GPU and temperature across the
+  same time span, so a spike lines up with the request that caused it. Below
+  that, the same thing as a table.
+- **Questions** — every question, the model's full answer, what it picked and
+  what was correct.
+
+Click any bar in the timeline, or any row in the request table, to jump to that
+question — its own power, energy, J/token and thermals are shown with it.
+
+A run still in flight shows both tabs. Its answers come from lm-eval's response
+cache and are matched to questions by the option text they quote, so a few may
+read `unmatched`; its device figures are marked `so far` and are computed from
+the telemetry written up to that moment.

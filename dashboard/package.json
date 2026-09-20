@@ -4,11 +4,14 @@
   "scripts": {
     "dev": "next dev -p 3939",
     "build": "next build",
-    "start": "next start -p 3939"
+    "start": "next start -p 3939",
+    "check": "NODE_NO_WARNINGS=1 node scripts/check-ssh.mjs",
+    "predev": "NODE_NO_WARNINGS=1 node scripts/check-ssh.mjs || true"
   },
   "dependencies": {
     "next": "15.5.4",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "recharts": "^3.10.1"
   }
 }
