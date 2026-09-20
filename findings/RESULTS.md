@@ -166,7 +166,44 @@ Recorded because they invalidate any earlier numbers taken from this harness:
 
 ---
 
-## 6. Capability coverage
+## 6. Statistical design and what is being re-run
+
+Decoding is greedy, so repeating an identical question set measures only
+implementation nondeterminism (~1 point: llama.cpp is not bit-identical across
+server restarts, observed as 1 of 100 GSM8K answers flipping). The uncertainty
+that matters is which questions were drawn: **±9.7 points at n=100**.
+
+The study therefore uses **three disjoint stratified subsets** — s1/s2/s3,
+seeds 20260918/19/20, 100 questions each, verified non-overlapping, pooling to
+**n=300 (±5.6)**. Each is reported individually as well as pooled; none is
+dropped. The variance repeat needs no extra run: the telemetry rerun of s1 on
+E2B repeats the 18 September run question for question.
+
+Method basis: Miller 2024 (arXiv:2411.00640), Madaan et al. 2024
+(arXiv:2406.10229), Dodge et al. 2019 (arXiv:1909.03004), Biderman et al. 2024
+(arXiv:2405.14782).
+
+Runs queued on the Pi as of 2026-09-20: s1 with telemetry (E2B, E4B), then
+s2 and s3 for both models, each wrapped in 1 Hz device telemetry.
+
+## 7. Device cost
+
+Every accuracy run is now wrapped in `run_measured.sh`, which records at 1 Hz:
+per-core CPU and MHz, SoC temperature, throttle flags, memory, swap, disk I/O,
+the server's RSS and CPU, and board power from the PMIC's per-rail V×I, with an
+idle baseline before and after. `summarize_run.py` turns that into energy per
+generated token, tok/s/W and thermal summaries.
+
+First measurements (E4B, short workload): **2.34 W idle, 6.86 W working,
+7.70 W peak, 1.55 J per generated token** (1.02 J above idle), **0.64
+tok/s/W**, no throttling at 2400 MHz.
+
+Power is board DC draw summed over the PMIC rails; it excludes power-supply
+conversion loss, so it is consistent between runs but is not wall power. State
+that whenever the number is quoted, and use the same method on the Jetson (its
+INA3221 rails, not `vcgencmd`) for the comparison to hold.
+
+## 8. Capability coverage
 
 Paper 1 claims three capability areas. Only one is covered so far.
 
@@ -183,7 +220,7 @@ the box and deliberately **kept** for that reason — BFCL can score condition D
 directly; condition E needs its prompts replayed through the classifier, as in
 §2.3, because the orchestrator executes tools rather than returning them.
 
-## 7. Machine state (2026-09-20)
+## 9. Machine state (2026-09-20)
 
 `MITLAB-EDGE` after cleanup: 38GB used of 117GB, 75GB free.
 
@@ -196,13 +233,19 @@ Deleted, 21GB: `~/.litert-lm` and `~/litert-venv` (condition C dropped),
 `~/.cache/pip`, an unrelated Qwen3-4B GGUF. The raw Sep-14 engine comparison
 scratch files were archived to `findings/early-engine-benchmarks/` first.
 
-## 8. Status
+## 10. Status
 
 Done: MMLU-Pro both models · tinyGSM8k E2B (256/1024) and E4B (256) · Tier 1–3
 own suite · MTP × thinking · quant sweep · live-answer audit · classifier audit.
 
-Not done, in rough priority order: MMLU-Pro thinking-on rows (E2B ~6–8h, E4B
-~12–15h) · MMLU-Pro repeat for run-to-run variance (~3h) · quantization control,
-Q8_0 through the same harness (~7h) · tinyGSM8k E4B at 1024 (~3h) · Jetson Orin
-Nano, all of it · safety and security benchmark selection · IFEval and BFCL for
-capability (b).
+In progress: MMLU-Pro s1 with telemetry (E2B, E4B), then s2 and s3 for both
+models — six measured runs, roughly a day of Pi time.
+
+Not done, in rough priority order: **Jetson Orin Nano, all of it** (the CUDA
+axis is core to the design, not optional) · capability (b) standard benchmark,
+IFEval and BFCL installed but unrun · capability (c) safety and security, no
+benchmark chosen · MMLU-Pro thinking-on rows (E2B ~6–8h, E4B ~12–15h) ·
+quantization control, Q8_0 through the same harness (~7h).
+
+**No further GSM8K runs.** Its results stay as the methodological appendix on
+generation caps (§1).

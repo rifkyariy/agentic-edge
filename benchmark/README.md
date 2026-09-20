@@ -1,9 +1,20 @@
 # Agentic edge benchmark
 
-Cross-device, cross-architecture comparison harness for running the same
-fixed suite of test cases against different (device, model, quantization,
-architecture, MTP, thinking) combinations and getting back one comparable
-JSON result file per run.
+Harness for the Agentic Edge study: the same fixed workload across
+(device, model, quantization, architecture, MTP, thinking), with **accuracy and
+device cost measured in the same run**, producing one comparable JSON result
+file each time.
+
+Two halves:
+
+| half | scripts | what it produces |
+|---|---|---|
+| **own suite** — architectures, tool calling, MTP, quant | `run_benchmark.py`, `pi5_run.sh`, `report.py` | `results/*.json`, tables T1-T4 |
+| **standard benchmarks + telemetry** | `std_mmlupro.sh`, `run_measured.sh`, `telemetry.py` | `~/Research/stdbench/`, `~/Research/measured/` |
+
+The protocol, the statistical design, and the revisions that results forced are
+in [EXPERIMENT_PLAN.md](EXPERIMENT_PLAN.md). Measured results are in
+[../findings/RESULTS.md](../findings/RESULTS.md).
 
 **Zero setup on a new device.** Stdlib only, no `pip install`. Clone the
 repo, copy an example config, point it at that device's model/engine, run.
@@ -53,7 +64,6 @@ device, and what each table proves — is in
 | engine | what it is | mtp / thinking | tool calling |
 |---|---|---|---|
 | `llama_cpp` | any llama.cpp-compatible `/v1/chat/completions` server | **server-launch flags** (`--spec-type draft-mtp`, `-rea on`) — `cfg["mtp"]`/`cfg["thinking"]` are labels for the report; start the server to match before running | none (bare model) |
-| `litert_lm` | same adapter as llama.cpp — same HTTP shape | same as above | none |
 | `little_gemma` | bare CLI (`lg "<prompt>"`), no server | not supported — always the floor case | none |
 | `proposed` | this repo's own [`voice-agent`](../voice-agent/), full pipeline | **toggled live** via `POST /option` before the run starts (`configure_proposed()` in `adapters.py`) — no manual step | intent classification + `match_result`/`f1_result`/`currency_rate`/`weather_forecast`/`web_search` |
 
@@ -63,12 +73,15 @@ device, and what each table proves — is in
 |---|---|---|---|
 | `A` | little-gemma | none | none — the floor. Auto-labelled `A-cpu` / `A-cuda` by the device's `cuda` flag, because little-gemma is C/CUDA by design and a GPU row is not the same condition as a CPU one. |
 | `B` | llama.cpp | none | none |
-| `C` | LiteRT-LM | none | none |
 | `D` | llama.cpp | **yes**, `tool_choice: auto` | none — the model decides alone |
 | `E` | **proposed** | yes | classify → pin → orchestrator-side fallback execution |
 | `B-mtp`, `E-think`, … | as above | | with MTP and/or thinking on (Tier 2) |
 
-**D vs E is the claim.** A/B/C have no tool access at all, so beating them
+**D vs E was the original claim** — see EXPERIMENT_PLAN §7.2 for how results revised it.
+
+**Condition C (LiteRT-LM) was dropped** on 2026-09-20 and its runtime removed from the Pi. Its runs remain in `results/` unreported.
+
+**D vs E, as first framed.** A/B/C have no tool access at all, so beating them
 proves only that a system with internet access beats one without. D is the
 same engine with the same schemas offered naively — the thing the
 orchestration layer has to actually improve on.
@@ -99,6 +112,31 @@ out of the result JSON and annotate separately, since automatic scoring for
 open-ended answers is out of scope here).
 
 ## Running
+
+### Standard benchmarks with device telemetry
+
+```bash
+# once: build the question subsets (disjoint, seeded, committed)
+python3 mmlupro_subset.py --seed 20260918 --tag s1
+python3 mmlupro_subset.py --seed 20260919 --tag s2 --exclude s1
+
+# one accuracy run, wrapped in 1Hz power/thermal/utilisation telemetry
+./run_measured.sh mmlupro-e2b-s1 -- env SUBSET=s1 ./std_mmlupro.sh e2b
+```
+
+Each measured run writes `telemetry.csv` (per-core CPU and MHz, temperature,
+throttle flags, memory, disk, server RSS, per-rail and total board power),
+`requests.csv` (per-request tokens and timings from llama-server's journal),
+`meta.json` and `summary.json` (J per generated token, tok/s/W, idle vs working
+watts, peak temperature). Rebuild the results page with
+`python3 build_viz.py`.
+
+Two settings the Pi needs, applied by `std_mmlupro.sh` and restored after:
+`-c 8192` (longest subset prompt is 2,427 tokens against a 2,048-token answer
+budget) and `--cache-ram 0` (llama.cpp's 8192 MiB default host prompt cache
+exceeds the board's RAM and gets OOM-killed on 100 distinct prompts).
+
+### Own suite
 
 ```bash
 ./sweep.sh tier1 devices/pi5.json     # 5 conditions x 2 models, full case suite
@@ -160,11 +198,12 @@ same comparison, since little-gemma is the one engine designed around CUDA.
 - **Sequential, single-flight only.** One case runs to completion before the
   next starts; there is no concurrent-user simulation. That is a different,
   larger benchmark than this one.
-- **`llama_cpp`/`litert_lm` do not control the server.** If `mtp`/`thinking`
-  in the config do not match how that server was actually started, the
-  result is silently mislabeled — check the server's own startup flags, not
-  just this config, before trusting those two columns.
-- **Tool-call detection for `llama_cpp`/`litert_lm`** reads
+- **The harness does not own the server's launch flags.** `run_benchmark.py`
+  verifies the loaded model through `/props` and switches it when needed, and
+  MTP/thinking are pushed through va-web's `/option`, but a server started by
+  hand with different flags would still be mislabeled. Check `ps` before
+  trusting those columns.
+- **Tool-call detection for `llama_cpp`** reads
   `delta.tool_calls` from the stream, which requires you to have actually
   offered tool schemas in that server's request — this harness sends a bare
   `messages` array with no `tools` field, so those two engines will show
@@ -175,3 +214,20 @@ same comparison, since little-gemma is the one engine designed around CUDA.
   obviously wrong number or a missing key fact, not answer quality. Treat
   cases without it (`creative-poem`, `knowledge-socket`) as latency-only and
   score their text by hand if quality matters for your writeup.
+
+
+## Scripts
+
+| script | what it does |
+|---|---|
+| `run_benchmark.py` | one run of the own suite: device + condition + model key |
+| `pi5_run.sh` | tiers 1-3 on the Pi, with the server juggling each condition needs |
+| `report.py` | tables T1-T4 from `results/` |
+| `mmlupro_subset.py` | draws a stratified, seeded, disjoint MMLU-Pro subset |
+| `std_mmlupro.sh` | one MMLU-Pro run (`SUBSET=`, `THINKING=`) via lm-eval |
+| `std_run.sh` | tinyGSM8k now; IFEval and BFCL deferred |
+| `run_measured.sh` | wraps any of the above with idle baselines and telemetry |
+| `telemetry.py` | 1 Hz device sampler, stdlib only |
+| `parse_llama_log.py` | per-request token timings from llama-server's journal |
+| `summarize_run.py` | energy, J/token, tok/s/W, thermals for one measured run |
+| `build_viz.py` | builds `findings/viz/mmlupro_run.html` from results + telemetry |
