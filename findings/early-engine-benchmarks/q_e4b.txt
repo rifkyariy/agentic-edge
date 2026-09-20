@@ -1,0 +1,67 @@
+
+===== Q1 =====
+29
+
+===== Q2 =====
+300
+
+===== Q3 =====
+No.
+The premises do not provide enough information to conclude that any roses fade quickly, as the group of flowers that fade quickly might not include any roses.
+
+===== Q4 =====
+Red yellow blue
+
+===== Q5 =====
+The capital of Indonesia is Jakarta, and the new planned capital city is Nusantara.
+
+===== Q6 =====
+```python
+def fib(n):
+    if n <= 0:
+        return 0
+    elif n == 1:
+        return 1
+    else:
+        a, b = 0, 1
+        for _ in range(2, n + 1):
+            a, b = b, a + b
+        return b
+```
+
+===== Q7 =====
+I do not know of a "Zorbium-7 protocol" in computer networking. It is possible that it is a very new, proprietary, or highly specialized internal protocol that has not been widely documented in public networking standards or literature.
+
+===== Q8 =====
+{
+  "name": "Ali",
+  "age": 30
+}
+
+===== Q9 =====
+Here are a few options, depending on the nuance you want to convey:
+
+**Most Common and Natural:**
+
+> **Cuacanya bagus hari ini, jadi saya ingin keluar dan berjalan-jalan.**
+
+**Slightly more formal:**
+
+> **Hari ini cuacanya menyenangkan, jadi saya ingin pergi keluar dan berjalan.**
+
+**More casual (using "mau"):**
+
+> **Cuacanya enak hari ini, jadi aku mau keluar dan jalan-jalan.**
+
+***
+
+**Breakdown of terms:**
+
+* **The weather is nice today:** *Cuacanya bagus hari ini* (or *Cuacanya menyenangkan*)
+* **So:** *Jadi*
+* **I want to:** *Saya ingin* (formal/standard) or *Aku mau* (casual)
+* **Go outside:** *Keluar* (to go out) or *Pergi keluar*
+* **And walk:** *Dan berjalan* (to walk) or *Dan berjalan-jalan* (to take a stroll/walk around, which is often implied in this context
+
+===== Q10 =====
+The Raspberry Pi 5 is a compact, powerful single-board computer featuring four Cortex-A76 cores and up to 16GB of RAM, making it a versatile tool for hobbyists, home automation, and local edge AI applications.

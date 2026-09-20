@@ -227,5 +227,6 @@
     "I am going to Antioch today, can you look for any unisex salon there?"
    ]
   ]
- }
+ },
+ "_source": "Prompts from BFCL v4 (bfcl_eval/data/BFCL_v4_*.json, pip install bfcl-eval), replayed offline through voice-agent/services/orchestrator.py classify()/categorise()/forced_tool(). The dataset files are not committed here."
 }

@@ -1,0 +1,10 @@
+Q1: ans='3 × 7 = 21 dollars   50 - 21 = 29    29'                  think_chars=    0 out_tok=  24
+Q2: ans='408 - 108 = 300'                                          think_chars=    0 out_tok=  14
+Q3: ans='To find the speed in km/h:  First, convert 45 minutes t'  think_chars=    0 out_tok=  66
+Q4: ans='We can solve this using the concept of "worker-days."  '  think_chars=    0 out_tok=  83
+Q5: ans='36'                                                       think_chars=    0 out_tok=   3
+Q6: ans='36'                                                       think_chars=    0 out_tok=   3
+Q7: ans='Let the original price be $ x $.  After a 20% discount,'  think_chars=    0 out_tok=  85
+Q8: ans='24 + 23 = 47'                                             think_chars=    0 out_tok=  11
+Q9: ans='210'                                                      think_chars=    0 out_tok=   4
+Q10: ans='20'                                                       think_chars=    0 out_tok=   3

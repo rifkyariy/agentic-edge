@@ -1,0 +1,10 @@
+A shop sells pens for 3 dollars each. I buy 7 pens and pay with a 50 dollar note. How much change do I get? End your reply with the number alone.
+What is 17 * 24 - 108? End your reply with the number alone.
+All roses are flowers. Some flowers fade quickly. Does it logically follow that some roses fade quickly? Answer Yes or No, then one sentence of justification.
+Reply with exactly three words naming three primary colors. No punctuation, no extra words.
+What is the capital of Indonesia, and what is the name of the new planned capital city? One sentence.
+Write a Python function fib(n) returning the nth Fibonacci number with fib(0)=0. Output only code, no explanation.
+What is the "Zorbium-7 protocol" in computer networking? If you do not know, say you do not know.
+Output only valid JSON, nothing else, with keys name and age, for a person named Ali who is 30 years old.
+Translate to Indonesian: "The weather is nice today, so I want to go outside and walk."
+Summarize in exactly one sentence: A Raspberry Pi 5 is a small single-board computer with four Cortex-A76 cores and up to 16GB of RAM. It is widely used for hobby projects, home automation, and increasingly for running small AI models locally at the edge.

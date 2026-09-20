@@ -14,3 +14,6 @@ picoagent-backup-*.tar.gz
 
 # Local editor/session state
 .claude/
+
+# Third-party benchmark data, reproducible from `pip install bfcl-eval`
+findings/bfcl_data/

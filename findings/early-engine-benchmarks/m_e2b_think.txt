@@ -1,0 +1,10 @@
+Q1: ans='29'                                                       think_chars=  287 out_tok= 108
+Q2: ans='300'                                                      think_chars=  649 out_tok= 336
+Q3: ans='80'                                                       think_chars= 1008 out_tok= 465
+Q4: ans='20'                                                       think_chars=  960 out_tok= 345
+Q5: ans='36'                                                       think_chars=  410 out_tok= 269
+Q6: ans='19'                                                       think_chars=  263 out_tok= 109
+Q7: ans='100'                                                      think_chars=  586 out_tok= 240
+Q8: ans='47'                                                       think_chars=  219 out_tok=  95
+Q9: ans='210'                                                      think_chars=  504 out_tok= 256
+Q10: ans='20'                                                       think_chars=  662 out_tok= 275

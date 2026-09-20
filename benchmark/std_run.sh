@@ -3,8 +3,8 @@
 #   tinyGSM8k (Polo et al. 2024) and IFEval (Zhou et al. 2023) via
 #   lm-evaluation-harness, against the same servers conditions B and C use.
 #
-#   ./std_run.sh queue    # per model (E2B, then E4B): tinyGSM8k, IFEval (B),
-#                         # BFCL (D); then C on LiteRT-LM last
+#   ./std_run.sh queue    # tinyGSM8k on B, E2B then E4B (current focus)
+#   ./std_run.sh full     # deferred: IFEval (B) + BFCL (D) per model, then C
 #   ./std_run.sh litert   # C only
 #
 # BFCL (Patil et al., ICML 2025) runs through its generic OpenAI-compatible
@@ -54,12 +54,18 @@ bfcl_run() {  # bfcl_run <label>
   ) || log "(bfcl failed)"
 }
 case "${1:-}" in
-  queue)
+  queue)   # tinyGSM8k only for now; IFEval, BFCL and LiteRT (C) deferred
+    for m in E2B E4B; do
+      l=$(echo $m | tr A-Z a-z)
+      [ -f "$OUT/B-$l/.tinyGSM8k.done" ] && continue
+      use_model "$MODELS/gemma-4-$m-it-qat-UD-Q4_K_XL.gguf" &&
+        evaluate "B-$l" "$LLAMA" "gemma4-$m" tinyGSM8k &&
+        touch "$OUT/B-$l/.tinyGSM8k.done"
+    done ;;
+  full)     # the deferred rest: IFEval + BFCL per model, then C
     for m in E2B E4B; do
       l=$(echo $m | tr A-Z a-z)
       use_model "$MODELS/gemma-4-$m-it-qat-UD-Q4_K_XL.gguf" || continue
-      [ -f "$OUT/B-$l/.tinyGSM8k.done" ] ||
-        { evaluate "B-$l" "$LLAMA" "gemma4-$m" tinyGSM8k && touch "$OUT/B-$l/.tinyGSM8k.done"; }
       evaluate "B-$l" "$LLAMA" "gemma4-$m" ifeval
       bfcl_run "D-$l"
     done
@@ -74,6 +80,6 @@ case "${1:-}" in
     done
     pgrep -f "[l]itert-lm serve" | xargs -r kill
     sudo -n systemctl start va-llm ;;
-  *) echo "usage: $0 {queue|litert}" >&2; exit 1 ;;
+  *) echo "usage: $0 {queue|full|litert}" >&2; exit 1 ;;
 esac
 log "done"

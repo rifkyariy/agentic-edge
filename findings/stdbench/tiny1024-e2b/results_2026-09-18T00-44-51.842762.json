@@ -1,0 +1,168 @@
+{
+  "results": {
+    "tinyGSM8k": {
+      "name": "tinyGSM8k",
+      "alias": "tinyGSM8k",
+      "sample_len": 100,
+      "exact_match,strict-match": 0.5081414410766787,
+      "exact_match_stderr,strict-match": "N/A",
+      "exact_match,flexible-extract": 0.8021607369730898,
+      "exact_match_stderr,flexible-extract": "N/A"
+    }
+  },
+  "group_subtasks": {},
+  "configs": {
+    "tinyGSM8k": {
+      "task": "tinyGSM8k",
+      "dataset_path": "tinyBenchmarks/tinyGSM8k",
+      "dataset_name": "main",
+      "training_split": "train",
+      "test_split": "test",
+      "fewshot_split": "train",
+      "doc_to_text": "Question: {{question}}\nAnswer:",
+      "doc_to_target": "{{answer}}",
+      "unsafe_code": false,
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "fewshot_config": {
+        "sampler": "default",
+        "split": "train",
+        "process_docs": null,
+        "fewshot_indices": null,
+        "samples": null,
+        "doc_to_text": "Question: {{question}}\nAnswer:",
+        "doc_to_choice": null,
+        "doc_to_target": "{{answer}}",
+        "gen_prefix": null,
+        "fewshot_delimiter": "\n\n",
+        "target_delimiter": " "
+      },
+      "num_fewshot": 5,
+      "metric_list": [
+        {
+          "metric": "exact_match",
+          "aggregation": "def agg_gpirt_gsm8k(items: List[float], benchmark: str = \"gsm8k\") -> float:\n    items = np.array(items)\n    predictions = tb.evaluate(items, benchmark)\n    return predictions[benchmark][\"gpirt\"]\n",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": false,
+          "regexes_to_ignore": [
+            ",",
+            "\\$",
+            "(?s).*#### ",
+            "\\.$"
+          ]
+        }
+      ],
+      "output_type": "generate_until",
+      "generation_kwargs": {
+        "until": [
+          "Question:",
+          "</s>",
+          "<|im_end|>"
+        ],
+        "do_sample": false,
+        "temperature": 0.0,
+        "max_gen_toks": 1024
+      },
+      "repeats": 1,
+      "filter_list": [
+        {
+          "name": "strict-match",
+          "filter": [
+            {
+              "function": "regex",
+              "regex_pattern": "#### (\\-?[0-9\\.\\,]+)"
+            },
+            {
+              "function": "take_first"
+            }
+          ]
+        },
+        {
+          "name": "flexible-extract",
+          "filter": [
+            {
+              "function": "regex",
+              "group_select": -1,
+              "regex_pattern": "(-?[$0-9.,]{2,})|(-?[0-9]+)"
+            },
+            {
+              "function": "take_first"
+            }
+          ]
+        }
+      ],
+      "should_decontaminate": false,
+      "metadata": {
+        "version": 0.0,
+        "model": "gemma4-E2B",
+        "base_url": "http://127.0.0.1:8080/v1/chat/completions",
+        "num_concurrent": 1,
+        "max_retries": 3,
+        "tokenized_requests": false,
+        "timeout": 1800,
+        "config_source": "/home/mitlab/Research/eval-venv/lib/python3.13/site-packages/lm_eval/tasks/tinyBenchmarks/tinyGSM8k.yaml"
+      }
+    }
+  },
+  "versions": {
+    "tinyGSM8k": 0.0
+  },
+  "n-shot": {
+    "tinyGSM8k": 5
+  },
+  "higher_is_better": {
+    "tinyGSM8k": {
+      "exact_match": true
+    }
+  },
+  "n-samples": {
+    "tinyGSM8k": {
+      "original": 100,
+      "effective": 100
+    }
+  },
+  "config": {
+    "model": "local-chat-completions",
+    "model_args": {
+      "model": "gemma4-E2B",
+      "base_url": "http://127.0.0.1:8080/v1/chat/completions",
+      "num_concurrent": 1,
+      "max_retries": 3,
+      "tokenized_requests": false,
+      "timeout": 1800
+    },
+    "batch_size": 1,
+    "batch_sizes": [],
+    "device": "cuda:0",
+    "use_cache": "/home/mitlab/Research/stdbench/tiny1024-e2b/cache",
+    "limit": null,
+    "bootstrap_iters": 100000,
+    "gen_kwargs": {
+      "max_gen_toks": 1024
+    },
+    "random_seed": 0,
+    "numpy_seed": 1234,
+    "torch_seed": 1234,
+    "fewshot_seed": 1234
+  },
+  "git_hash": null,
+  "date": 1789658195.5270762,
+  "pretty_env_info": "N/A (torch not installed)",
+  "transformers_version": "N/A",
+  "lm_eval_version": "0.4.13",
+  "upper_git_hash": null,
+  "task_hashes": {
+    "tinyGSM8k": "3844e3d9a1c9ca3bc7f5e0c09b8c23415aa22c3caa244c6a9a55b00993963a07"
+  },
+  "model_source": "local-chat-completions",
+  "model_name": "gemma4-E2B",
+  "model_name_sanitized": "gemma4-E2B",
+  "system_instruction": null,
+  "system_instruction_sha": null,
+  "fewshot_as_multiturn": true,
+  "chat_template": "",
+  "chat_template_sha": null,
+  "total_evaluation_time_seconds": "5303.51107080598"
+}

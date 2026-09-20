@@ -1,0 +1,10 @@
+A shop sells pens for 3 dollars each. I buy 7 pens and pay with a 50 dollar note. How much change? Reply with the number only.
+What is 17 * 24 - 108? Reply with the number only.
+A train travels 60 km in 45 minutes. What is its speed in km/h? Reply with the number only.
+If 5 workers build a wall in 12 days, how many days for 3 workers at the same rate? Reply with the number only.
+What is 15% of 240? Reply with the number only.
+I have 3 boxes with 12 apples each. I give away 17 apples. How many left? Reply with the number only.
+A shirt costs 80 dollars after a 20% discount. What was the original price? Reply with the number only.
+What is 144 divided by 6, plus 23? Reply with the number only.
+Sum of all integers from 1 to 20 inclusive? Reply with the number only.
+A car uses 8 liters per 100 km. How many liters for 250 km? Reply with the number only.

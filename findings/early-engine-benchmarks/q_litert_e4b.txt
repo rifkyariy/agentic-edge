@@ -1,0 +1,61 @@
+
+===== Q1 =====
+31
+
+===== Q2 =====
+300
+
+===== Q3 =====
+No.
+
+The premises do not establish a direct link between roses and the subset of flowers that fade quickly.
+
+===== Q4 =====
+Red yellow blue
+
+===== Q5 =====
+The capital of Indonesia is Jakarta, and the name of the new planned capital city is Nusantara.
+
+===== Q6 =====
+```python
+def fib(n):
+    if n <= 0:
+        return 0
+    elif n == 1:
+        return 1
+    else:
+        a, b = 0, 1
+        for _ in range(2, n + 1):
+            a, b = b, a + b
+        return b
+```
+
+===== Q7 =====
+I do not know what the "Zorbium-7 protocol" is in computer networking.
+
+===== Q8 =====
+{"name": "Ali", "age": 30}
+
+===== Q9 =====
+Here are a few ways to translate "The weather is nice today, so I want to go outside and walk" into Indonesian, depending on the level of formality:
+
+**Most Natural/Common:**
+
+> **"Cuaca hari ini bagus, jadi aku mau keluar dan jalan-jalan."**
+
+**Slightly More Formal:**
+
+> **"Cuaca hari ini menyenangkan, jadi saya ingin pergi ke luar dan berjalan-jalan."**
+
+**Breakdown of words:**
+
+* **The weather:** *Cuaca*
+* **is nice:** *bagus* (good) or *menyenangkan* (pleasant/nice)
+* **today:** *hari ini*
+* **so:** *jadi*
+* **I want:** *aku mau* (informal) or *saya ingin* (formal)
+* **to go outside:** *keluar* (to go out) or *pergi ke luar* (to go outside)
+* **and walk:** *dan jalan-jalan* (literally "and stroll/walk around," which is the most natural way to say "go for a walk" in Indonesian) or *dan berjalan* (and walk).
+
+===== Q10 =====
+The Raspberry Pi 5 is a compact, powerful single-board computer featuring four Cortex-A76 cores and up to 16GB of RAM, making it ideal for hobbyist projects, home automation, and local edge AI applications.

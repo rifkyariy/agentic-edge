@@ -1,0 +1,76 @@
+
+===== Q1 =====
+25
+
+===== Q2 =====
+408
+
+===== Q3 =====
+No.
+
+The premises do not provide any information linking the set of roses to the set of flowers that fade quickly.
+
+===== Q4 =====
+Red yellow blue
+
+===== Q5 =====
+The capital of Indonesia is Jakarta, and the new planned capital city is Nusantara.
+
+===== Q6 =====
+```python
+def fib(n):
+    if n <= 0:
+        return 0
+    elif n == 1:
+        return 1
+    else:
+        a, b = 0, 1
+        for _ in range(2, n + 1):
+            a, b = b, a + b
+        return b
+```
+
+===== Q7 =====
+I do not have specific, readily available information about a "Zorbium-7 protocol" in computer networking.
+
+Therefore, **I do not know what the "Zorbium-7 protocol" is.**
+
+It is possible that:
+
+* It is a very new or proprietary protocol.
+* It is a term from a specific, niche, or internal system.
+* It is a fictional protocol (from a book, game, or movie).
+
+If you have more context about where you encountered this term, I might be able to help you find more information!
+
+===== Q8 =====
+```json
+{
+  "name": "Ali",
+  "age": 30
+}
+```
+
+===== Q9 =====
+Here are a few ways to translate "The weather is nice today, so I want to go outside and walk" into Indonesian, depending on the desired nuance:
+
+**Most Common and Natural Translation:**
+
+> **Cuacanya bagus hari ini, jadi saya ingin keluar dan berjalan-jalan.**
+
+**Slightly more casual:**
+
+> **Cuacanya enak hari ini, jadi aku mau keluar dan jalan-jalan.** (Using "aku" instead of "saya" is more informal)
+
+**Breakdown of the words:**
+
+* **The weather:** Cuaca
+* **is nice:** bagus (good/nice) or enak (pleasant/nice)
+* **today:** hari ini
+* **so:** jadi
+* **I want to:** saya ingin (formal) / aku mau (informal)
+* **go outside:** keluar (to go out)
+* **and walk:** dan berjalan-jalan (to walk around/stroll) or dan jalan (and walk)
+
+===== Q10 =====
+The Raspberry Pi 5 is a powerful, compact single-board computer featuring four Cortex-A76 cores and up to 16GB of RAM, making it popular for hobby projects, home automation, and local edge AI applications.

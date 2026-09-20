@@ -1,0 +1,134 @@
+{
+ "seed": 20260918,
+ "method": "proportional stratified by category, largest remainder, min 1; indices are positions within each lm-eval mmlu_pro_<subject> task (test split filtered by category, dataset order)",
+ "question_ids": {
+  "mmlu_pro_biology": [
+   2857,
+   2963,
+   3123,
+   3250,
+   3430,
+   3441
+  ],
+  "mmlu_pro_business": [
+   231,
+   406,
+   434,
+   440,
+   720,
+   752,
+   833
+  ],
+  "mmlu_pro_chemistry": [
+   3621,
+   3728,
+   3752,
+   3783,
+   3917,
+   3973,
+   4219,
+   4288,
+   4661
+  ],
+  "mmlu_pro_computer_science": [
+   10452,
+   10671,
+   10705
+  ],
+  "mmlu_pro_economics": [
+   7070,
+   7126,
+   7346,
+   7460,
+   7485,
+   7544,
+   7620
+  ],
+  "mmlu_pro_engineering": [
+   11351,
+   11516,
+   11571,
+   11793,
+   11805,
+   11846,
+   11856,
+   11971
+  ],
+  "mmlu_pro_health": [
+   6135,
+   6163,
+   6209,
+   6254,
+   6576,
+   6619,
+   6668
+  ],
+  "mmlu_pro_history": [
+   4727,
+   4750,
+   4869
+  ],
+  "mmlu_pro_law": [
+   943,
+   990,
+   1208,
+   1369,
+   1412,
+   1413,
+   1441,
+   1740,
+   1932
+  ],
+  "mmlu_pro_math": [
+   7720,
+   7743,
+   7805,
+   7807,
+   7968,
+   8024,
+   8030,
+   8728,
+   8793,
+   8835,
+   8971
+  ],
+  "mmlu_pro_other": [
+   5091,
+   5175,
+   5388,
+   5489,
+   5707,
+   5898,
+   5945,
+   5990
+  ],
+  "mmlu_pro_philosophy": [
+   10929,
+   11009,
+   11101,
+   11247
+  ],
+  "mmlu_pro_physics": [
+   9122,
+   9125,
+   9288,
+   9546,
+   9686,
+   9874,
+   9936,
+   9939,
+   9969,
+   9978,
+   10350
+  ],
+  "mmlu_pro_psychology": [
+   1988,
+   2200,
+   2204,
+   2363,
+   2423,
+   2640,
+   2743
+  ]
+ }
+}
