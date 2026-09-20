@@ -1,0 +1,467 @@
+<title>MMLU-Pro on Pi 5</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#f6f6f4; --panel:#fffffe; --ink:#16171a; --ink-2:#55585f; --ink-3:#83878f;
+    --line:#e0e0da; --line-2:#cfcfc7;
+    --blue:#2a78d6; --orange:#eb6834; --aqua:#1baf7a; --red:#e34948; --violet:#4a3aa7;
+    --ok:#1baf7a; --bad:#e34948; --warn:#eda100;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#131416; --panel:#1b1d20; --ink:#f2f2f0; --ink-2:#b4b8c0; --ink-3:#7f848d;
+      --line:#2b2e33; --line-2:#3a3e45;
+      --blue:#3987e5; --orange:#d95926; --aqua:#199e70; --red:#e66767; --violet:#9085e9;
+      --ok:#199e70; --bad:#e66767; --warn:#c98500;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#131416; --panel:#1b1d20; --ink:#f2f2f0; --ink-2:#b4b8c0; --ink-3:#7f848d;
+    --line:#2b2e33; --line-2:#3a3e45;
+    --blue:#3987e5; --orange:#d95926; --aqua:#199e70; --red:#e66767; --violet:#9085e9;
+    --ok:#199e70; --bad:#e66767; --warn:#c98500;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;
+       margin:0;padding-block:28px 64px;padding-inline:16px;font-size:15px}
+  .wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+  h1{font-size:26px;font-weight:600;margin:0;letter-spacing:-.01em;text-wrap:balance}
+  .sub{color:var(--ink-2);margin:6px 0 0;max-width:68ch}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+           color:var(--ink-3);margin:0 0 8px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+  h2{font-size:16px;font-weight:600;margin:0 0 4px}
+  .note{color:var(--ink-2);font-size:13px;margin:0 0 14px;max-width:72ch}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .tile .m{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+  .tile .big{font-size:32px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .tile .big span{font-size:15px;color:var(--ink-2);font-weight:400}
+  .tile dl{display:grid;grid-template-columns:auto auto;gap:3px 10px;margin:12px 0 0;
+           font-size:13px;font-variant-numeric:tabular-nums}
+  .tile dt{color:var(--ink-2)} .tile dd{margin:0;text-align:right}
+  .bar-official{height:5px;background:var(--line-2);border-radius:3px;margin-top:10px;position:relative}
+  .bar-official i{position:absolute;inset:0 auto 0 0;background:var(--blue);border-radius:3px;display:block}
+  .bar-official u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--orange);text-decoration:none}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap}
+  button{font:inherit;font-size:13px;color:var(--ink);background:var(--panel);
+         border:1px solid var(--line-2);border-radius:999px;padding:5px 13px;cursor:pointer}
+  button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2);margin-top:10px}
+  .legend i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:6px;vertical-align:-1px}
+  .scroll{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:13.5px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+  th{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+     color:var(--ink-3);font-weight:500;position:sticky;top:0;background:var(--panel)}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12.5px}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:color-mix(in srgb,var(--blue) 8%,transparent)}
+  tbody tr[aria-selected="true"]{background:color-mix(in srgb,var(--blue) 14%,transparent)}
+  .pill{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:999px;white-space:nowrap}
+  .pill.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+  .pill.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+  .pill.warn{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--warn)}
+  .qlist{max-height:440px;overflow-y:auto;border:1px solid var(--line);border-radius:8px}
+  .detail{margin-top:16px;border-top:1px solid var(--line);padding-top:16px}
+  .detail h3{font-size:14px;margin:0 0 8px;font-weight:600}
+  .qtext{font-size:14.5px;margin:0 0 12px;white-space:pre-wrap}
+  .opts{display:grid;gap:4px;margin:0 0 14px;padding:0;list-style:none;font-size:13.5px}
+  .opts li{padding:5px 9px;border-radius:6px;border:1px solid var(--line);font-family:var(--mono);font-size:12.5px}
+  .opts li.gold{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,transparent)}
+  .opts li.picked{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,transparent)}
+  .opts li.gold.picked{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 16%,transparent)}
+  pre.resp{font-family:var(--mono);font-size:12.5px;line-height:1.55;white-space:pre-wrap;
+           background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;
+           max-height:340px;overflow:auto;margin:0}
+  pre.resp mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:inherit;
+                border-radius:3px;padding:1px 3px}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  select{font:inherit;font-size:13px;padding:5px 9px;border-radius:8px;border:1px solid var(--line-2);
+         background:var(--panel);color:var(--ink)}
+  .foot{color:var(--ink-3);font-size:12.5px;max-width:78ch}
+  .foot code{font-family:var(--mono);font-size:11.5px}
+  @media (max-width:620px){ .tile .big{font-size:26px} h1{font-size:22px} }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Agentic Edge · benchmark run</p>
+    <h1>MMLU-Pro on a Raspberry Pi 5</h1>
+    <p class="sub">Gemma 4 E2B and E4B, 4-bit QAT via llama.cpp, on a 100-question stratified
+      subset. Every question, every answer the model wrote, and the timing of each request
+      as the evaluation ran.</p>
+  </header>
+
+  <section class="tiles" id="tiles"></section>
+
+  <section class="panel">
+    <h2>Run timeline</h2>
+    <p class="note">One bar per question, in the order the harness sent them. Height is how long
+      the request took, split into reading the prompt (prefill) and writing the answer (decode).
+      The line is decode speed in tokens per second.</p>
+    <div class="tabs" id="tl-tabs"></div>
+    <div id="timeline"></div>
+    <div class="legend">
+      <span><i style="background:var(--blue)"></i>prefill</span>
+      <span><i style="background:var(--orange)"></i>decode</span>
+      <span><i style="background:var(--violet)"></i>decode tok/s</span>
+    </div>
+  </section>
+
+
+  <section class="panel" id="tele-panel">
+    <h2>Device telemetry <span id="tele-live"></span></h2>
+    <p class="note">Sampled once a second on the Pi itself while the evaluation ran. Power is the
+      sum of the PMIC's per-rail volts × amps — the board's own DC draw, which excludes power-supply
+      conversion loss, so treat it as consistent between runs rather than as wall-socket watts.
+      The shaded band at the left is the idle baseline recorded before the workload starts.</p>
+    <div class="tabs" id="tele-tabs"></div>
+    <div class="tiles" id="tele-tiles" style="margin-bottom:16px"></div>
+    <div id="tele-charts"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Accuracy by subject</h2>
+    <p class="note">Counts are small (3–11 questions per subject), so treat these as indicative.</p>
+    <div id="subjects"></div>
+    <div class="legend">
+      <span><i style="background:var(--blue)"></i>E2B</span>
+      <span><i style="background:var(--orange)"></i>E4B</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Every question and answer</h2>
+    <p class="note">Click a row to read the model's full reasoning. “No answer letter” means the
+      response never wrote <code>the answer is (X)</code>, so it scored zero regardless of the
+      reasoning.</p>
+    <div class="filters">
+      <div class="tabs" id="q-model"></div>
+      <div class="tabs" id="q-filter"></div>
+      <select id="q-subject"></select>
+      <span class="note" id="q-count" style="margin:0"></span>
+    </div>
+    <div class="qlist scroll"><table id="qtable"><thead><tr>
+      <th>#</th><th>Subject</th><th>Question</th><th>Gold</th><th>Model</th><th class="num">Chars</th>
+    </tr></thead><tbody></tbody></table></div>
+    <div class="detail" id="detail" hidden></div>
+  </section>
+
+  <p class="foot">Protocol: lm-evaluation-harness <code>mmlu_pro</code>, 5-shot chain-of-thought,
+    greedy decoding, <code>max_gen_toks</code> 2048, extraction <code>answer is (X)</code>.
+    Subset stratified proportionally over all 14 subjects, seed 20260918. Server: llama.cpp with
+    <code>-c 8192 --cache-ram 0</code>. Timings come from llama-server's own per-request log.
+    Published Gemma 4 figures are from Google's model card, which states neither precision nor
+    protocol, so the comparison is a consistency check rather than a controlled one.</p>
+</div>
+
+<script>
+const DATA = /*__DATA__*/{};
+/* Request timings for the graded runs come from whichever measured run used
+   that model; the older graded runs carry their own timeline in TL. */
+const TL = {};
+for (const [tag, m] of Object.entries(DATA.models)) TL[tag] = m.timeline || [];
+for (const r of Object.values(DATA.runs)) {
+  const tag = /E4B/i.test(r.model) ? 'E4B' : 'E2B';
+  if (r.requests?.length && r.requests.length >= (TL[tag]?.length || 0)) {
+    TL[tag] = r.requests.map((q, i) => ({i, t: q.t, pt: q.pt, pms: q.pms, gt: q.gt,
+                                         gms: q.gms, pts: q.pts, gts: q.gts}));
+  }
+}
+const F = (n, d = 0) => (n === null || n === undefined || Number.isNaN(n)) ? '—'
+  : Number(n).toLocaleString(undefined, {minimumFractionDigits: d, maximumFractionDigits: d});
+const el = (t, a = {}, ...kids) => {
+  const n = document.createElement(t);
+  for (const [k, v] of Object.entries(a)) {
+    if (k === 'class') n.className = v; else if (k === 'html') n.innerHTML = v; else n.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) n.append(k?.nodeType ? k : document.createTextNode(k));
+  return n;
+};
+const SVGNS = 'http://www.w3.org/2000/svg';
+const s = (t, a = {}) => { const n = document.createElementNS(SVGNS, t);
+  for (const [k, v] of Object.entries(a)) n.setAttribute(k, v); return n; };
+
+/* ---------- summary tiles ---------- */
+const tiles = document.getElementById('tiles');
+try {
+for (const [tag, d] of Object.entries(DATA.models)) {
+  const pct = d.score, off = d.official;
+  const t = el('div', {class: 'tile'});
+  t.append(el('div', {class: 'm'}, `Gemma 4 ${tag}`),
+    el('div', {class: 'big'}, `${F(pct, 1)}%`, el('span', {}, ` ±${F(d.stderr, 1)}`)));
+  const bar = el('div', {class: 'bar-official'});
+  bar.append(el('i', {style: `width:${pct}%`}), el('u', {style: `left:${off}%`, title: `published ${off}%`}));
+  t.append(bar);
+  const dl = el('dl');
+  const rows = [['Published (Google)', `${F(off, 1)}%`], ['Correct', `${d.n_correct}/${d.n}`],
+    ['No answer letter', `${d.no_letter}`], ['Run time', `${F(d.minutes)} min`],
+    ['Tokens generated', F(d.total_gen_tokens)], ['Tokens read', F(d.total_prompt_tokens)]];
+  for (const [k, v] of rows) { dl.append(el('dt', {}, k), el('dd', {}, v)); }
+  t.append(dl);
+  tiles.append(t);
+}
+} catch (e) { console.error('tiles', e); }
+
+/* ---------- timeline ---------- */
+let tlModel = 'E2B';
+const tlTabs = document.getElementById('tl-tabs');
+for (const tag of Object.keys(DATA.models)) {
+  const b = el('button', {type: 'button', 'aria-pressed': String(tag === tlModel)}, `Gemma 4 ${tag}`);
+  b.onclick = () => { tlModel = tag;
+    [...tlTabs.children].forEach(c => c.setAttribute('aria-pressed', String(c === b))); drawTimeline(); };
+  tlTabs.append(b);
+}
+function drawTimeline() {
+  const d = DATA.models[tlModel], tl = TL[tlModel] || [];
+  const box = document.getElementById('timeline');
+  if (!tl.length) {
+    box.replaceChildren(el('p', {class: 'note'}, 'No per-request timings recorded for this run.'));
+    return;
+  }
+  const W = 1000, H = 320, ml = 54, mr = 46, mt = 14, mb = 34;
+  const iw = W - ml - mr, ih = H - mt - mb;
+  const maxSec = Math.max(...tl.map(r => (r.pms + r.gms) / 1000)) * 1.08;
+  const maxTps = Math.max(...tl.map(r => r.gts)) * 1.15;
+  const bw = iw / tl.length;
+  const y = v => mt + ih - (v / maxSec) * ih;
+  const svg = s('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img',
+    'aria-label': `Per-question request duration for Gemma 4 ${tlModel}`});
+  for (let i = 0; i <= 4; i++) {
+    const v = maxSec * i / 4, yy = y(v);
+    svg.append(s('line', {x1: ml, x2: ml + iw, y1: yy, y2: yy, stroke: 'var(--line)', 'stroke-width': 1}));
+    const lab = s('text', {x: ml - 8, y: yy + 4, 'text-anchor': 'end', fill: 'var(--ink-3)',
+      'font-size': 11, 'font-family': 'var(--mono)'}); lab.textContent = F(v) + 's'; svg.append(lab);
+  }
+  tl.forEach((r, i) => {
+    const x = ml + i * bw, w = Math.max(1, bw - 1.6);
+    const gh = (r.gms / 1000 / maxSec) * ih, ph = (r.pms / 1000 / maxSec) * ih;
+    svg.append(s('rect', {x, y: mt + ih - gh, width: w, height: Math.max(0.6, gh), fill: 'var(--orange)', rx: 1}));
+    svg.append(s('rect', {x, y: mt + ih - gh - ph, width: w, height: Math.max(0.6, ph), fill: 'var(--blue)', rx: 1}));
+    const tip = s('title');
+    tip.textContent = `#${i + 1} · prefill ${F(r.pt)} tok in ${F(r.pms / 1000, 1)}s (${F(r.pts, 1)} tok/s)\n`
+      + `decode ${F(r.gt)} tok in ${F(r.gms / 1000, 1)}s (${F(r.gts, 2)} tok/s)`;
+    const hit = s('rect', {x, y: mt, width: w, height: ih, fill: 'transparent'}); hit.append(tip); svg.append(hit);
+  });
+  const pts = tl.map((r, i) => `${ml + i * bw + bw / 2},${mt + ih - (r.gts / maxTps) * ih}`).join(' ');
+  svg.append(s('polyline', {points: pts, fill: 'none', stroke: 'var(--violet)', 'stroke-width': 1.8,
+    'stroke-linejoin': 'round', opacity: .9}));
+  for (let i = 0; i <= 3; i++) {
+    const v = maxTps * i / 3, yy = mt + ih - (v / maxTps) * ih;
+    const lab = s('text', {x: ml + iw + 8, y: yy + 4, fill: 'var(--violet)', 'font-size': 11,
+      'font-family': 'var(--mono)'}); lab.textContent = F(v, 1); svg.append(lab);
+  }
+  [0, 24, 49, 74, 99].forEach(i => {
+    if (i >= tl.length) return;
+    const lab = s('text', {x: ml + i * bw + bw / 2, y: H - 12, 'text-anchor': 'middle',
+      fill: 'var(--ink-3)', 'font-size': 11, 'font-family': 'var(--mono)'});
+    lab.textContent = `#${i + 1}`; svg.append(lab);
+  });
+  const total = tl.reduce((a, r) => a + r.pms + r.gms, 0) / 1000;
+  const cap = el('p', {class: 'note', style: 'margin:10px 0 0'},
+    `${tl.length} requests · ${F(total / 60)} min of model time · median decode `
+    + `${F(tl.map(r => r.gts).sort((a, b) => a - b)[Math.floor(tl.length / 2)], 2)} tok/s · `
+    + `longest request ${F(maxSec / 1.08 / 60, 1)} min`);
+  box.replaceChildren(svg, cap);
+}
+drawTimeline();
+
+
+/* ---------- device telemetry ---------- */
+const RUNS = Object.entries(DATA.runs);
+let teleRun = RUNS.length ? RUNS[RUNS.length - 1][0] : null;
+if (!RUNS.length) document.getElementById('tele-panel').hidden = true;
+else {
+  const tabs = document.getElementById('tele-tabs');
+  if (RUNS.length > 1) for (const [key, r] of RUNS) {
+    const b = el('button', {type: 'button', 'aria-pressed': String(key === teleRun)},
+      r.model.replace(/gemma-4-|-it-qat-UD-Q4_K_XL\.gguf/g, '') || key);
+    b.onclick = () => { teleRun = key;
+      [...tabs.children].forEach(c => c.setAttribute('aria-pressed', String(c === b))); drawTele(); };
+    tabs.append(b);
+  }
+  try { drawTele(); } catch (e) { console.error('telemetry', e); }
+}
+function statTile(label, value, unit, sub) {
+  const t = el('div', {class: 'tile'});
+  t.append(el('div', {class: 'm'}, label),
+    el('div', {class: 'big'}, value, unit ? el('span', {}, ' ' + unit) : ''));
+  if (sub) t.append(el('div', {class: 'note', style: 'margin:6px 0 0'}, sub));
+  return t;
+}
+function drawTele() {
+  const r = DATA.runs[teleRun], st = r.stats;
+  document.getElementById('tele-live').innerHTML = r.done ? ''
+    : '<span class="pill warn" style="margin-left:8px">run in progress</span>';
+  const hrs = st.work_s / 3600;
+  document.getElementById('tele-tiles').replaceChildren(
+    statTile('Energy per generated token', F(st.j_per_token ?? 0, 2), 'J',
+      st.j_per_token_above_idle != null ? `${F(st.j_per_token_above_idle, 2)} J above idle` : ''),
+    statTile('Power draw', F(st.mean_w ?? 0, 2), 'W mean',
+      `idle ${F(st.idle_w ?? 0, 2)} W · peak ${F(st.peak_w ?? 0, 2)} W`),
+    statTile('Throughput per watt', F(st.tok_s_per_w ?? 0, 3), 'tok/s/W',
+      `${F(st.decode_tok_s ?? 0, 2)} tok/s decode`),
+    statTile('Energy used', F(st.energy_wh ?? 0, 3), 'Wh',
+      `${F(st.energy_j ?? 0)} J over ${F(hrs, 2)} h`),
+    statTile('Peak temperature', F(st.temp_max ?? 0, 1), '°C',
+      st.throttle_samples ? `${st.throttle_samples} throttled samples`
+        : `mean ${F(st.temp_mean ?? 0, 1)} °C · never throttled`),
+    statTile('Memory', F(st.rss_max ?? 0), 'MB',
+      `server RSS · system ${F(st.mem_max ?? 0)} MB · CPU ${F(st.cpu_mean ?? 0, 1)}%`));
+
+  const charts = [
+    {key: 'w', label: 'Board power', unit: 'W', color: 'var(--orange)', fill: true},
+    {key: 'cpu', label: 'CPU utilisation', unit: '%', color: 'var(--blue)', max: 100},
+    {key: 't', label: 'SoC temperature', unit: '°C', color: 'var(--red)'},
+    {key: 'mem', label: 'Memory used', unit: 'MB', color: 'var(--aqua)'},
+  ];
+  const host = document.getElementById('tele-charts');
+  host.replaceChildren(...charts.map(c => lineChart(r, c)));
+}
+function lineChart(r, cfg) {
+  const W = 1000, H = 150, ml = 54, mr = 16, mt = 12, mb = 22;
+  const iw = W - ml - mr, ih = H - mt - mb;
+  const ts = r.ts, vs = r[cfg.key];
+  const tmax = ts[ts.length - 1] || 1;
+  const vals = vs.filter(v => v != null);
+  const vmax = cfg.max ?? Math.max(...vals) * 1.1, vmin = 0;
+  const X = t => ml + (t / tmax) * iw;
+  const Y = v => mt + ih - ((v - vmin) / (vmax - vmin)) * ih;
+  const svg = s('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img',
+    'aria-label': `${cfg.label} over the run`});
+  svg.append(s('rect', {x: ml, y: mt, width: Math.max(0, X(r.idle_end_s) - ml), height: ih,
+    fill: 'var(--line)', opacity: .5}));
+  for (let i = 0; i <= 2; i++) {
+    const v = vmin + (vmax - vmin) * i / 2, yy = Y(v);
+    svg.append(s('line', {x1: ml, x2: ml + iw, y1: yy, y2: yy, stroke: 'var(--line)', 'stroke-width': 1}));
+    const lab = s('text', {x: ml - 8, y: yy + 4, 'text-anchor': 'end', fill: 'var(--ink-3)',
+      'font-size': 10.5, 'font-family': 'var(--mono)'});
+    lab.textContent = F(v, vmax < 12 ? 1 : 0); svg.append(lab);
+  }
+  let d = '', open = false;
+  ts.forEach((t, i) => {
+    const v = vs[i];
+    if (v == null) { open = false; return; }
+    d += (open ? 'L' : 'M') + X(t).toFixed(1) + ' ' + Y(v).toFixed(1) + ' ';
+    open = true;
+  });
+  if (cfg.fill) {
+    const first = ts.findIndex((t, i) => vs[i] != null);
+    svg.append(s('path', {d: d + `L${X(tmax).toFixed(1)} ${Y(vmin)} L${X(ts[first] || 0).toFixed(1)} ${Y(vmin)} Z`,
+      fill: cfg.color, opacity: .16}));
+  }
+  svg.append(s('path', {d, fill: 'none', stroke: cfg.color, 'stroke-width': 1.4,
+    'stroke-linejoin': 'round'}));
+  for (const t of r.throttle) {
+    svg.append(s('line', {x1: X(t), x2: X(t), y1: mt, y2: mt + ih, stroke: 'var(--warn)',
+      'stroke-width': 1, opacity: .8}));
+  }
+  for (let i = 0; i <= 4; i++) {
+    const t = tmax * i / 4;
+    const lab = s('text', {x: X(t), y: H - 6, 'text-anchor': i === 0 ? 'start' : (i === 4 ? 'end' : 'middle'),
+      fill: 'var(--ink-3)', 'font-size': 10.5, 'font-family': 'var(--mono)'});
+    lab.textContent = F(t / 60) + 'm'; svg.append(lab);
+  }
+  const box = el('div', {style: 'margin-bottom:14px'});
+  const cur = vals.length ? vals[vals.length - 1] : 0;
+  box.append(el('div', {class: 'm', style: 'font-family:var(--mono);font-size:12px;color:var(--ink-3)'},
+    `${cfg.label} (${cfg.unit}) · latest ${F(cur, cfg.unit === 'W' ? 2 : 1)}`), svg);
+  return box;
+}
+
+/* ---------- subjects ---------- */
+try { (function drawSubjects() {
+  const subs = Object.keys(DATA.models.E2B.subjects);
+  const W = 1000, rowH = 26, H = subs.length * rowH + 26, ml = 132, mr = 60;
+  const iw = W - ml - mr;
+  const svg = s('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Accuracy by subject'});
+  subs.forEach((sub, i) => {
+    const yy = i * rowH + 8;
+    const lab = s('text', {x: ml - 10, y: yy + 15, 'text-anchor': 'end', fill: 'var(--ink-2)', 'font-size': 12});
+    lab.textContent = sub; svg.append(lab);
+    [['E2B', 'var(--blue)', 0], ['E4B', 'var(--orange)', 9]].forEach(([tag, col, off]) => {
+      const [ok, n] = DATA.models[tag].subjects[sub];
+      const w = (ok / n) * iw;
+      svg.append(s('rect', {x: ml, y: yy + off, width: iw, height: 7, fill: 'var(--line)', rx: 2}));
+      svg.append(s('rect', {x: ml, y: yy + off, width: Math.max(1.5, w), height: 7, fill: col, rx: 2}));
+      const t = s('text', {x: ml + iw + 8, y: yy + off + 7, fill: 'var(--ink-3)', 'font-size': 10.5,
+        'font-family': 'var(--mono)'});
+      t.textContent = `${DATA.models[tag].subjects[sub][0]}/${n}`;
+      svg.append(t);
+    });
+  });
+  document.getElementById('subjects').replaceChildren(svg);
+})(); } catch (e) { console.error('subjects', e); }
+
+/* ---------- question explorer ---------- */
+let qModel = 'E2B', qFilter = 'all', qSubject = 'all', qSel = null;
+const mkTabs = (host, items, get, set) => {
+  host.replaceChildren();
+  for (const [val, label] of items) {
+    const b = el('button', {type: 'button', 'aria-pressed': String(get() === val)}, label);
+    b.onclick = () => { set(val); [...host.children].forEach(c => c.setAttribute('aria-pressed', String(c === b))); render(); };
+    host.append(b);
+  }
+};
+mkTabs(document.getElementById('q-model'), Object.keys(DATA.models).map(t => [t, `Gemma 4 ${t}`]),
+  () => qModel, v => { qModel = v; qSel = null; });
+mkTabs(document.getElementById('q-filter'),
+  [['all', 'All'], ['ok', 'Correct'], ['bad', 'Wrong'], ['none', 'No answer letter']],
+  () => qFilter, v => { qFilter = v; qSel = null; });
+const selSub = document.getElementById('q-subject');
+selSub.append(el('option', {value: 'all'}, 'All subjects'),
+  ...Object.keys(DATA.models.E2B.subjects).map(sub => el('option', {value: sub}, sub)));
+selSub.onchange = () => { qSubject = selSub.value; qSel = null; render(); };
+
+function rows() {
+  return DATA.models[qModel].questions.map((q, i) => ({...q, idx: i})).filter(q =>
+    (qSubject === 'all' || q.subject === qSubject) &&
+    (qFilter === 'all' || (qFilter === 'ok' && q.ok) || (qFilter === 'bad' && !q.ok)
+      || (qFilter === 'none' && !q.got)));
+}
+function render() {
+  const body = document.querySelector('#qtable tbody');
+  const rs = rows();
+  document.getElementById('q-count').textContent =
+    `${rs.length} question${rs.length === 1 ? '' : 's'} · ${rs.filter(q => q.ok).length} correct`;
+  body.replaceChildren(...rs.map(q => {
+    const tr = el('tr', {'aria-selected': String(qSel === q.idx)});
+    tr.append(el('td', {class: 'num'}, String(q.idx + 1)),
+      el('td', {}, q.subject),
+      el('td', {}, q.q.length > 96 ? q.q.slice(0, 96) + '…' : q.q),
+      el('td', {}, el('span', {class: 'pill ok'}, q.gold)),
+      el('td', {}, q.got ? el('span', {class: 'pill ' + (q.ok ? 'ok' : 'bad')}, q.got)
+        : el('span', {class: 'pill warn'}, 'none')),
+      el('td', {class: 'num'}, F(q.chars)));
+    tr.onclick = () => { qSel = q.idx; render(); detail(q); };
+    return tr;
+  }));
+  if (qSel === null) document.getElementById('detail').hidden = true;
+}
+function detail(q) {
+  const box = document.getElementById('detail');
+  box.hidden = false;
+  const opts = el('ul', {class: 'opts'});
+  q.options.forEach((o, i) => {
+    const L = 'ABCDEFGHIJ'[i];
+    const cls = (L === q.gold ? 'gold ' : '') + (L === q.got ? 'picked' : '');
+    opts.append(el('li', {class: cls.trim()}, `${L}. ${o}`));
+  });
+  const esc = t => t.replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+  const marked = esc(q.resp).replace(/([Tt]he answer is \(?[A-J]\)?\.?)/g, '<mark>$1</mark>');
+  box.replaceChildren(
+    el('h3', {}, `Question ${q.idx + 1} · ${q.subject} · `,
+      q.got ? (q.ok ? 'correct' : `answered ${q.got}, gold ${q.gold}`)
+        : 'no answer letter written'),
+    el('p', {class: 'qtext'}, q.q), opts,
+    el('h3', {}, `What Gemma 4 ${qModel} wrote (${F(q.chars)} characters)`),
+    el('pre', {class: 'resp', html: marked}));
+  box.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+render();
+</script>

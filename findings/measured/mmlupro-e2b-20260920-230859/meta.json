@@ -1,0 +1,12 @@
+{
+ "label": "mmlupro-e2b",
+ "command": "./std_mmlupro.sh e2b",
+ "model_path": "/home/mitlab/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+ "server_args": "/home/mitlab/llama.cpp/build/bin/llama-server -m /home/mitlab/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf -t 3 -c 4096 --host 127.0.0.1 --port 8080 -rea off --reasoning-budget -1",
+ "governor": "ondemand",
+ "kernel": "Linux 6.18.34+rpt-rpi-2712",
+ "host": "MITLAB-EDGE-PI-5-128",
+ "cpus": 4,
+ "start_epoch": 1789916939.3240356,
+ "throttled_at_start": "throttled=0x0"
+}

@@ -4,6 +4,7 @@
 #   ./std_mmlupro.sh e2b              # baseline, thinking off
 #   ./std_mmlupro.sh e4b
 #   THINKING=on ./std_mmlupro.sh e2b  # the reasoning-mode row
+#   SUBSET=s2 ./std_mmlupro.sh e2b    # an independent question sample
 #
 # Build the subset once with mmlupro_subset.py (seed 20260918, proportional
 # over all 14 subjects). The ids are committed in findings/stdbench/.
@@ -18,8 +19,9 @@
 # Set directly in runtime.env rather than through va-web's /model, which
 # recomputes VA_LLM_SPEC_ARGS and would drop the flags.
 set -uo pipefail
-MODEL_KEY="${1:?usage: $0 {e2b|e4b}}"
+MODEL_KEY="${1:?usage: $0 e2b|e4b}"
 THINKING="${THINKING:-off}"
+SUBSET="${SUBSET:-s1}"
 RT=/etc/voice-agent/runtime.env
 S=~/Research/stdbench
 
@@ -28,7 +30,7 @@ case "$MODEL_KEY" in
   e4b) M=/home/mitlab/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf; TAG=E4B ;;
   *) echo "unknown model key: $MODEL_KEY" >&2; exit 1 ;;
 esac
-OUT=$S/mmlupro100-$MODEL_KEY
+OUT=$S/mmlupro100-$MODEL_KEY-$SUBSET
 [ "$THINKING" = on ] && OUT=$OUT-think
 mkdir -p "$OUT"
 
@@ -43,14 +45,14 @@ for _ in $(seq 150); do
   sleep 2
 done
 ps -o args= -C llama-server
-echo "$(date) start MMLU-Pro subset100  model=$TAG thinking=$THINKING"
+echo "$(date) start MMLU-Pro subset100/$SUBSET  model=$TAG thinking=$THINKING"
 
 # Stock lm-eval mmlu_pro config: 5-shot CoT, greedy, max_gen_toks 2048,
 # 'answer is (X)' extraction. Only the question set is restricted.
 ~/Research/eval-venv/bin/lm_eval run --model local-chat-completions \
   --model_args "model=gemma4-$TAG,base_url=http://127.0.0.1:8080/v1/chat/completions,num_concurrent=1,max_retries=3,tokenized_requests=False,timeout=3600" \
   --tasks mmlu_pro --apply_chat_template \
-  --samples "$(cat "$S/mmlupro_subset100_samples.json")" \
+  --samples "$(cat "$S/mmlupro_subset100_${SUBSET}_samples.json")" \
   --log_samples --use_cache "$OUT/cache" --output_path "$OUT" \
   > "$OUT/lm_eval.log" 2>&1 && touch "$OUT/.done"
 echo "$(date) end rc=$?"
