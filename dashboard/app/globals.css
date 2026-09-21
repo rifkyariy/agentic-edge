@@ -368,3 +368,24 @@ pre.resp mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:in
                 border-radius:0 8px 8px 0;list-style:none;margin-left:-18px}
 .caveats code{font-family:var(--mono);font-size:12px;background:var(--panel-2);
               padding:1px 5px;border-radius:4px;margin:0 2px}
+
+/* scope note on the comparison page */
+.scope p{margin:0 0 12px;font-size:13.5px;line-height:1.65;color:var(--ink-2)}
+.scope p b,.scope li b{color:var(--ink)}
+.scope code{font-family:var(--mono);font-size:12px;background:var(--panel-2);
+            padding:1px 5px;border-radius:4px;margin:0 2px}
+.scope-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.scope-list li{display:flex;gap:11px;align-items:baseline;font-size:13.5px;
+               line-height:1.6;color:var(--ink-2)}
+.scope-tag{flex:none;width:74px;text-align:center;font:600 9.5px var(--mono);
+           letter-spacing:.08em;text-transform:uppercase;padding:3px 0;border-radius:999px}
+.scope-tag.open{background:color-mix(in srgb,var(--cpu) 14%,var(--panel));
+                color:var(--ink-2);border:1px solid color-mix(in srgb,var(--cpu) 35%,var(--line))}
+.scope-tag.undecided{background:color-mix(in srgb,var(--warn) 16%,var(--panel));
+                color:var(--ink-2);border:1px solid color-mix(in srgb,var(--warn) 42%,var(--line))}
+.scope-line{margin:8px 0 0;font:11.5px/1.6 var(--mono);color:var(--ink-3);
+            border-top:1px solid var(--line);padding-top:9px}
+.scope-line b{color:var(--ink-2);font-weight:600}
+.scope-line code{background:var(--panel-2);padding:1px 4px;border-radius:4px}
+.scope-line a{color:var(--cpu);text-decoration:none}
+.scope-line a:hover{text-decoration:underline}

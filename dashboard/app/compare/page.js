@@ -182,6 +182,49 @@ export default function Compare() {
         </p>
       </section>
 
+      {/* What is fixed here and what is still open, so the page is not read as
+          a final result for the paper. */}
+      <section className="card scope">
+        <h2>What this page is — and what it is not yet</h2>
+        <p>
+          Every number here is the <b>baseline condition on both boards</b>: Gemma 4
+          served by <b>llama.cpp</b>, thinking off
+          (<code>-rea off --reasoning-budget -1</code>), greedy decoding, the same
+          Q4_K_XL QAT weights and the same MMLU-Pro subsets. That holds the model,
+          the engine and the decoding fixed so the only variable left is the board.
+        </p>
+        <ul className="scope-list">
+          <li>
+            <span className="scope-tag open">planned</span>
+            <div>
+              <b>Reasoning mode on.</b> A second row with <code>THINKING=on</code>
+              (budget 320) against this baseline. Not the same thing as the
+              <code>-rea</code> flag above, which only controls where the thinking
+              text is returned. Unrun on either board — <code>std_mmlupro_jetson.sh</code>
+              has no <code>THINKING</code> switch yet.
+            </div>
+          </li>
+          <li>
+            <span className="scope-tag undecided">undecided</span>
+            <div>
+              <b>Inference engine.</b> llama.cpp is what these runs use, not a
+              conclusion. The engine axis also holds <code>little-gemma</code> and
+              this project&apos;s own pipeline; LiteRT-LM was dropped. Which engine
+              carries the standard-benchmark rows has not been decided, so treat
+              these as llama.cpp figures rather than device figures.
+            </div>
+          </li>
+          <li>
+            <span className="scope-tag open">planned</span>
+            <div>
+              <b>Capability (b) and (c).</b> Tool calling still rests on the custom
+              10-case suite — IFEval and BFCL are installed but unrun. No safety
+              benchmark has been chosen.
+            </div>
+          </li>
+        </ul>
+      </section>
+
       <div className="cmp-grid">
         <Chart title="Accuracy" note="MMLU-Pro, pooled over the finished subsets"
                data={acc} unit="%" decimals={1}

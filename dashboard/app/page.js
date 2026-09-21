@@ -22,6 +22,13 @@ function Matrix({ boxes, onOpen }) {
         <h2>Experiment queue</h2>
         <p className="sub">MMLU-Pro · three disjoint 100-question subsets per model, pooled to n=300.
           Greyed cells are results from the earlier batch, before telemetry — they are not part of this rerun.</p>
+        <p className="scope-line">
+          <b>Baseline condition</b> on both boards: llama.cpp, thinking off
+          (<code>-rea off --reasoning-budget -1</code>), greedy. Reasoning-on is a
+          planned second row; the inference engine is not settled either — llama.cpp
+          here is the current choice, not a conclusion.{" "}
+          <Link href="/compare">scope and caveats →</Link>
+        </p>
       </div>
       <div className="matrix-grid">
         {boxes.map((box) => (
