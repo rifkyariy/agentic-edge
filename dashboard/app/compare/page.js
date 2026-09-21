@@ -175,15 +175,17 @@ export default function Compare() {
         <p className="cmp-lede">
           The Orin draws about half as much power again as the Pi, yet spends
           less energy per token — it finishes so much sooner that the higher
-          draw is billed for a fraction of the time. Accuracy is the Pi&apos;s,
-          by a small but consistent margin.
+          draw is billed for a fraction of the time. On accuracy the two are
+          tied: a paired test over the same questions finds no significant
+          difference, even though they pick the same letter only 70% of the
+          time.
         </p>
       </section>
 
       <div className="cmp-grid">
         <Chart title="Accuracy" note="MMLU-Pro, pooled over the finished subsets"
                data={acc} unit="%" decimals={1}
-               better="The Orin's figure is invalid — see below" />
+               better="The boards are statistically tied — see below" />
         <Chart title="Decode throughput" note="tokens per second, generation only"
                data={series("decode_tok_s")} unit="tok/s" decimals={2}
                better="Higher is better" />
@@ -269,24 +271,32 @@ export default function Compare() {
         <h2>Reading this fairly</h2>
         <ul>
           <li className="bad">
-            <b>Do not compare the accuracy bars yet — the Orin&apos;s are wrong.</b>{" "}
-            Its server ran without <code>-rea off --reasoning-budget -1</code>, which
-            the Pi passes, so llama.cpp split Gemma&apos;s thinking into
-            <code>reasoning_content</code> and lm-eval — which reads only{" "}
-            <code>content</code> — scored what was left. On one subset that meant a
-            median response of 993 characters against the Pi&apos;s 1,880,{" "}
-            <b>11 answers returned completely empty</b>, and 23 of 100 with no
-            extractable letter against the Pi&apos;s 6. Scored generously, the Orin&apos;s
-            ceiling on that subset was 71% to the Pi&apos;s 57% — so the gap probably
-            runs the other way. The flag is fixed and every Orin MMLU-Pro run needs
-            redoing before these numbers mean anything.
+            <b>The accuracy difference is not significant.</b> The bars differ by a
+            few points, but the two boards answer the <em>same</em> questions, so the
+            honest test is paired, not two independent intervals. On E2B s2 with both
+            boards configured identically: 44 questions right on both, 46 wrong on
+            both, 7 only the Pi, 3 only the Orin. Ten discordant pairs gives an exact
+            McNemar <b>p = 0.34</b> — no detectable difference. Read the accuracy
+            chart as a tie until the other subsets are re-run and pooled.
           </li>
           <li>
-            <b>The speed and energy figures are unaffected in kind but not in
-            detail.</b> tok/s, J/token and tok/s/W are per-token rates over real
-            generation and remain the honest comparison. Per-run totals — energy in
-            Wh, minutes — are not comparable, because the two boards were generating
-            different amounts of text.
+            <b>They do disagree on the answers themselves, though.</b> The same two
+            boards pick the same letter on only <b>70 of 100</b> questions, while
+            landing on near-identical scores. Same weights, same prompts, greedy
+            decoding — so the divergence is CPU versus CUDA arithmetic tipping
+            near-ties, and it happens to be accuracy-neutral. That is the interesting
+            result here, not the score gap.
+          </li>
+          <li>
+            <b>Five Orin runs are still invalid and excluded from this reading.</b>{" "}
+            They ran without <code>-rea off --reasoning-budget -1</code>, so llama.cpp
+            split Gemma&apos;s thinking into <code>reasoning_content</code> and
+            lm-eval — which reads only <code>content</code> — scored what was left:
+            a 993-character median against the Pi&apos;s 1,880, and 11 answers
+            returned completely empty. Fixing it restored full-length responses (2,028
+            median, zero empty) and moved the score by <b>one point, downward</b>, so
+            the bug was real data loss but not the reason for the gap. Only E2B s2 has
+            been re-run so far.
           </li>
           <li>
             <b>Uncertainty is from question sampling</b>, not repeats: ±9.7 points at
