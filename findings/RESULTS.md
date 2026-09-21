@@ -23,7 +23,11 @@ Protocol: lm-eval `mmlu_pro`, 5-shot CoT, greedy, `max_gen_toks` 2048, extractio
 `answer is (X)`. Subset: proportional stratification over all 14 subjects, seed
 20260918, question ids in `findings/stdbench/mmlupro_subset100_ids.json`.
 Server: llama.cpp, `-c 8192` (the longest prompt is 2362 tokens, so the
-deployed 4096 would truncate), `--cache-ram 0`.
+deployed 4096 would truncate), `--cache-ram 0`, and
+**`-rea off --reasoning-budget -1`** — the baseline, thinking-off serving
+config. `-rea` is `--reasoning-format`, not a reasoning switch: without it
+llama.cpp splits Gemma's thinking into `reasoning_content`, which lm-eval never
+reads. Both boards must carry it; see §8.1.
 
 **This is a consistency check, not a controlled comparison.** The Gemma 4 model
 card states neither precision, shot count nor thinking mode, so the Δ column
@@ -202,6 +206,51 @@ Power is board DC draw summed over the PMIC rails; it excludes power-supply
 conversion loss, so it is consistent between runs but is not wall power. State
 that whenever the number is quoted, and use the same method on the Jetson (its
 INA3221 rails, not `vcgencmd`) for the comparison to hold.
+
+## 7.1 The Jetson's reasoning-format defect (2026-09-21)
+
+Recorded here because it invalidated runs, and every run gets reported.
+
+The Jetson's `std_mmlupro_jetson.sh` launched llama-server **without**
+`-rea off --reasoning-budget -1`, which the Pi carries via va-llm's
+`runtime.env`. The lm-eval invocation was identical on both boards; only the
+server differed. Measured on one board, one model, one flag apart:
+
+| | `content` | `reasoning_content` |
+|---|---|---|
+| default | 263 chars | 1,046 chars |
+| `-rea off` | 688 chars | 0 |
+
+lm-eval reads `content` alone, so the Jetson scored a fraction of each answer.
+On E2B s2, the same 100 questions on both boards:
+
+| | median chars | empty answers | no answer letter | score |
+|---|---|---|---|---|
+| Pi 5 | 1,880 | 0 | 6 | 51.0% |
+| Jetson, defective | 993 | 11 | 23 | 48.0% |
+| Jetson, corrected | 2,028 | 0 | 8 | **47.0%** |
+
+**The defect did not cause the score gap.** Correcting it moved accuracy by one
+point, downward. What it did change is what the runs are usable for:
+
+| class | effect | usable? |
+|---|---|---|
+| rates — decode tok/s, J/token, tok/s/W, W, GPU% | all within 1% (22.88→23.00 tok/s, 0.46→0.46 J/token) | **yes** |
+| per-run totals — generated tokens, Wh, minutes | −36% (116,679→74,149 tokens); the empty responses drove lm-eval retries | no |
+| accuracy | mechanism broken regardless of size of effect | no |
+
+On the matched-config comparison, a paired test over the same 100 questions
+gives 44 correct on both, 46 wrong on both, 7 Pi-only, 3 Jetson-only — ten
+discordant pairs, **McNemar exact p = 0.34**. No detectable accuracy
+difference between the boards.
+
+The boards agree on the *answer letter* for only **70 of 100** questions while
+scoring within noise of each other. Same weights, same prompts, greedy
+decoding, so this is CPU versus CUDA arithmetic tipping near-ties to different
+tokens — and it is accuracy-neutral. That, not the score gap, is the finding.
+
+Defective runs are archived under `stdbench/failed/` and
+`measured/failed/` with a `-reasoningfmt-` suffix.
 
 ## 8. Capability coverage
 

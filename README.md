@@ -27,6 +27,25 @@ those engine and model choices.
   comparison table. Clone the repo, edit a config, run — see
   [`benchmark/README.md`](benchmark/README.md).
 
+## Baseline serving config
+
+Every MMLU-Pro number in this repository is the **thinking-off baseline**, served
+on both boards with:
+
+```
+llama-server -m <model> -c 8192 --host 127.0.0.1 --port 8080 \
+  -rea off --reasoning-budget -1 --cache-ram 0
+```
+
+`-rea` is `--reasoning-format`, **not** a reasoning toggle. The model reasons
+either way; the flag only decides whether that text comes back inline in
+`content` or split into `reasoning_content`. lm-eval reads `content` alone, so
+omitting it silently truncates answers — on the Jetson it halved the median
+response and returned 11 of 100 completely empty. See AGENTS.md §5.
+
+The reasoning-on row is a separate condition (`THINKING=on`, budget 320) and is
+not what this flag controls.
+
 ## Hardware
 
 Raspberry Pi 5 (8GB), running headless. No microphone or speaker attached —

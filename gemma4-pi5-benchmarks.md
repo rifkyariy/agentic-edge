@@ -1,5 +1,12 @@
 # Gemma 4 on a Raspberry Pi 5: little-gemma vs llama.cpp
 
+> **Note:** this is the Sep-14 single-box engine comparison and it predates the
+> MMLU-Pro subset protocol — its serving flags are whatever is recorded in the
+> sections below, not the current baseline. The benchmark suite's baseline now
+> serves with `-rea off --reasoning-budget -1 -c 8192 --cache-ram 0` on both
+> boards; `-rea` is `--reasoning-format`, not a reasoning switch. See
+> AGENTS.md §5.
+
 Two engines × two models, measured on one box the same afternoon. The headline:
 **little-gemma's README advantage over llama.cpp is real but CUDA-only, and does
 not survive the trip to a CPU-only Pi.** On this hardware llama.cpp is ~6× faster

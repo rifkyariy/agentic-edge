@@ -99,13 +99,29 @@ lm-evaluation-harness `mmlu_pro`, unmodified: 5-shot chain of thought, greedy,
 `max_gen_toks` 2048, extraction `answer is (X)`. Only the question set is
 restricted, via `--samples`.
 
-Two device-specific settings, both restored afterwards and both load-bearing:
+Three serving settings, all load-bearing, and the first two restored afterwards:
 
 - **`-c 8192`** — the longest subset prompt is 2,427 tokens against a
   2,048-token answer budget, so the deployed 4,096 context would truncate.
 - **`--cache-ram 0`** — llama.cpp's default host prompt cache is 8192 MiB,
   more than the Pi has. With 100 distinct prompts it fills and the server is
   OOM-killed; this happened at question 48 of the first E4B GSM8K attempt.
+- **`-rea off --reasoning-budget -1`** — `-rea` is `--reasoning-format`, not a
+  reasoning toggle. Gemma reasons either way; the flag decides only whether
+  that text returns inline in `content` or split into `reasoning_content`.
+  lm-eval reads `content` alone. The Jetson served without it until
+  2026-09-22, which halved its median response (993 characters against the
+  Pi's 1,880), returned 11 of 100 answers completely empty, and left 23 of 100
+  with no extractable letter against the Pi's 6. Those runs are archived under
+  `stdbench/failed/`. **This is the baseline, thinking-off row** — the
+  reasoning-on condition is `THINKING=on` with budget 320, which is a
+  different experiment.
+
+  Correcting it moved accuracy by one point (48.0% -> 47.0% on E2B s2) and
+  left every rate metric within 1% — decode tok/s 22.88 -> 23.00, J/token 0.46
+  -> 0.46, mean watts unchanged. Per-run totals fell ~36% (116,679 -> 74,149
+  generated tokens), since the empty responses were driving lm-eval retries.
+  So the bug invalidates accuracy and per-run totals, not the rates.
 
 ### 4.2 Efficiency — `run_measured.sh`
 

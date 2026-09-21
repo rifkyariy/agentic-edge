@@ -60,6 +60,13 @@ finished or running cell to open it.
 **Device cards** — live power, CPU, temperature and GPU over the last 20
 minutes, plus progress and ETA for whatever is running.
 
+All MMLU-Pro runs shown here are the **baseline, thinking-off** config: both
+boards serve with `-rea off --reasoning-budget -1` (plus `-c 8192
+--cache-ram 0`). `-rea` is `--reasoning-format`, not a reasoning switch —
+without it llama.cpp splits Gemma's thinking into `reasoning_content`, which
+lm-eval never reads, and answers arrive truncated or empty. Jetson runs from
+before 2026-09-22 lack it and are archived as superseded.
+
 **Run detail** has two tabs:
 
 - **Device** — prefill and decode seconds per request as stacked bars with

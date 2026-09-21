@@ -140,7 +140,12 @@ per-question samples.
    `sudo systemctl start va-llm va-asr va-tts va-orchestrator va-web`.
 9. **One job per device.** Both boards are single-resource; a second concurrent
    run invalidates the telemetry of both.
-10. **Never `next build` in `dashboard/` while `npm run dev` is running.** The
+10. **Diff the actual `llama-server` command line between boards before
+   trusting a cross-device comparison.** The Pi reaches it through va-llm and
+   `runtime.env`, the Jetson launches it directly, so the two drift apart
+   silently. `ps -o args= -C llama-server` on each is the check; a difference
+   there invalidates the comparison no matter how clean the harness looks.
+11. **Never `next build` in `dashboard/` while `npm run dev` is running.** The
    build wipes `.next` under the dev server and every request 500s until it is
    restarted. Stop the dev server first, or just don't build — dev compiles.
 
@@ -151,6 +156,15 @@ These are not preferences — breaking them invalidates the paper.
 - **Both devices must run the identical question subsets** (`s1`/`s2`/`s3`,
   seeds 20260918/19/20, disjoint, ids committed in `findings/stdbench/`) with
   the identical task config. Only the device differs.
+- **The baseline serves with `-rea off --reasoning-budget -1`** on both boards.
+  `-rea` is `--reasoning-format`, not a reasoning switch: the model thinks
+  either way, and the flag only decides whether that text is returned inline in
+  `content` or split into `reasoning_content`. lm-eval reads `content` alone,
+  so without it answers arrive truncated or empty. The Jetson ran without it
+  until 2026-09-22 and lost the thinking from every answer — median response
+  993 characters against the Pi's 1,880, and 11 of 100 completely empty. The
+  thinking-on row is a *separate* condition (`THINKING=on`, budget 320), not
+  this flag.
 - **Report every run, including failures and superseded ones.** No quiet
   replacement of a bad run with a good one.
 - **Greedy decoding**, so repeats of the same questions measure only ~1 point of
