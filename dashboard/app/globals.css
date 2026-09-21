@@ -3,6 +3,7 @@
   --ink:#15171a; --ink-2:#55595f; --ink-3:#8b8f96;
   --line:#e5e5df; --line-2:#d2d2ca;
   --power:#eb6834; --cpu:#2a78d6; --temp:#e34948;
+  --pi:#2a78d6; --jetson:#c2517f;
   --ok:#1baf7a; --danger:#e34948; --warn:#eda100;
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   --sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -13,6 +14,7 @@
   --ink:#f1f2f0; --ink-2:#aab0b8; --ink-3:#767c85;
   --line:#25292e; --line-2:#333941;
   --power:#f07a4a; --cpu:#4c94e8; --temp:#ec6d6d;
+  --pi:#4c94e8; --jetson:#dd7aa2;
   --ok:#25c78a; --danger:#ec6d6d; --warn:#d99a10;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -18px rgba(0,0,0,.8);
 }}
@@ -316,3 +318,47 @@ pre.resp mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:in
 .reclegend{font:10.5px var(--mono);color:var(--ink-3);display:flex;align-items:center;gap:6px}
 .reclegend i{font-style:normal;font-size:8px;color:var(--danger);margin-right:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ── Pi 5 vs Orin comparison page ──────────────────────────────────────── */
+.cmp .top a.pill{text-decoration:none}
+.cmp-hero{display:grid;grid-template-columns:repeat(3,auto) 1fr;gap:26px;align-items:start}
+.cmp-heronum b{display:block;font:600 40px/1 var(--sans);letter-spacing:-.02em;
+               color:var(--jetson);margin:4px 0 3px}
+.cmp-heronum.alt b{color:var(--ink-3)}
+.cmp-heronum em{font:11.5px var(--mono);font-style:normal;color:var(--ink-3)}
+.cmp-lede{margin:0;font-size:13.5px;line-height:1.6;color:var(--ink-2);
+          border-left:1px solid var(--line);padding-left:20px}
+
+.cmp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}
+.cmp-fig{margin:0;background:var(--panel);border:1px solid var(--line);
+         border-radius:14px;padding:16px 14px 10px}
+.cmp-fig figcaption{padding:0 4px}
+.cmp-fig h3{margin:0;font-size:14.5px;font-weight:600}
+.cmp-fig figcaption p{margin:2px 0 6px;font:11px var(--mono);color:var(--ink-3)}
+.cmp-better{margin:2px 4px 4px;font:11px var(--mono);color:var(--ink-3);text-align:right}
+
+.gpucard .tiles{margin-bottom:14px}
+.gpunote p{margin:0 0 10px;font-size:13.5px;line-height:1.65;color:var(--ink-2)}
+.gpunote p:last-child{margin-bottom:0}
+.gpunote b{color:var(--ink)}
+.gpunote code{font-family:var(--mono);font-size:12px;background:var(--panel-2);
+              padding:1px 5px;border-radius:4px}
+
+.caveats h2,.cmp .card h2{margin:0 0 10px;font-size:15px}
+.caveats ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:9px}
+.caveats li{font-size:13.5px;line-height:1.6;color:var(--ink-2)}
+.caveats b{color:var(--ink)}
+.cmp .reqtable td{font-size:11.5px}
+.cmp tr.dim td{color:var(--ink-3)}
+
+@media (max-width:860px){
+  .cmp-hero{grid-template-columns:repeat(3,1fr)}
+  .cmp-lede{grid-column:1/-1;border-left:0;border-top:1px solid var(--line);
+            padding:14px 0 0}
+}
+.cmp-key{list-style:none;display:flex;gap:14px;margin:0 0 4px;padding:0;
+         font:11px var(--mono);color:var(--ink-3)}
+.cmp-key i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px;
+           vertical-align:-1px}
+.pill.nav{text-decoration:none;margin-right:8px}
+.pill.nav:hover{color:var(--ink);border-color:var(--line-2)}

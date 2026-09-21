@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { PLAN, cell, BATCH_START } from "./lib/plan";
 import RunDetail from "./RunDetail";
 import { MetricChart, fmt } from "./Charts";
@@ -241,6 +242,7 @@ export default function Page() {
           <p className="sub">Gemma 4 E2B / E4B · Raspberry Pi 5 versus Jetson Orin Nano</p>
         </div>
         <div className="status">
+          <Link className="pill muted nav" href="/compare">Pi 5 vs Orin →</Link>
           <span className={`pill ${any ? "live" : "danger"}`}>
             <i className="dot" />{any ? "polling" : "offline"}
           </span>

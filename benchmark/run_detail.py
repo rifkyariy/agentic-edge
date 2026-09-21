@@ -340,12 +340,87 @@ def live_device(tele, tl, tdir):
     }
 
 
+def baseline():
+    """Every finished MMLU-Pro run on this box, paired with what it cost.
+
+    The score comes from lm-eval's results file, the device cost from the
+    measured run that produced it. Runs without a results file (killed, still
+    going) are reported with score None rather than dropped — a failure is a
+    result too.
+    """
+    runs = []
+    for d in sorted(glob.glob(f"{ROOT}/stdbench/mmlupro100-*")):
+        if not os.path.isdir(d):
+            continue
+        run = os.path.basename(d)
+        m = re.match(r"^mmlupro100-(e2b|e4b)(?:-(s\d))?$", run, re.I)
+        if not m:
+            continue                      # smoke tests, .bak dirs, anything else
+        model, sub = m[1].lower(), (m[2] or "s1").lower()
+
+        row = {"run": run, "model": model, "subset": sub,
+               "done": os.path.exists(os.path.join(d, ".done"))}
+        res = sorted(glob.glob(f"{d}/*/results_*.json"))
+        if res:
+            try:
+                j = json.load(open(res[-1]))
+                r = j["results"]["mmlu_pro"]
+                sc, se = _f(r.get("exact_match,custom-extract")), _f(r.get("exact_match_stderr,custom-extract"))
+                row.update(score=round(100 * sc, 1) if sc is not None else None,
+                           stderr=round(100 * se, 1) if se is not None else None,
+                           minutes=round((_f(j.get("total_evaluation_time_seconds")) or 0) / 60),
+                           at=time.strftime("%Y-%m-%d %H:%M",
+                                            time.localtime(os.path.getmtime(res[-1]))))
+            except (OSError, KeyError, ValueError):
+                pass
+
+        mdir = measured_dir(model, sub)
+        sp = os.path.join(mdir, "summary.json") if mdir else None
+        if sp and os.path.exists(sp):
+            try:
+                j = json.load(open(sp))
+                u, t = j["utilisation"], j["tokens"]
+                row["device"] = {
+                    "energy_wh": j["power"]["energy_wh"],
+                    "idle_w": j["power"]["idle_w"],
+                    "mean_w": j["power"]["work_mean_w"],
+                    "peak_w": j["power"]["work_peak_w"],
+                    "j_per_token": j["efficiency"]["j_per_generated_token"],
+                    "tok_s_per_w": j["efficiency"]["decode_tok_s_per_w"],
+                    "decode_tok_s": t["decode_tok_s"], "prefill_tok_s": t["prefill_tok_s"],
+                    "gen_tokens": t["generated_tokens"],
+                    "temp_max": (j["thermal"]["temp_c"] or {}).get("max"),
+                    "throttled": j["thermal"]["throttled_nonzero_samples"],
+                    "cpu_mean": (u["cpu_pct"] or {}).get("mean"),
+                    "gpu_mean": (u.get("gpu_pct") or {}).get("mean"),
+                    "gpu_max": (u.get("gpu_pct") or {}).get("max"),
+                    "gpu_mhz_mean": (u.get("gpu_mhz") or {}).get("mean"),
+                    "dir": os.path.basename(mdir),
+                }
+            except (OSError, KeyError, ValueError):
+                pass
+        runs.append(row)
+
+    # runs that were archived after failing still belong in the record
+    failed = [os.path.basename(p) for p in glob.glob(f"{ROOT}/stdbench/failed/*")]
+
+    return {"root": ROOT, "runs": runs, "failed": failed,
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S")}
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--run", required=True, help="directory name under stdbench/")
+    ap.add_argument("--run", help="directory name under stdbench/")
+    ap.add_argument("--baseline", action="store_true",
+                    help="every finished run on this box with its device cost")
     ap.add_argument("--max-questions", type=int, default=400)
     args = ap.parse_args()
+
+    if args.baseline:
+        print(json.dumps(baseline())); return
+    if not args.run:
+        print(json.dumps({"error": "--run or --baseline required"})); return
 
     run_dir = os.path.join(ROOT, "stdbench", args.run)
     if not os.path.isdir(run_dir):
