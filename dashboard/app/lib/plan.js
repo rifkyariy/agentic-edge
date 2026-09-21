@@ -19,7 +19,13 @@ const matches = (name, model, subset) => {
 export function cell(box, model, subset) {
   const d = box?.data;
   if (!d) return { status: "unknown" };
-  if (d.progress && matches(d.progress.run, model, subset)) {
+  // progress comes from parsing the newest lm_eval.log, which keeps reading
+  // 100/100 long after the run ended — so it only means "running" while the
+  // box actually has the processes to match. Without this a finished run
+  // sits at a blue 100% instead of showing its score.
+  const procs = d.procs || {};
+  const live = procs.lm_eval || procs.run_measured || procs.telemetry;
+  if (live && d.progress && matches(d.progress.run, model, subset)) {
     return { status: "running", pct: d.progress.pct, eta: d.progress.eta, run: d.progress.run };
   }
   const done = (d.completed || []).find(
