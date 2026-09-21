@@ -292,7 +292,6 @@ pre.resp mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:in
 .meter-keys{position:relative;height:15px;margin-top:5px;font:10.5px var(--mono);color:var(--ink-3)}
 .meter-keys span{position:absolute;white-space:nowrap;transform:translateX(-50%)}
 .meter-keys .work{color:var(--ink-2);font-weight:600}
-.meter-keys .end{right:0;left:auto !important;transform:none}
 .chip.ok{background:color-mix(in srgb,var(--ok) 14%,var(--panel));color:var(--ink-2);
          border:1px solid color-mix(in srgb,var(--ok) 40%,var(--line))}
 

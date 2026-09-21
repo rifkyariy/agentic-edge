@@ -150,6 +150,11 @@ def main():
         },
         "utilisation": {
             "cpu_pct": stats(rows, "cpu_pct", work_lo, work_hi),
+            # None on the Pi, which has no discrete GPU to sample; on the Jetson
+            # this is the whole point of the comparison, so it is reported the
+            # same way as cpu_pct rather than left out.
+            "gpu_pct": stats(rows, "gpu_pct", work_lo, work_hi),
+            "gpu_mhz": stats(rows, "gpu_mhz", work_lo, work_hi),
             "proc_cpu_pct": stats(rows, "proc_cpu_pct", work_lo, work_hi),
             "proc_rss_mb": stats(rows, "proc_rss_mb", work_lo, work_hi),
             "mem_used_mb": stats(rows, "mem_used_mb", work_lo, work_hi),

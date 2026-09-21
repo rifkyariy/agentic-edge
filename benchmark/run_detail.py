@@ -143,7 +143,7 @@ def telemetry_for(run, model, subset):
             rows.append({"t": t, "w": _f(r.get("power_w")), "cpu": _f(r.get("cpu_pct")),
                          "temp": _f(r.get("temp_c")), "gpu": _f(r.get("gpu_pct")),
                          "mem": _f(r.get("mem_used_mb")), "rss": _f(r.get("proc_rss_mb")),
-                         "mhz": _f(r.get("cpu0_mhz")),
+                         "mhz": _f(r.get("cpu0_mhz")), "mhz_gpu": _f(r.get("gpu_mhz")),
                          "thr": (r.get("throttled") or "") not in ("", "0x0")})
         summary = None
         sp = os.path.join(d, "summary.json")
@@ -319,6 +319,8 @@ def live_device(tele, tl, tdir):
     gen_tok = sum(q.get("gt") or 0 for q in tl)
     gen_s = sum((q.get("gms") or 0) for q in tl) / 1000
     cpu = [r["cpu"] for r in tele if r["cpu"] is not None]
+    gpu = [r["gpu"] for r in tele if r["gpu"] is not None]
+    mhz = [r["mhz_gpu"] for r in tele if r.get("mhz_gpu") is not None]
     temp = [r["temp"] for r in tele if r["temp"] is not None]
     mean_w = sum(work) / len(work)
     return {
@@ -331,6 +333,9 @@ def live_device(tele, tl, tdir):
         "temp_max": round(max(temp), 1) if temp else None,
         "throttled": sum(1 for r in tele if r["thr"]),
         "cpu_mean": round(sum(cpu) / len(cpu), 1) if cpu else None,
+        "gpu_mean": round(sum(gpu) / len(gpu), 1) if gpu else None,
+        "gpu_max": round(max(gpu), 1) if gpu else None,
+        "gpu_mhz_mean": round(sum(mhz) / len(mhz)) if mhz else None,
         "dir": tdir, "provisional": True,
     }
 
@@ -392,6 +397,9 @@ def main():
                   "temp_max": (tsummary["thermal"]["temp_c"] or {}).get("max"),
                   "throttled": tsummary["thermal"]["throttled_nonzero_samples"],
                   "cpu_mean": (tsummary["utilisation"]["cpu_pct"] or {}).get("mean"),
+                  "gpu_mean": (tsummary["utilisation"].get("gpu_pct") or {}).get("mean"),
+                  "gpu_max": (tsummary["utilisation"].get("gpu_pct") or {}).get("max"),
+                  "gpu_mhz_mean": (tsummary["utilisation"].get("gpu_mhz") or {}).get("mean"),
                   "dir": tdir}
     elif tele:
         # summary.json only appears when the run ends; compute the same figures

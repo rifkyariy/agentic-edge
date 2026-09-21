@@ -57,7 +57,7 @@ function RunCost({ d, minutes }) {
         <div className="split">
           <div className="split-head">
             <span>Board power</span>
-            <span className="split-keys">0 – {fmt(d.peak_w, 2)} W</span>
+            <span className="split-keys">0 – {fmt(d.peak_w, 2)} W peak</span>
           </div>
           <div className="meter" role="img"
                aria-label={`idle ${fmt(d.idle_w, 2)} watts, working ${fmt(d.mean_w, 2)} watts, peak ${fmt(d.peak_w, 2)} watts`}>
@@ -65,11 +65,12 @@ function RunCost({ d, minutes }) {
             <span className="meter-mark idle" style={{ left: `${(d.idle_w / span) * 100}%` }} />
           </div>
           <div className="meter-keys">
-            {/* max() keeps a label centred on its mark without clipping off
-                the left edge when idle is a small fraction of peak. */}
-            <span style={{ left: `max(34px, ${(d.idle_w / span) * 100}%)` }}>idle {fmt(d.idle_w, 2)} W</span>
-            <span className="work" style={{ left: `max(52px, ${(d.mean_w / span) * 100}%)` }}>working {fmt(d.mean_w, 2)} W</span>
-            <span className="end">peak {fmt(d.peak_w, 2)} W</span>
+            {/* clamp(): centred on its mark, except where that would run off
+                an edge. The peak is named in the head, not labelled again. */}
+            <span style={{ left: `clamp(34px, ${(d.idle_w / span) * 100}%, calc(100% - 150px))` }}>
+              idle {fmt(d.idle_w, 2)} W</span>
+            <span className="work" style={{ left: `clamp(52px, ${(d.mean_w / span) * 100}%, calc(100% - 52px))` }}>
+              working {fmt(d.mean_w, 2)} W</span>
           </div>
         </div>
       </div>
@@ -81,6 +82,12 @@ function RunCost({ d, minutes }) {
               sub={<em className="delta flat">decode</em>} />
         <Tile label="CPU" value={fmt(d.cpu_mean, 0)} unit="%" accent="var(--cpu)"
               sub={<em className="delta flat">mean over the run</em>} />
+        {/* Jetson only — the Pi has no discrete GPU to sample. */}
+        {d.gpu_mean !== null && d.gpu_mean !== undefined && (
+          <Tile label="GPU" value={fmt(d.gpu_mean, 0)} unit="%" accent="var(--gpu)"
+                sub={<><em className="delta flat">{fmt(d.gpu_max, 0)}% peak</em>
+                  {d.gpu_mhz_mean ? <em className="delta flat">{fmt(d.gpu_mhz_mean)} MHz mean</em> : null}</>} />
+        )}
         <Tile label="Peak temperature" value={fmt(d.temp_max, 1)} unit="°C" accent="var(--temp)"
               sub={<em className={`delta ${d.throttled ? "poor" : "good"}`}>
                 {d.throttled ? `clock capped on ${fmt(d.throttled)} samples`
