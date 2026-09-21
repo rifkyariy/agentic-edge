@@ -26,10 +26,9 @@ esac
 
 BENCH="$HOME/research/agentic-edge/benchmark"
 STD="$HOME/research/stdbench"
-LOG="$HOME/research/queue-$MODEL-$(date +%Y%m%d-%H%M).log"
 cd "$BENCH"
 
-echo "queue: $MODEL $* -> $LOG"
+echo "queue: $MODEL $* (redirect stdout to keep a log)"
 
 for S in "$@"; do
   RUN="mmlupro100-$MODEL-$S"
