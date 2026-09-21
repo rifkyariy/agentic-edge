@@ -362,3 +362,9 @@ pre.resp mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:in
            vertical-align:-1px}
 .pill.nav{text-decoration:none;margin-right:8px}
 .pill.nav:hover{color:var(--ink);border-color:var(--line-2)}
+
+.caveats li.bad{background:color-mix(in srgb,var(--danger) 7%,transparent);
+                border-left:2px solid var(--danger);padding:9px 12px;
+                border-radius:0 8px 8px 0;list-style:none;margin-left:-18px}
+.caveats code{font-family:var(--mono);font-size:12px;background:var(--panel-2);
+              padding:1px 5px;border-radius:4px;margin:0 2px}

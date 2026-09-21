@@ -183,7 +183,7 @@ export default function Compare() {
       <div className="cmp-grid">
         <Chart title="Accuracy" note="MMLU-Pro, pooled over the finished subsets"
                data={acc} unit="%" decimals={1}
-               better={`Pi 5 ahead on both models — see the caveat below.`} />
+               better="The Orin's figure is invalid — see below" />
         <Chart title="Decode throughput" note="tokens per second, generation only"
                data={series("decode_tok_s")} unit="tok/s" decimals={2}
                better="Higher is better" />
@@ -268,13 +268,25 @@ export default function Compare() {
       <section className="card caveats">
         <h2>Reading this fairly</h2>
         <ul>
+          <li className="bad">
+            <b>Do not compare the accuracy bars yet — the Orin&apos;s are wrong.</b>{" "}
+            Its server ran without <code>-rea off --reasoning-budget -1</code>, which
+            the Pi passes, so llama.cpp split Gemma&apos;s thinking into
+            <code>reasoning_content</code> and lm-eval — which reads only{" "}
+            <code>content</code> — scored what was left. On one subset that meant a
+            median response of 993 characters against the Pi&apos;s 1,880,{" "}
+            <b>11 answers returned completely empty</b>, and 23 of 100 with no
+            extractable letter against the Pi&apos;s 6. Scored generously, the Orin&apos;s
+            ceiling on that subset was 71% to the Pi&apos;s 57% — so the gap probably
+            runs the other way. The flag is fixed and every Orin MMLU-Pro run needs
+            redoing before these numbers mean anything.
+          </li>
           <li>
-            <b>The Pi scores higher on every comparable pair</b>, by roughly 2–5
-            points. Both boards run the same weights, the same subsets and greedy
-            decoding, so this is not sampling: it is CPU versus CUDA arithmetic
-            producing different tokens. Each gap is inside its own ±5 interval, but
-            the direction is consistent, which is worth a line in the write-up
-            rather than a shrug.
+            <b>The speed and energy figures are unaffected in kind but not in
+            detail.</b> tok/s, J/token and tok/s/W are per-token rates over real
+            generation and remain the honest comparison. Per-run totals — energy in
+            Wh, minutes — are not comparable, because the two boards were generating
+            different amounts of text.
           </li>
           <li>
             <b>Uncertainty is from question sampling</b>, not repeats: ±9.7 points at

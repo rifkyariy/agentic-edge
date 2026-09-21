@@ -33,8 +33,14 @@ SRVLOG=$OUT/server.log
 
 pkill -f "llama-server -m" 2>/dev/null; sleep 2
 echo "$(date) starting llama.cpp (CUDA, -ngl $NGL) on $TAG"
+# -rea off --reasoning-budget -1 must match the Pi. Without them llama.cpp
+# splits Gemma's thinking into reasoning_content, which lm-eval never reads:
+# answers come back truncated or entirely empty, and the run scores far below
+# what the model actually produced. This cost every Jetson MMLU-Pro run before
+# 2026-09-21.
 nohup sh -c "$SERVER -m $M -c 8192 --host 127.0.0.1 --port 8080 \
-  -ngl $NGL --cache-ram 0 2>&1 | python3 $PWD/stamp.py" > "$SRVLOG" 2>&1 < /dev/null &
+  -ngl $NGL -rea off --reasoning-budget -1 --cache-ram 0 2>&1 | python3 $PWD/stamp.py" \
+  > "$SRVLOG" 2>&1 < /dev/null &
 for _ in $(seq 150); do curl -sf localhost:8080/health >/dev/null 2>&1 && break; sleep 2; done
 curl -s localhost:8080/props | grep -o '"model_path":"[^"]*"'
 "$SERVER" --list-devices 2>/dev/null | grep -i cuda || true
