@@ -1,0 +1,21 @@
+{
+  "mmlupro-baseline": {
+    "description": "Thinking off. Verified 2026-09-22 against llama-server --help on both boards: -rea is --reasoning, the thinking switch, NOT --reasoning-format. --reasoning-budget -1 is already llama.cpp's default; it is passed explicitly so the resolved command line records it.",
+    "flags": {
+      "ctx": "8192",
+      "cache_ram": "0",
+      "reasoning": "off",
+      "reasoning_budget": "-1"
+    }
+  },
+  "mmlupro-thinking-on": {
+    "description": "The reasoning row. --reasoning-format MUST be pinned to none: left at its 'auto' default the thoughts go to message.reasoning_content, which lm-eval never reads, and answers arrive truncated or empty.",
+    "flags": {
+      "ctx": "8192",
+      "cache_ram": "0",
+      "reasoning": "on",
+      "reasoning_budget": "320",
+      "reasoning_format": "none"
+    }
+  }
+}
