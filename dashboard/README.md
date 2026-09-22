@@ -12,6 +12,7 @@ that already live in the repo there:
 |---|---|
 | `benchmark/probe_status.py` | one-shot status, polled every 5s |
 | `benchmark/run_detail.py` | one run in full, on demand |
+| `benchmark/queue_ctl.py` | the queue: status, preflight, add, cancel, logs |
 
 ## Setup
 
@@ -24,9 +25,9 @@ npm run dev        # http://localhost:3939
 
 `npm run check` is the important step on a fresh clone. It verifies, per board:
 ssh works with key auth, the repo is where the dashboard expects it,
-`probe_status.py` runs, and the eval venv's python exists. Every failure prints
-the command that fixes it. `npm run dev` runs it first too, but does not block
-on it.
+`probe_status.py` runs, the eval venv's python exists, and the queue daemon is
+running. Every failure prints the command that fixes it. `npm run dev` runs it
+first too, but does not block on it.
 
 ### SSH
 
@@ -78,6 +79,38 @@ before 2026-09-22 lack it and are archived as superseded.
 
 Click any bar in the timeline, or any row in the request table, to jump to that
 question — its own power, energy, J/token and thermals are shown with it.
+
+## Queueing a run
+
+`/queue` starts runs instead of only watching them. Each board runs a small
+daemon (`benchmark/queue_runner.py`, a systemd user unit) that owns a queue
+file and takes one job at a time, so a run survives this Mac going to sleep and
+"one job per device" is a property of the loop rather than a rule to remember.
+
+The form is built from each board's own `job_kinds.json`, so it cannot offer a
+job the daemon would refuse. Every change re-runs the preflight, and you see
+the answer before committing three hours:
+
+- **memory** — E4B needs ~5,400 MB free, E2B ~3,900 MB. This is the check that
+  would have caught the s2 run OOM-killed at question 94 after 2h39m.
+- **output directory** — a run whose `stdbench/` directory already exists is
+  refused, because a stale lm-eval cache there is replayed, not regenerated.
+- **subset ids** — the committed question ids for that subset must be present.
+- **board idle** — nothing else benchmarking.
+
+Before lm-eval starts, the daemon captures the resolved `llama-server` command
+line and diffs it against `benchmark/baselines.json`. **On drift it refuses to
+start.** This is the AGENTS §10 check made automatic: it is what would have
+caught the Jetson serving without `-rea off` before 2026-09-22, which cost
+every run its thinking and was only noticed days later by reading answers. An
+override exists, is written to the event log, and marks the job permanently.
+
+Each job's page shows its timeline, the flag diff, and live tails of
+`lm_eval.log`, `server.log` and `command.log`. Completion is the `.done`
+marker, never the exit status — `std_mmlupro_jetson.sh` ends on
+`echo finished` and always returns 0.
+
+## Run detail
 
 A run still in flight shows both tabs. Its answers come from lm-eval's response
 cache and are matched to questions by the option text they quote, so a few may

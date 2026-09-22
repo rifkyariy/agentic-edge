@@ -800,8 +800,13 @@ git commit -m "Record what happened to each job, readable by offset"
     `memory_mb` (int or None), `params` (the normalised parameters)
 
 **Why label and output_dir are separate templates:** `run_measured.sh` is given
-`mmlupro-e4b-s2` while lm-eval writes `mmlupro100-e4b-s2`, and a thinking-on run
-appends `-think` to the *output* only (`std_mmlupro.sh` sets `OUT=$OUT-think`).
+`mmlupro-e4b-s2` while lm-eval writes `mmlupro100-e4b-s2`. A thinking-on run
+appends `-think` to **both** — `std_mmlupro.sh` sets `OUT=$OUT-think` for the
+output, and the label needs it too because `run_detail.py:42` matches a run to
+its telemetry with a `-(s\d)-\d{8}` regex over the *measured* directory name,
+which is built from the label. Without it, a thinking-on and thinking-off run of
+the same model and subset both produce `mmlupro-e4b-s2-<stamp>` and the lookup
+silently returns whichever ran last.
 `SRVLOG` must be built from `output_dir`; built from the label it would point at
 a file that never exists, `run_measured.sh` would fall back to parsing the
 journal, and the Jetson has no `llama-server` unit — so `requests.csv` would come
@@ -873,8 +878,10 @@ class TestKinds(unittest.TestCase):
         got = kinds.resolve(self.reg, "mmlupro",
                             {"model": "e4b", "subset": "s2", "thinking": "on"},
                             self.jetson)
-        # The label keeps its shape; only the output directory gains the suffix.
-        self.assertEqual(got["label"], "mmlupro-e4b-s2")
+        # Both gain the suffix. The label becomes the measured directory name,
+        # which run_detail.py:42 uses to match a run to its telemetry; if a
+        # thinking run were labelled the same as the baseline it would collide.
+        self.assertEqual(got["label"], "mmlupro-e4b-s2-think")
         self.assertEqual(got["output_dir"], "mmlupro100-e4b-s2-think")
         self.assertTrue(got["env"]["SRVLOG"].endswith("mmlupro100-e4b-s2-think/server.log"))
 
@@ -922,7 +929,7 @@ Create `benchmark/job_kinds.json`:
     },
     "label": "mmlupro-{model}-{subset}",
     "output_dir": "mmlupro100-{model}-{subset}",
-    "output_suffix_when": {"thinking": {"on": "-think"}},
+    "suffix_when": {"thinking": {"on": "-think"}},
     "baseline": {"thinking": {"off": "mmlupro-baseline", "on": "mmlupro-thinking-on"}},
     "memory_mb": {"e2b": 3900, "e4b": 5400},
     "boards": {
@@ -1042,8 +1049,15 @@ def resolve(registry, kind, params, paths):
 
     label = spec["label"].format(**params)
     output_dir = spec["output_dir"].format(**params)
-    suffix = pick(spec.get("output_suffix_when"), params)
+    # The suffix goes on BOTH. run_detail.py:42 matches a benchmark run to the
+    # measured run that produced it by model plus a -(s\d)-\d{8} regex over the
+    # measured directory name, which is built from the label. Leave the label
+    # unsuffixed and a thinking-on and thinking-off run of the same model and
+    # subset both land at mmlupro-e4b-s2-<stamp>; the lookup then returns
+    # whichever is newer and silently attaches the wrong telemetry.
+    suffix = pick(spec.get("suffix_when"), params)
     if suffix:
+        label += suffix
         output_dir += suffix
 
     board = spec["boards"].get(paths.board)
@@ -1654,6 +1668,17 @@ git commit -m "Make the AGENTS §10 check automatic, with the regression as a fi
 ---
 
 ## Task 7: The runner state machine
+
+> **Corrected during implementation (2026-09-22).** The code below captures the
+> fingerprint *before* `_execute`, which is the exact bug the spec warned
+> against: the run script is what configures the server, so at that moment the
+> flags belong to whatever the board was already running — the idle deployed
+> server on the Pi, nothing at all on the Jetson. Every `mmlupro` job would
+> block. The shipped `jobqueue/runner.py` instead starts the command, polls for
+> the run's own server, diffs then, and kills the run on drift. The `exec_fn`
+> seam became `start_fn`, returning a still-running process. See the tests in
+> `TestFingerprintTiming`, which assert the ordering the old fakes could not
+> express.
 
 **Files:**
 - Create: `benchmark/jobqueue/runner.py`

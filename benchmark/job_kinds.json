@@ -1,0 +1,40 @@
+{
+  "mmlupro": {
+    "description": "MMLU-Pro on one 100-question subset, one model.",
+    "params": {
+      "model":    {"enum": ["e2b", "e4b"]},
+      "subset":   {"enum": ["s1", "s2", "s3"]},
+      "thinking": {"enum": ["off", "on"], "default": "off"}
+    },
+    "label": "mmlupro-{model}-{subset}",
+    "output_dir": "mmlupro100-{model}-{subset}",
+    "suffix_when": {"thinking": {"on": "-think"}},
+    "baseline": {"thinking": {"off": "mmlupro-baseline", "on": "mmlupro-thinking-on"}},
+    "memory_mb": {"e2b": 3900, "e4b": 5400},
+    "boards": {
+      "pi": {
+        "command": "env SUBSET={subset} THINKING={thinking} ./std_mmlupro.sh {model}",
+        "env": {}
+      },
+      "jetson": {
+        "command": "env SUBSET={subset} THINKING={thinking} ./std_mmlupro_jetson.sh {model}",
+        "env": {"SRVLOG": "{stdbench}/{output_dir}/server.log", "SUBSET": "{subset}"}
+      }
+    }
+  },
+
+  "raw": {
+    "description": "Any command, wrapped in run_measured.sh. The escape hatch.",
+    "params": {
+      "label":   {"pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+      "command": {"free_text": true}
+    },
+    "label": "{label}",
+    "output_dir": "{label}",
+    "baseline": null,
+    "boards": {
+      "pi":     {"command": "{command}", "env": {}},
+      "jetson": {"command": "{command}", "env": {}}
+    }
+  }
+}

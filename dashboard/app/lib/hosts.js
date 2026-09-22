@@ -28,7 +28,13 @@ export const HOSTS = [
 export const byId = (id) => HOSTS.find((h) => h.id === id);
 
 // Shared ssh flags: never prompt (the web app has no tty), give up quickly.
-export const SSH = "-o BatchMode=yes -o ConnectTimeout=6 -o StrictHostKeyChecking=accept-new";
+// ControlMaster reuses one connection per board across calls — the dashboard
+// polls every 5s, which is ~11,500 handshakes over an 8h run, each forking an
+// sshd and a python on a board AGENTS §5 requires to be otherwise quiet.
+// ControlPath lives in /tmp so a stale socket dies with the machine.
+export const SSH = "-o BatchMode=yes -o ConnectTimeout=6 -o StrictHostKeyChecking=accept-new"
+  + " -o ControlMaster=auto -o ControlPersist=300"
+  + " -o ControlPath=/tmp/agentic-edge-cm-%r@%h:%p";
 
 // ssh failures are cryptic out of context; say what to actually do about them.
 export function hint(err, h) {

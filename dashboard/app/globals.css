@@ -454,3 +454,62 @@ table.score tr.tie td,table.score tr.tie th{background:color-mix(in srgb,var(--n
 .tradeoff b{color:var(--ink)}
 .tradeoff-note{font:11px/1.6 var(--mono);color:var(--ink-3);margin-bottom:0;
                border-left:2px solid var(--line-2);padding-left:11px}
+
+/* ---- queue page ---- */
+.jobform { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;
+           padding: 0 1rem 1rem; }
+.jobform label { display: flex; flex-direction: column; gap: .25rem;
+                 font-size: .8rem; text-transform: lowercase; opacity: .85; }
+.jobform select, .jobform input { padding: .35rem .5rem; font: inherit; }
+.jobform button { padding: .45rem 1rem; font: inherit; cursor: pointer; }
+.jobform button:disabled { opacity: .5; cursor: not-allowed; }
+
+.prechecks { flex-basis: 100%; list-style: none; margin: 0; padding: 0;
+             font-size: .8rem; }
+.prechecks li { padding: .15rem 0; }
+.prechecks li.ok b { color: #3fa45b; }
+.prechecks li.bad b { color: #d14; }
+
+.resolved { flex-basis: 100%; margin: 0; padding: .5rem .75rem; font-size: .75rem;
+            background: rgba(127,127,127,.12); border-radius: 4px;
+            white-space: pre-wrap; word-break: break-all; }
+.pre-error { flex-basis: 100%; color: #d14; font-size: .85rem; margin: 0; }
+
+.queue-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.queue-table th, .queue-table td { padding: .4rem .75rem; text-align: left;
+                                   border-top: 1px solid rgba(127,127,127,.2); }
+.queue-table .note { opacity: .7; font-size: .78rem; }
+.state-running td { background: rgba(60,120,220,.12); }
+.state-blocked td { background: rgba(221,17,68,.12); }
+.state-failed td  { background: rgba(221,17,68,.08); }
+.state-completed td { background: rgba(63,164,91,.10); }
+
+/* ---- job detail ---- */
+.timeline { list-style: none; margin: 0; padding: 0 1rem 1rem; font-size: .85rem; }
+.timeline li { padding: .2rem 0; }
+.timeline b { font-variant-numeric: tabular-nums; opacity: .7; margin-right: .5rem; }
+.timeline i { opacity: .75; }
+
+.fingerprint { padding: 0 1rem 1rem; }
+.fingerprint h4 { margin: .75rem 0 .5rem; }
+.fingerprint h4 i { font-weight: normal; opacity: .6; font-size: .8rem; }
+.fingerprint table { border-collapse: collapse; font-size: .82rem; width: 100%; }
+.fingerprint td { padding: .2rem .5rem; border-top: 1px solid rgba(127,127,127,.15); }
+.fingerprint tr.bad { color: #d14; }
+.fingerprint tr.ok td:nth-child(2) { color: #3fa45b; }
+.fingerprint.drift { border-left: 3px solid #d14; }
+
+.tabs button { font: inherit; padding: .25rem .7rem; cursor: pointer;
+               background: none; border: 1px solid rgba(127,127,127,.3);
+               border-radius: 4px; margin-left: .25rem; }
+.tabs button.on { background: rgba(127,127,127,.2); }
+
+.logview { margin: 0 1rem 1rem; padding: .75rem; max-height: 60vh; overflow: auto;
+           font-size: .75rem; line-height: 1.45; white-space: pre-wrap;
+           background: rgba(127,127,127,.10); border-radius: 4px; }
+
+.state-pill { font-style: normal; font-size: .7rem; padding: .1rem .5rem;
+              border-radius: 999px; vertical-align: middle;
+              background: rgba(127,127,127,.2); }
+.fingerprint.unchecked { border-left: 3px solid rgba(127,127,127,.4); }
+.fingerprint.unchecked h4 i { font-weight: normal; opacity: .7; }

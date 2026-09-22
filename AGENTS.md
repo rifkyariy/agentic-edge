@@ -46,6 +46,14 @@ benchmark/          the harness (stdlib only on the devices, no pip needed)
   run_detail.py       one run's timeline + answers + per-request device stats
   build_viz.py        builds findings/viz/mmlupro_run.html
 
+  queue_runner.py     the job queue daemon; one per board, a systemd user unit
+  queue_ctl.py        the only thing the dashboard runs over ssh (JSON in/out)
+  jobqueue/           paths, store, events, kinds, prechecks, fingerprint, runner
+  job_kinds.json      what can be queued, and what it resolves to per board
+  baselines.json      expected serving flags per condition, for the fingerprint
+  install_queue.sh    installs and starts the unit (run it on the board)
+  tests/              stdlib unittest; `python3 -m unittest discover -s tests`
+
 dashboard/          Next.js live monitor (runs on the Mac, not the devices)
   app/page.js         queue matrix, device cards, live charts
   app/RunDetail.js    drill-down sheet: device tab + questions tab
@@ -54,6 +62,9 @@ dashboard/          Next.js live monitor (runs on the Mac, not the devices)
   app/lib/hosts.js    the two boxes, overridable from .env.local
   app/api/status      ssh -> probe_status.py on both boxes, every 5s
   app/api/run         ssh -> run_detail.py for one run
+  app/queue/          queue a run, see its prechecks, follow its logs
+  app/api/queue       ssh -> queue_ctl.py: status, preflight, add, cancel
+  app/api/logs        ssh -> queue_ctl.py --log, offset-based tailing
   scripts/check-ssh.mjs  `npm run check` — preflight before a fresh clone runs
 
 findings/           results and analysis (committed)
@@ -100,6 +111,14 @@ SRVLOG=~/research/stdbench/mmlupro100-e2b-s1/server.log SUBSET=s1 \
 
 # the own suite (architectures, MTP x thinking, quant sweep)
 ./pi5_run.sh tier1 ; python3 report.py t1
+
+# queue a run instead of launching it by hand (survives the Mac sleeping)
+ssh MITLAB-JETSON
+cd ~/research/agentic-edge/benchmark
+./queue_ctl.py --preflight '{"kind":"mmlupro","params":{"model":"e4b","subset":"s2"}}'
+./queue_ctl.py --add       '{"kind":"mmlupro","params":{"model":"e4b","subset":"s2"}}'
+./queue_ctl.py --status
+# or do all of that at http://localhost:3939/queue
 
 # dashboard, on the Mac
 cd dashboard && npm install
@@ -158,9 +177,15 @@ per-question samples.
      left nothing to sample.
 
    This is why the missing `-rea` survived days of review: the audit trail
-   AGENTS relies on was blank at exactly the moment it mattered. Until
-   `run_measured.sh` takes a second capture after the server is up, treat
-   archived `server_args` as evidence of nothing.
+   AGENTS relies on was blank at exactly the moment it mattered.
+
+   **`run_measured.sh` now takes a second sample**, once the run's own server
+   is serving, under `server_args_after`. That is the honest field; read it,
+   not `server_args`, which is kept only so nothing already parsing it
+   changes meaning. Runs archived before 2026-09-22 have no
+   `server_args_after` at all — for those, treat `server_args` as evidence of
+   nothing. A queued run also records the same capture, diffed against
+   `baselines.json`, in `<results root>/queue/jobs/<id>/fingerprint.json`.
 
    **The runs themselves are fine** — it is the record that lied. The Pi's
    journal shows both servers on either side of one capture:
