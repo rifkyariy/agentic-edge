@@ -176,9 +176,9 @@ export default function Compare() {
           The Orin draws about half as much power again as the Pi, yet spends
           less energy per token — it finishes so much sooner that the higher
           draw is billed for a fraction of the time. On accuracy the two are
-          tied: a paired test over the same questions finds no significant
-          difference, even though they pick the same letter only 70% of the
-          time.
+          tied: over all 600 paired questions the boards are within 0.6 points
+          of each other and a paired test finds no difference, even though they
+          pick the same letter on only 79% of them.
         </p>
       </section>
 
@@ -298,13 +298,17 @@ export default function Compare() {
             The catch is memory, and it is not capacity — the two boards are within
             600 MB of each other, <b>8,062 MB</b> on the Pi against <b>7,485 MB</b> on
             the Orin. It is what the memory is spent on. The Pi mmaps the GGUF, so
-            the weights live in evictable page cache and an E4B run peaks at about{" "}
-            <b>4,162 MB</b> in use. Offloading every layer to CUDA makes that
-            allocation pinned device memory in the Orin&apos;s shared pool, which has
-            no swap: the same run peaks at <b>6,874 MB</b>, roughly 600 MB from the
-            ceiling. Two E4B runs were killed by the OOM killer when a second user
-            logged in and took 1.25 GB; both are kept under{" "}
-            <code>stdbench/failed/</code>. The Pi&apos;s ceiling is speed, the
+            the weights live in evictable page cache and an E4B run peaks at{" "}
+            <b>4,118–4,294 MB</b> in use across its three runs — its resident set runs
+            higher than that, but those pages are reclaimable. Offloading every layer
+            to CUDA makes the allocation pinned device memory in the Orin&apos;s shared
+            pool, which has no swap: six E4B runs peaked at <b>6,874–7,320 MB</b>, the
+            worst of them leaving <b>165 MB</b> of headroom. Two E4B runs were killed
+            by the OOM killer when a second user logged in and took 1.25 GB; both are
+            kept under <code>stdbench/failed/</code>. That is why{" "}
+            <code>queue_jetson.sh</code> refuses to start an E4B run below 5,400 MB
+            free — the two E4B re-runs launched through it on 22 September cleared
+            that gate by 12 MB and by 1 MB. The Pi&apos;s ceiling is speed, the
             Orin&apos;s is memory.
           </p>
         </div>
@@ -315,31 +319,59 @@ export default function Compare() {
         <ul>
           <li className="bad">
             <b>The accuracy difference is not significant.</b> The bars differ by a
-            few points, but the two boards answer the <em>same</em> questions, so the
-            honest test is paired, not two independent intervals. On E2B s2 with both
-            boards configured identically: 44 questions right on both, 46 wrong on
-            both, 7 only the Pi, 3 only the Orin. Ten discordant pairs gives an exact
-            McNemar <b>p = 0.34</b> — no detectable difference. Read the accuracy
-            chart as a tie until the other subsets are re-run and pooled.
+            point or two, but the two boards answer the <em>same</em> questions, so the
+            honest test is paired, not two independent intervals. All six subsets are
+            now re-run with both boards configured identically, so the test runs over
+            the full <b>600 questions</b>: 321 right on both, 213 wrong on both, 31
+            only the Pi, 35 only the Orin. Sixty-six discordant pairs gives an exact
+            McNemar <b>p = 0.71</b> — no detectable difference. It holds within each
+            model too: E2B <b>p = 0.76</b> (51.7% against 52.7%), E4B <b>p = 1.00</b>{" "}
+            (65.7% against 66.0%). Read the accuracy chart as a tie.
           </li>
           <li>
-            <b>They do disagree on the answers themselves, though.</b> The same two
-            boards pick the same letter on only <b>70 of 100</b> questions, while
-            landing on near-identical scores. Same weights, same prompts, greedy
-            decoding — so the divergence is CPU versus CUDA arithmetic tipping
-            near-ties, and it happens to be accuracy-neutral. That is the interesting
-            result here, not the score gap.
+            <b>They do disagree on the answers themselves, though.</b> The two boards
+            pick the same letter on <b>475 of 600</b> questions — 79% — while landing
+            on scores 0.6 points apart. Same weights, same prompts, greedy decoding,
+            so the divergence is CPU versus CUDA arithmetic tipping near-ties, and it
+            is accuracy-neutral: of the 125 they answer differently, the Pi wins 31
+            and the Orin 35, the rest wrong both ways. That is the interesting result
+            here, not the score gap. The agreement rate is itself model-dependent —
+            E4B agrees on <b>258 of 300</b> (86%), E2B on only <b>217 of 300</b>{" "}
+            (72%), so the smaller model sits on more near-ties for the arithmetic
+            to tip.
           </li>
           <li>
-            <b>Five Orin runs are still invalid and excluded from this reading.</b>{" "}
-            They ran without <code>-rea off --reasoning-budget -1</code>, so llama.cpp
-            split Gemma&apos;s thinking into <code>reasoning_content</code> and
-            lm-eval — which reads only <code>content</code> — scored what was left:
-            a 993-character median against the Pi&apos;s 1,880, and 11 answers
-            returned completely empty. Fixing it restored full-length responses (2,028
-            median, zero empty) and moved the score by <b>one point, downward</b>, so
-            the bug was real data loss but not the reason for the gap. Only E2B s2 has
-            been re-run so far.
+            <b>Every Orin run here is a re-run; the originals are superseded.</b>{" "}
+            The first six ran without <code>-rea off --reasoning-budget -1</code>, so
+            llama.cpp split Gemma&apos;s thinking into <code>reasoning_content</code>{" "}
+            and lm-eval — which reads only <code>content</code> — scored what was
+            left: medians of 877–1,085 characters against the Pi&apos;s 1,792–1,947,
+            and
+            <b> 73 of 600 answers returned completely empty</b>. All six were re-run
+            on 21–22 September with the flags matched to the Pi; every one now has
+            zero empty answers and a 1,686–2,063 character median. The cost was
+            <b> 5.2 points of accuracy</b>, not the one point the first re-run
+            suggested: E2B moved 50→56, 48→47, 47→55 and E4B 59→67, 59→66, 62→65,
+            pooling 48.3→52.7 and 60.0→66.0. Five of the six superseded runs are kept
+            under <code>stdbench/failed/</code> and listed below; the sixth, the E4B s1
+            original, sits under <code>stdbench/archive/</code>, which this page does
+            not read — it is the one superseded run not shown here. The broken runs
+            were also <em>slower</em>{" "}
+            — 158–167 minutes against 98–102 for E4B — because the discarded thinking
+            was still generated and paid for.
+          </li>
+          <li>
+            <b>The two boards were served identically.</b> Per-board defaults drift,
+            so the check is the actual command line each run used — the Pi&apos;s from
+            its <code>command.log</code> after <code>std_mmlupro.sh</code> rewrites{" "}
+            <code>runtime.env</code>, the Orin&apos;s from the live process. They
+            differ in exactly one place, which is the thing being compared:{" "}
+            <code>-t 3</code> on the Pi against <code>-ngl 99</code> on the Orin. Same
+            GGUF quant, same <code>-c 8192</code>, same{" "}
+            <code>-rea off --reasoning-budget -1 --cache-ram 0</code> on both. Note
+            that <code>meta.json</code> on the Pi is <em>not</em> the evidence for
+            this: it snapshots the server before the run script switches models, so it
+            reports the deployed defaults rather than what served the eval.
           </li>
           <li>
             <b>Uncertainty is from question sampling</b>, not repeats: ±9.7 points at
