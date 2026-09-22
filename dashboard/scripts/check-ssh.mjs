@@ -4,7 +4,7 @@
 //
 //   npm run check
 //
-// Each board is checked in four steps, and the first failure says what to fix
+// Each board is checked in five steps, and the first failure says what to fix
 // rather than leaving you with a bare ssh error in the browser.
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -59,6 +59,14 @@ for (const h of HOSTS) {
      `python3 could not run the probe — check python3 exists on ${h.host}`],
     ["eval venv python", `test -x $(eval echo ${h.py}) && echo yes`,
      `no python at ${h.py} — run detail will fail. Set ${h.id.toUpperCase()}_PY in .env.local`],
+    // The daemon is what makes a run survive this Mac going to sleep, so a
+    // dead one is worth catching here rather than when a queued job silently
+    // never starts.
+    ["queue daemon running",
+     `${h.py} ${h.repo}/benchmark/queue_ctl.py --status | `
+     + `python3 -c "import json,sys;print('yes' if json.load(sys.stdin).get('daemon_alive') else 'no')"`,
+     `the queue daemon is not running. Start it with:\n`
+     + `        ssh ${h.host} 'cd ${h.repo} && ./benchmark/install_queue.sh'`],
   ]) {
     try {
       if ((await sh(h.host, cmd)) !== "yes") throw new Error("not found");
