@@ -483,3 +483,33 @@ table.score tr.tie td,table.score tr.tie th{background:color-mix(in srgb,var(--n
 .state-blocked td { background: rgba(221,17,68,.12); }
 .state-failed td  { background: rgba(221,17,68,.08); }
 .state-completed td { background: rgba(63,164,91,.10); }
+
+/* ---- job detail ---- */
+.timeline { list-style: none; margin: 0; padding: 0 1rem 1rem; font-size: .85rem; }
+.timeline li { padding: .2rem 0; }
+.timeline b { font-variant-numeric: tabular-nums; opacity: .7; margin-right: .5rem; }
+.timeline i { opacity: .75; }
+
+.fingerprint { padding: 0 1rem 1rem; }
+.fingerprint h4 { margin: .75rem 0 .5rem; }
+.fingerprint h4 i { font-weight: normal; opacity: .6; font-size: .8rem; }
+.fingerprint table { border-collapse: collapse; font-size: .82rem; width: 100%; }
+.fingerprint td { padding: .2rem .5rem; border-top: 1px solid rgba(127,127,127,.15); }
+.fingerprint tr.bad { color: #d14; }
+.fingerprint tr.ok td:nth-child(2) { color: #3fa45b; }
+.fingerprint.drift { border-left: 3px solid #d14; }
+
+.tabs button { font: inherit; padding: .25rem .7rem; cursor: pointer;
+               background: none; border: 1px solid rgba(127,127,127,.3);
+               border-radius: 4px; margin-left: .25rem; }
+.tabs button.on { background: rgba(127,127,127,.2); }
+
+.logview { margin: 0 1rem 1rem; padding: .75rem; max-height: 60vh; overflow: auto;
+           font-size: .75rem; line-height: 1.45; white-space: pre-wrap;
+           background: rgba(127,127,127,.10); border-radius: 4px; }
+
+.state-pill { font-style: normal; font-size: .7rem; padding: .1rem .5rem;
+              border-radius: 999px; vertical-align: middle;
+              background: rgba(127,127,127,.2); }
+.fingerprint.unchecked { border-left: 3px solid rgba(127,127,127,.4); }
+.fingerprint.unchecked h4 i { font-weight: normal; opacity: .7; }
