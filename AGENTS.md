@@ -177,14 +177,21 @@ These are not preferences — breaking them invalidates the paper.
   Same method on both boards, so the comparison holds — but never call it wall
   power.
 
-## 6. State as of 2026-09-21
+## 6. State as of 2026-09-22
 
-Done: Pi tiers 1-3, MTP × thinking, quant sweep, MMLU-Pro s1 both models,
-tinyGSM8k, the live-answer and classifier audits, Jetson setup (CUDA llama.cpp
-for sm_87, models on the SSD, eval venv, telemetry with GPU).
+Done: Pi tiers 1-3, MTP × thinking, quant sweep, tinyGSM8k, the live-answer and
+classifier audits, Jetson setup (CUDA llama.cpp for sm_87, models on the SSD,
+eval venv, telemetry with GPU), and **the full MMLU-Pro baseline grid — s1/s2/s3
+× E2B/E4B on both boards with telemetry**, all on matched serving flags.
 
-Running: Pi and Jetson each working through MMLU-Pro s1/s2/s3 × E2B/E4B with
-telemetry.
+Baseline headline (n=300 per model, paired over the same questions): E2B Pi
+51.7% vs Jetson 52.7%, E4B Pi 65.7% vs Jetson 66.0% — tied on both (McNemar
+p = 0.76 and 1.00). The Jetson is ~3.4× faster at decode and ~2.4× cheaper per
+token while drawing ~1.5× the power. The boards pick the same answer letter on
+only 71% (E2B) / 85% (E4B) of questions despite greedy decoding; see
+`findings/RESULTS.md` §7.1.
+
+Running: nothing.
 
 Not started: capability (b) standard benchmark — IFEval and BFCL are installed
 but unrun, so tool calling currently rests on the custom 10-case suite;

@@ -230,8 +230,20 @@ On E2B s2, the same 100 questions on both boards:
 | Jetson, defective | 993 | 11 | 23 | 48.0% |
 | Jetson, corrected | 2,028 | 0 | 8 | **47.0%** |
 
-**The defect did not cause the score gap.** Correcting it moved accuracy by one
-point, downward. What it did change is what the runs are usable for:
+**Its size was badly misjudged from one subset.** E2B s2, the first subset
+re-run, moved 48.0% -> 47.0% and was read as "worth roughly zero points". With
+all six runs redone on 2026-09-22 the pooled effect is the opposite:
+
+| | defective | corrected | Δ |
+|---|---|---|---|
+| Jetson E2B, n=300 | 48.3% | **52.7%** | +4.4 |
+| Jetson E4B, n=300 | 60.0% | **66.0%** | +6.0 |
+
+s2 was the single subset where correcting it did not help. Judging the fix on
+that one run inverted the conclusion — the reason the protocol pools three
+subsets rather than trusting one.
+
+What the defect changes is what a run is usable for:
 
 | class | effect | usable? |
 |---|---|---|
@@ -239,15 +251,29 @@ point, downward. What it did change is what the runs are usable for:
 | per-run totals — generated tokens, Wh, minutes | −36% (116,679→74,149 tokens); the empty responses drove lm-eval retries | no |
 | accuracy | mechanism broken regardless of size of effect | no |
 
-On the matched-config comparison, a paired test over the same 100 questions
-gives 44 correct on both, 46 wrong on both, 7 Pi-only, 3 Jetson-only — ten
-discordant pairs, **McNemar exact p = 0.34**. No detectable accuracy
-difference between the boards.
+### Matched-config comparison, both boards complete (n=300 per model)
 
-The boards agree on the *answer letter* for only **70 of 100** questions while
-scoring within noise of each other. Same weights, same prompts, greedy
-decoding, so this is CPU versus CUDA arithmetic tipping near-ties to different
-tokens — and it is accuracy-neutral. That, not the score gap, is the finding.
+| | Pi 5 | Jetson | Δ | both right | both wrong | Pi only | Orin only | McNemar |
+|---|---|---|---|---|---|---|---|---|
+| E2B | 51.7% (56/51/48) | **52.7%** (56/47/55) | +1.0 | 136 | 123 | 19 | 22 | p = **0.76** |
+| E4B | 65.7% (64/66/67) | **66.0%** (67/66/65) | +0.3 | 185 | 90 | 12 | 13 | p = **1.00** |
+| pooled n=600 | | | +0.6 | 321 | 213 | 31 | 35 | p = **0.71** |
+
+**Neither board is detectably more accurate.** The original reading — that the
+Pi led by 2-5 points — was an artefact of the defect, and the residual leads
+here are noise in the other direction. Counted independently from lm-eval's
+samples files and from `run_detail.py`, these four cells agree exactly.
+
+The boards pick the *same answer letter* on only about **79%** of the 600
+questions — roughly 72% on E2B against 86% on E4B. (The exact count moves by a
+few questions depending on whether the first or last `answer is (X)` in a
+response is taken, so treat the rate as ±1 point; the correctness figures above
+do not have that ambiguity.) Same weights, same prompts, greedy decoding, so
+this is CPU versus CUDA arithmetic tipping near-ties to different tokens, and it
+is accuracy-neutral: of the questions they answer differently, the Pi wins 31
+and the Orin 35. The larger model is markedly more stable across the two
+backends. That, not the score gap, is the finding worth carrying into the
+manuscript.
 
 Defective runs are archived under `stdbench/failed/` and
 `measured/failed/` with a `-reasoningfmt-` suffix.
