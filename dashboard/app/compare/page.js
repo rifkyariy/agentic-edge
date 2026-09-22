@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  Bar, BarChart, CartesianGrid, LabelList,
+  Bar, BarChart, CartesianGrid, Cell, LabelList,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { fmt } from "../Charts";
@@ -46,22 +46,45 @@ function pooled(rows) {
            ci95: 1.96 * Math.sqrt((p * (1 - p)) / n) * 100 };
 }
 
-function Chart({ title, note, data, unit, decimals = 2, better }) {
+/* Outcome, not identity: for each model the better board's bar goes green and
+   the worse one red, with grey for a tie. Two things keep that honest —
+   "better" is only ever decided by `goodWhen`, never by which board it is, and
+   a tie must be passed in explicitly (`tied`) rather than inferred from a
+   small gap, so a statistical dead heat cannot be painted as a win.
+
+   Red and green are the one pair colour-vision deficiency collapses, so they
+   never carry the meaning alone: every bar is also labelled with its value and
+   a ▲ / ▼ / = glyph, the device order is fixed (Pi left, Orin right) and
+   named on the axis, and the verdict is written underneath in words. The
+   steps themselves are picked to survive it — deutan ΔE 8.5 light, 8.1 dark. */
+const OUTCOME = { win: "var(--better)", lose: "var(--worse)", tie: "var(--neutral)" };
+const GLYPH = { win: "\u25b2", lose: "\u25bc", tie: "=" };
+
+function verdictFor(row, goodWhen, tied) {
+  const { pi, jetson } = row;
+  if (tied || pi == null || jetson == null) return { pi: "tie", jetson: "tie" };
+  if (pi === jetson) return { pi: "tie", jetson: "tie" };
+  const piBetter = goodWhen === "lower" ? pi < jetson : pi > jetson;
+  return piBetter ? { pi: "win", jetson: "lose" } : { pi: "lose", jetson: "win" };
+}
+
+function Chart({ title, note, data, unit, decimals = 2, goodWhen = "higher",
+                 tied = false, verdict }) {
+  const marks = data.map((row) => verdictFor(row, goodWhen, tied));
   return (
     <figure className="cmp-fig">
       <figcaption>
         <h3>{title}</h3>
         {note && <p>{note}</p>}
-        {/* Our own key rather than recharts' Legend: it renders a bottom
-            legend in its own order, which did not match the bars. */}
         <ul className="cmp-key">
-          {Object.entries(DEV).map(([id, v]) => (
-            <li key={id}><i style={{ background: v.color }} />{v.short}</li>
-          ))}
+          <li><i className="swatch better" />better</li>
+          <li><i className="swatch worse" />worse</li>
+          {tied && <li><i className="swatch neutral" />no difference</li>}
+          <li className="order">bars: Pi 5 left, Orin right</li>
         </ul>
       </figcaption>
-      <ResponsiveContainer width="100%" height={168}>
-        <BarChart data={data} margin={{ top: 18, right: 12, bottom: 0, left: 0 }} barGap={6}>
+      <ResponsiveContainer width="100%" height={176}>
+        <BarChart data={data} margin={{ top: 22, right: 12, bottom: 0, left: 0 }} barGap={6}>
           <CartesianGrid stroke="var(--line)" vertical={false} />
           <XAxis dataKey="model" {...axis} />
           <YAxis width={52} tickFormatter={(v) => fmt(v, decimals)} {...axis} />
@@ -69,16 +92,24 @@ function Chart({ title, note, data, unit, decimals = 2, better }) {
                    isAnimationActive={false}
                    formatter={(v, n) => [`${fmt(v, decimals)} ${unit}`, DEV[n]?.short ?? n]} />
           {Object.keys(DEV).map((id) => (
-            <Bar key={id} dataKey={id} name={id} fill={DEV[id].color}
-                 radius={[4, 4, 0, 0]} maxBarSize={54} isAnimationActive={false}>
+            <Bar key={id} dataKey={id} name={id} radius={[4, 4, 0, 0]}
+                 maxBarSize={54} isAnimationActive={false}>
+              {data.map((_, i) => (
+                <Cell key={i} fill={OUTCOME[marks[i][id]]} />
+              ))}
               <LabelList dataKey={id} position="top"
-                         formatter={(v) => (v == null ? "" : fmt(v, decimals))}
-                         style={{ fill: "var(--ink-2)", font: "11px var(--mono)" }} />
+                         content={({ x, y, width, value, index }) => (
+                           value == null ? null : (
+                             <text x={x + width / 2} y={y - 6} textAnchor="middle"
+                                   className={`barlab ${marks[index][id]}`}>
+                               {GLYPH[marks[index][id]]} {fmt(value, decimals)}
+                             </text>
+                           ))} />
             </Bar>
           ))}
         </BarChart>
       </ResponsiveContainer>
-      {better && <p className="cmp-better">{better}</p>}
+      {verdict && <p className="cmp-better">{verdict}</p>}
     </figure>
   );
 }
@@ -156,29 +187,85 @@ export default function Compare() {
       </header>
 
       {/* The three numbers the comparison exists to produce. */}
-      <section className="card cmp-hero">
-        <div className="cmp-heronum">
-          <span className="tile-label">Decode throughput</span>
-          <b>{fmt(speedX, 1)}×</b>
-          <em>faster on the Orin</em>
-        </div>
-        <div className="cmp-heronum">
-          <span className="tile-label">Energy per token</span>
-          <b>{fmt(energyX, 1)}×</b>
-          <em>lower on the Orin</em>
-        </div>
-        <div className="cmp-heronum alt">
-          <span className="tile-label">Board power draw</span>
-          <b>{fmt(powerX, 1)}×</b>
-          <em>higher on the Orin</em>
-        </div>
+      {/* The experiment in one block, then its verdict — so the page reads as
+          a summary of what was run, not a chart dump. */}
+      <section className="card design">
+        <h2>What was run</h2>
+        <dl className="design-grid">
+          <div><dt>Question set</dt>
+            <dd>MMLU-Pro, three disjoint 100-question stratified subsets
+              (<code>s1</code>/<code>s2</code>/<code>s3</code>, seeds 20260918/19/20),
+              <b> n=300 per model per board</b> — 1,200 answers in total.</dd></div>
+          <div><dt>Models</dt>
+            <dd>Gemma 4 <b>E2B</b> and <b>E4B</b>, identical Unsloth Q4_K_XL QAT
+              GGUFs on both boards.</dd></div>
+          <div><dt>Serving</dt>
+            <dd>llama.cpp, 5-shot CoT, greedy, <code>max_gen_toks</code> 2048,{" "}
+              <code>-c 8192 --cache-ram 0 -rea off --reasoning-budget -1</code>.
+              Differs only in <code>-t 3</code> (Pi) against <code>-ngl 99</code> (Orin).</dd></div>
+          <div><dt>Measured together</dt>
+            <dd>Accuracy and device cost in the same run: 1 Hz telemetry for power,
+              CPU, GPU, thermals and memory, plus per-request token timings.</dd></div>
+          <div><dt>Boards</dt>
+            <dd><b>Pi 5</b> — 4× Cortex-A76, 8,062 MB, CPU only.{" "}
+              <b>Orin Nano</b> — sm_87 Ampere GPU + 6× Cortex-A78AE, 7,485 MB
+              shared, 15 W mode.</dd></div>
+          <div><dt>Power method</dt>
+            <dd>Board DC draw — the Pi&apos;s PMIC rails summed, the Orin&apos;s
+              INA3221 <code>VDD_IN</code>. Excludes PSU conversion loss; not wall
+              power.</dd></div>
+        </dl>
+      </section>
+
+      <section className="card scorecard">
+        <h2>What it found</h2>
+        <table className="score">
+          <thead>
+            <tr><th>Measure</th><th>Pi 5</th><th>Orin Nano</th><th>Result</th></tr>
+          </thead>
+          <tbody>
+            <tr className="tie">
+              <th>Accuracy <em>MMLU-Pro, n=300</em></th>
+              <td>51.7% · 65.7%</td><td>52.7% · 66.0%</td>
+              <td><span className="pillv tie">= tied</span>
+                <em>McNemar p = 0.76 / 1.00</em></td>
+            </tr>
+            <tr>
+              <th>Decode throughput</th>
+              <td>6.80 · 3.37 <i>tok/s</i></td><td>23.00 · 11.62 <i>tok/s</i></td>
+              <td><span className="pillv win">▲ Orin</span><em>{fmt(speedX, 1)}× faster</em></td>
+            </tr>
+            <tr>
+              <th>Energy per token</th>
+              <td>1.15 · 2.20 <i>J</i></td><td>0.47 · 0.96 <i>J</i></td>
+              <td><span className="pillv win">▲ Orin</span><em>{fmt(energyX, 1)}× cheaper</em></td>
+            </tr>
+            <tr>
+              <th>Board power</th>
+              <td>7.01 · 6.80 <i>W</i></td><td>10.12 · 10.54 <i>W</i></td>
+              <td><span className="pillv win">▲ Pi</span><em>{fmt(powerX, 1)}× lower draw</em></td>
+            </tr>
+            <tr>
+              <th>Peak temperature</th>
+              <td>72.0 · 73.8 <i>°C</i></td><td>58.4 · 59.0 <i>°C</i></td>
+              <td><span className="pillv win">▲ Orin</span><em>~14 °C cooler</em></td>
+            </tr>
+            <tr>
+              <th>Memory headroom <em>worst run</em></th>
+              <td>~3.9 GB spare</td><td>165 MB spare</td>
+              <td><span className="pillv win">▲ Pi</span><em>Orin OOM-killed twice</em></td>
+            </tr>
+          </tbody>
+        </table>
         <p className="cmp-lede">
-          The Orin draws about half as much power again as the Pi, yet spends
-          less energy per token — it finishes so much sooner that the higher
-          draw is billed for a fraction of the time. On accuracy the two are
-          tied: over all 600 paired questions the boards are within 0.6 points
-          of each other and a paired test finds no difference, even though they
-          pick the same letter on only 79% of them.
+          <b>The two boards are equally accurate and not equally fast.</b> The Orin
+          answers the same questions just as well, {fmt(speedX, 1)}× quicker and for{" "}
+          {fmt(energyX, 1)}× less energy per token, despite drawing {fmt(powerX, 1)}×
+          the power — it finishes soon enough that the higher draw is billed for a
+          fraction of the time. What it buys that with is headroom: every layer sits
+          in a 7,485 MB pool it shares with the CPU and cannot swap, and two runs were
+          killed for it. The Pi is the slower, cooler-running, roomier board; the Orin
+          is the efficient one.
         </p>
       </section>
 
@@ -226,24 +313,26 @@ export default function Compare() {
       </section>
 
       <div className="cmp-grid">
-        <Chart title="Accuracy" note="MMLU-Pro, pooled over the finished subsets"
-               data={acc} unit="%" decimals={1}
-               better="The boards are statistically tied — see below" />
+        {/* tied is asserted, not inferred: McNemar p = 0.71 pooled, 0.76 / 1.00
+            per model. A 1-point bar gap is not a win and is not drawn as one. */}
+        <Chart title="Accuracy" note="MMLU-Pro, pooled n=300 per model"
+               data={acc} unit="%" decimals={1} tied
+               verdict="No significant difference — paired McNemar p = 0.76 (E2B), 1.00 (E4B)" />
         <Chart title="Decode throughput" note="tokens per second, generation only"
-               data={series("decode_tok_s")} unit="tok/s" decimals={2}
-               better="Higher is better" />
+               data={series("decode_tok_s")} unit="tok/s" decimals={2} goodWhen="higher"
+               verdict="Orin ~3.4x faster on both models" />
         <Chart title="Energy per generated token" note="board DC draw ÷ tokens produced"
-               data={series("j_per_token")} unit="J/tok"
-               better="Lower is better" />
+               data={series("j_per_token")} unit="J/tok" goodWhen="lower"
+               verdict="Orin ~2.4x cheaper per token" />
         <Chart title="Throughput per watt" note="decode tokens per second per watt"
-               data={series("tok_s_per_w")} unit="tok/s/W" decimals={3}
-               better="Higher is better" />
+               data={series("tok_s_per_w")} unit="tok/s/W" decimals={3} goodWhen="higher"
+               verdict="Orin ~2.2x more work per watt" />
         <Chart title="Board power while working" note="PMIC rails (Pi) / INA3221 VDD_IN (Orin)"
-               data={series("mean_w")} unit="W"
-               better="Excludes power-supply conversion loss — not wall power" />
+               data={series("mean_w")} unit="W" goodWhen="lower"
+               verdict="Pi draws less — but for far longer, so it loses on energy" />
         <Chart title="Peak temperature" note="SoC, across the whole run"
-               data={series("temp_max", 1)} unit="°C" decimals={1}
-               better="Neither board throttled on any completed run" />
+               data={series("temp_max", 1)} unit="°C" decimals={1} goodWhen="lower"
+               verdict="Orin runs ~14 °C cooler; neither board throttled" />
       </div>
 
       {/* What the Orin actually brings: the GPU the Pi does not have. */}
