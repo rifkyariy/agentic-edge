@@ -62,8 +62,39 @@ sleep "$IDLE"
 
 WORK_START=$(date +%s)
 echo "[$(date +%H:%M:%S)] running: $*"
-"$@" > "$OUT/command.log" 2>&1
+"$@" > "$OUT/command.log" 2>&1 &
+WORK_PID=$!
+
+# meta.json's server_args is captured before the command starts, so it records
+# whatever was already running -- the idle deployed server on the Pi, nothing at
+# all on the Jetson. That is how a missing -rea survived days of review. Take a
+# second sample once the run's own server is up, and keep it under a separate
+# key so the original field's meaning does not change under anything already
+# reading it.
+( for _ in $(seq 60); do
+    sleep 5
+    ARGS=$(ps -o args= -C llama-server 2>/dev/null | head -1)
+    [ -n "$ARGS" ] || continue
+    python3 - "$OUT" "$ARGS" <<'CAPTURE'
+import json, sys
+out, args = sys.argv[1], sys.argv[2]
+p = out + "/meta.json"
+m = json.load(open(p))
+if m.get("server_args_after"):
+    raise SystemExit(0)
+m["server_args_after"] = args
+json.dump(m, open(p, "w"), indent=1)
+CAPTURE
+    break
+  done ) &
+CAPTURE_PID=$!
+
+wait "$WORK_PID"
 RC=$?
+# Do not leave the sampler polling for five minutes after a short run, and
+# never let it write meta.json while summarize_run.py is reading it.
+kill "$CAPTURE_PID" 2>/dev/null
+wait "$CAPTURE_PID" 2>/dev/null
 WORK_END=$(date +%s)
 echo "[$(date +%H:%M:%S)] command finished rc=$RC; idle tail ${IDLE}s"
 
