@@ -21,3 +21,5 @@ findings/bfcl_data/
 # Node dashboard
 dashboard/node_modules/
 dashboard/.next/
+findings/export/*.json
+!findings/export/experiment-full.json.gz

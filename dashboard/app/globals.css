@@ -205,9 +205,13 @@ pre.resp mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:in
 .track-head b{font-size:10.5px;letter-spacing:0;text-transform:none}
 .reqtable table{width:100%;border-collapse:collapse;font:11.5px var(--mono);font-variant-numeric:tabular-nums}
 /* two-tier header: a group band, then the column with its unit under it */
+/* Single-row header sticks at the top. The two-tier header in the run-detail
+   table offsets its second row instead — pinning every header at 21px left a
+   band the first data row scrolled behind and vanished into. */
 .reqtable th{text-align:right;color:var(--ink);font-weight:600;padding:6px 7px;
-             background:var(--panel-2);position:sticky;top:21px;
+             background:var(--panel-2);position:sticky;top:0;
              border-bottom:2px solid var(--line-2)}
+.reqtable thead:has(th.grp) tr:last-child th{top:21px}
 .reqtable th i{display:block;font-style:normal;font-weight:500;font-size:9.5px;
                color:var(--ink-3);letter-spacing:.04em}
 /* the two header rows overlap by 1px on purpose: an exact abutment leaves a
@@ -437,3 +441,5 @@ table.score tr.tie td,table.score tr.tie th{background:color-mix(in srgb,var(--n
            border:1px solid var(--line-2)}
 .score td em{display:block;font:10.5px var(--mono);font-style:normal;color:var(--ink-3);margin-top:4px}
 .scorecard .cmp-lede{border-left:0;border-top:1px solid var(--line);padding:13px 0 0;margin:0}
+.cmp .runname{font-size:11px;color:var(--ink-3);white-space:nowrap}
+.cmp .runname em{font-style:normal;color:var(--warn);font-weight:600}

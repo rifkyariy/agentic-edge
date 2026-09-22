@@ -415,6 +415,8 @@ def main():
     ap.add_argument("--baseline", action="store_true",
                     help="every finished run on this box with its device cost")
     ap.add_argument("--max-questions", type=int, default=400)
+    ap.add_argument("--raw-telemetry", action="store_true",
+                    help="every 1Hz sample instead of the ~700-point chart series")
     args = ap.parse_args()
 
     if args.baseline:
@@ -484,7 +486,14 @@ def main():
         "run": args.run, "subset": sub, "status": status, "note": note,
         "summary": summary, "n": len(qs),
         "questions": qs[:args.max_questions],
-        "timeline": tl, "telemetry": downsample(tele, t0), "device": device,
+        "timeline": tl,
+        # downsampled for charting by default; --raw-telemetry gives every
+        # sample, which an export wants and a browser does not.
+        "telemetry": ([{**r, "t": round(r["t"] - t0, 1)} for r in tele]
+                      if args.raw_telemetry else downsample(tele, t0)),
+        "telemetry_raw": bool(args.raw_telemetry),
+        "telemetry_hz": 1 if args.raw_telemetry else None,
+        "device": device,
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
     }))
 
