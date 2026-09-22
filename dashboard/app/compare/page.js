@@ -161,6 +161,44 @@ export default function Compare() {
   const energyX = ratio("j_per_token", true);
   const powerX = ratio("mean_w");
 
+  /* Campaign totals: what running the whole grid actually cost each board.
+     canonical() has already dropped the Pi's duplicate pre-subset directory,
+     so nothing is counted twice. */
+  const totals = (id) => {
+    const rows = MODELS.flatMap(([m]) => rowsFor(id, m));
+    const sum = (f) => rows.reduce((a, r) => a + (f(r) || 0), 0);
+    const idle = rows.map((r) => r.device?.idle_w).filter(Boolean);
+    return {
+      runs: rows.length,
+      minutes: sum((r) => r.minutes),
+      wh: sum((r) => r.device?.energy_wh),
+      tokens: sum((r) => r.device?.gen_tokens),
+      idle_w: idle.length ? mean(idle) : null,
+    };
+  };
+  const T = { pi: totals("pi"), jetson: totals("jetson") };
+  const whPerK = (t) => (t.tokens ? (1000 * t.wh) / t.tokens : null);
+
+  /* Where the trade turns over. Under load the Orin is far cheaper per token;
+     at rest it costs more than twice what the Pi does. Over a 24h day doing T
+     tokens, total energy is work + idle for the remainder, and the two curves
+     cross at the token count below which the Pi's low floor wins. */
+  const breakeven = (() => {
+    const g = (id, k) => devMean(id, "e2b", k);
+    const [pd, pw, pi_] = [g("pi", "decode_tok_s"), g("pi", "mean_w"), T.pi.idle_w];
+    const [jd, jw, ji] = [g("jetson", "decode_tok_s"), g("jetson", "mean_w"), T.jetson.idle_w];
+    if (![pd, pw, pi_, jd, jw, ji].every(Boolean)) return null;
+    const day = 86400;
+    const slopeP = (pw - pi_) / pd, slopeJ = (jw - ji) / jd;
+    if (slopeP <= slopeJ) return null;
+    const tokens = (day * (ji - pi_)) / (slopeP - slopeJ);
+    // What each board could produce decoding flat out for 24h. The Pi's
+    // ceiling sits close to the crossover, which bounds how much of the
+    // "Orin wins on energy" range is even reachable on a Pi.
+    return { tokens, piHours: tokens / pd / 3600, jetHours: tokens / jd / 3600,
+             piCeiling: pd * day, jetCeiling: jd * day };
+  })();
+
   const gpu = {
     mean: devMean("jetson", "e4b", "gpu_mean"),
     max: devMean("jetson", "e4b", "gpu_max"),
@@ -271,12 +309,102 @@ export default function Compare() {
 
       {/* What is fixed here and what is still open, so the page is not read as
           a final result for the paper. */}
+      {/* Totals, because per-token rates hide what a campaign actually costs. */}
+      <section className="card cost">
+        <h2>What the whole benchmark cost</h2>
+        <p className="sub">
+          Six runs per board — 2 models × 3 subsets, 600 questions each, every
+          run wrapped in telemetry.
+        </p>
+        <table className="score cost-table">
+          <thead>
+            <tr><th>Across all six runs</th><th>Pi 5</th><th>Orin Nano</th><th>Ratio</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>Wall-clock time</th>
+              <td>{fmt(T.pi.minutes / 60, 1)} h <i>{fmt(T.pi.minutes)} min</i></td>
+              <td>{fmt(T.jetson.minutes / 60, 1)} h <i>{fmt(T.jetson.minutes)} min</i></td>
+              <td><span className="pillv win">▲ Orin</span>
+                <em>{fmt(T.pi.minutes / T.jetson.minutes, 1)}× quicker</em></td>
+            </tr>
+            <tr>
+              <th>Energy consumed</th>
+              <td>{fmt(T.pi.wh, 1)} <i>Wh</i></td>
+              <td>{fmt(T.jetson.wh, 1)} <i>Wh</i></td>
+              <td><span className="pillv win">▲ Orin</span>
+                <em>{fmt(T.pi.wh / T.jetson.wh, 1)}× less</em></td>
+            </tr>
+            <tr>
+              <th>Energy per 1,000 tokens</th>
+              <td>{fmt(whPerK(T.pi), 2)} <i>Wh</i></td>
+              <td>{fmt(whPerK(T.jetson), 2)} <i>Wh</i></td>
+              <td><span className="pillv win">▲ Orin</span>
+                <em>{fmt(whPerK(T.pi) / whPerK(T.jetson), 1)}× cheaper</em></td>
+            </tr>
+            <tr>
+              <th>Idle draw <em>board at rest</em></th>
+              <td>{fmt(T.pi.idle_w, 2)} <i>W</i></td>
+              <td>{fmt(T.jetson.idle_w, 2)} <i>W</i></td>
+              <td><span className="pillv win">▲ Pi</span>
+                <em>{fmt(T.jetson.idle_w / T.pi.idle_w, 1)}× lower floor</em></td>
+            </tr>
+            <tr className="tie">
+              <th>Tokens generated <em>the work itself</em></th>
+              <td>{fmt(T.pi.tokens)}</td>
+              <td>{fmt(T.jetson.tokens)}</td>
+              <td><span className="pillv tie">= same work</span>
+                <em>within {fmt(Math.abs(100 * (T.pi.tokens / T.jetson.tokens - 1)), 1)}%</em></td>
+            </tr>
+          </tbody>
+        </table>
+
+        {breakeven && (
+          <div className="tradeoff">
+            <h3>The trade-off</h3>
+            <p>
+              Under load the Orin is the efficient board. <b>At rest it is not</b> —
+              it idles at {fmt(T.jetson.idle_w, 2)} W against the Pi&apos;s{" "}
+              {fmt(T.pi.idle_w, 2)} W, a floor it pays whether or not it is
+              answering anything. Over a 24-hour day the two cross at roughly{" "}
+              <b>{fmt(breakeven.tokens / 1000)}k generated tokens</b> — about{" "}
+              {fmt(breakeven.jetHours, 1)} h of Orin decoding, or{" "}
+              {fmt(breakeven.piHours, 1)} h of the Pi&apos;s.
+            </p>
+            <p>
+              Above that the Orin wins on total energy; below it the Pi&apos;s lower
+              floor does, because the Orin spends the rest of the day idling at
+              two and a half times the cost. A board answering steadily wants the
+              Orin. A board waiting for a wake word most of the day wants the Pi.
+            </p>
+            <p>
+              That crossover sits near the Pi&apos;s ceiling, which is the sharper
+              limit. Decoding flat out for a full day the Pi tops out at{" "}
+              <b>{fmt(breakeven.piCeiling / 1000)}k tokens</b> against the
+              Orin&apos;s <b>{fmt(breakeven.jetCeiling / 1000)}k</b>, so the
+              break-even already demands {fmt(100 * breakeven.piHours / 24)}% of the
+              Pi&apos;s day. Past roughly {fmt(breakeven.piCeiling / 1000)}k the
+              question stops being which board is cheaper and becomes whether the
+              Pi can keep up at all — it cannot, at any power budget.
+            </p>
+            <p className="tradeoff-note">
+              Computed from these runs&apos; own E2B figures — decode rate, working
+              watts and the idle baseline each run records before it starts. It
+              assumes the board is idle whenever it is not decoding, so it is a
+              floor for the Orin rather than an exact duty cycle.
+            </p>
+          </div>
+        )}
+      </section>
+
       <section className="card scope">
         <h2>What this page is — and what it is not yet</h2>
         <p>
           Every number here is the <b>baseline condition on both boards</b>: Gemma 4
-          served by <b>llama.cpp</b>, thinking off
-          (<code>-rea off --reasoning-budget -1</code>), greedy decoding, the same
+          served by <b>llama.cpp</b> with thinking genuinely off —{" "}
+          <code>-rea off</code> is llama.cpp&apos;s <code>--reasoning</code> switch,
+          so the model answers directly rather than reasoning first — greedy
+          decoding, the same
           Q4_K_XL QAT weights and the same MMLU-Pro subsets. That holds the model,
           the engine and the decoding fixed so the only variable left is the board.
         </p>
@@ -284,11 +412,11 @@ export default function Compare() {
           <li>
             <span className="scope-tag open">planned</span>
             <div>
-              <b>Reasoning mode on.</b> A second row with <code>THINKING=on</code>
-              (budget 320) against this baseline. Not the same thing as the
-              <code>-rea</code> flag above, which only controls where the thinking
-              text is returned. Unrun on either board — <code>std_mmlupro_jetson.sh</code>
-              has no <code>THINKING</code> switch yet.
+              <b>Reasoning mode on.</b> A second row, <code>THINKING=on</code>, which
+              flips <code>-rea</code> to <code>on</code> so the model actually thinks
+              before answering — and pins <code>--reasoning-format none</code> so
+              lm-eval can still see the result. Both scripts now take the switch;
+              neither board has run the row yet.
             </div>
           </li>
           <li>

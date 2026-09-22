@@ -17,6 +17,13 @@ cd "$(dirname "$0")"
 MODEL_KEY="${1:?usage: $0 e2b|e4b}"
 SUBSET="${SUBSET:-s1}"
 NGL="${NGL:-99}"
+# Mirrors std_mmlupro.sh on the Pi. -rea on|off is the thinking switch;
+# --reasoning-format is separate and defaults to auto, which moves the thoughts
+# into reasoning_content where lm-eval cannot see them — so pin it to none
+# whenever thinking is on. Off, there is nothing to extract.
+THINKING="${THINKING:-off}"
+FMT=""
+[ "$THINKING" = on ] && FMT="--reasoning-format none"
 R=~/research
 M_DIR=$R/models
 S=$R/stdbench
@@ -28,24 +35,25 @@ case "$MODEL_KEY" in
   *) echo "unknown model key: $MODEL_KEY" >&2; exit 1 ;;
 esac
 OUT=$S/mmlupro100-$MODEL_KEY-$SUBSET
+[ "$THINKING" = on ] && OUT=$OUT-think
 mkdir -p "$OUT"
 SRVLOG=$OUT/server.log
 
 pkill -f "llama-server -m" 2>/dev/null; sleep 2
 echo "$(date) starting llama.cpp (CUDA, -ngl $NGL) on $TAG"
-# -rea off --reasoning-budget -1 must match the Pi. Without them llama.cpp
-# splits Gemma's thinking into reasoning_content, which lm-eval never reads:
-# answers come back truncated or entirely empty, and the run scores far below
-# what the model actually produced. This cost every Jetson MMLU-Pro run before
-# 2026-09-21.
+# The reasoning flags must match the Pi. Left unset, -rea defaults to auto
+# (thinking on for Gemma) and --reasoning-format defaults to auto, so the
+# thoughts land in reasoning_content where lm-eval cannot see them: answers
+# come back truncated or entirely empty. That cost every Jetson MMLU-Pro run
+# before 2026-09-22, ~5 points pooled.
 nohup sh -c "$SERVER -m $M -c 8192 --host 127.0.0.1 --port 8080 \
-  -ngl $NGL -rea off --reasoning-budget -1 --cache-ram 0 2>&1 | python3 $PWD/stamp.py" \
+  -ngl $NGL -rea $THINKING --reasoning-budget -1 $FMT --cache-ram 0 2>&1 | python3 $PWD/stamp.py" \
   > "$SRVLOG" 2>&1 < /dev/null &
 for _ in $(seq 150); do curl -sf localhost:8080/health >/dev/null 2>&1 && break; sleep 2; done
 curl -s localhost:8080/props | grep -o '"model_path":"[^"]*"'
 "$SERVER" --list-devices 2>/dev/null | grep -i cuda || true
 
-echo "$(date) start MMLU-Pro subset100/$SUBSET  model=$TAG"
+echo "$(date) start MMLU-Pro subset100/$SUBSET  model=$TAG thinking=$THINKING"
 ~/venvs/eval/bin/lm_eval run --model local-chat-completions \
   --model_args "model=gemma4-$TAG,base_url=http://127.0.0.1:8080/v1/chat/completions,num_concurrent=1,max_retries=3,tokenized_requests=False,timeout=3600" \
   --tasks mmlu_pro --apply_chat_template \

@@ -21,6 +21,14 @@
 set -uo pipefail
 MODEL_KEY="${1:?usage: $0 e2b|e4b}"
 THINKING="${THINKING:-off}"
+# -rea on|off is the thinking switch itself. --reasoning-format is a different
+# flag and defaults to auto, which lifts the thoughts out into
+# reasoning_content — a field lm-eval does not read, so a thinking run scored
+# with the default loses most of every answer. Pin it to none whenever
+# thinking is on. With thinking off there are no thoughts to extract, so the
+# baseline needs nothing and its completed runs stay valid.
+FMT=""
+[ "$THINKING" = on ] && FMT=" --reasoning-format none"
 SUBSET="${SUBSET:-s1}"
 RT=/etc/voice-agent/runtime.env
 S=~/Research/stdbench
@@ -35,7 +43,7 @@ OUT=$S/mmlupro100-$MODEL_KEY-$SUBSET
 mkdir -p "$OUT"
 
 sudo -n sed -i -e "s|^VA_LLM_MODEL_PATH=.*|VA_LLM_MODEL_PATH=$M|" \
-               -e 's|^VA_LLM_SPEC_ARGS=.*|VA_LLM_SPEC_ARGS=--cache-ram 0|' \
+               -e "s|^VA_LLM_SPEC_ARGS=.*|VA_LLM_SPEC_ARGS=--cache-ram 0$FMT|" \
                -e "s|^VA_LLM_REASONING=.*|VA_LLM_REASONING=$THINKING|" \
                -e '/^VA_LLM_CTX=/d' "$RT"
 echo "VA_LLM_CTX=8192" | sudo -n tee -a "$RT" >/dev/null
