@@ -39,9 +39,24 @@ class TestRunner(unittest.TestCase):
         self.registry = kinds.load()
         self.baselines = fingerprint.load_baselines()
         self.executed = []
+        self.started = []
 
     def make(self, args=GOOD_ARGS, rc=0, done=True, mem=9000):
-        def exec_fn(command, env, cwd, log_path):
+        class DoneProc:
+            """A command that has already finished by the time we look."""
+            def __init__(self, rc):
+                self.rc, self.pid, self.killed = rc, 4242, False
+
+            def poll(self):
+                return self.rc
+
+            def wait(self):
+                return self.rc
+
+            def kill(self):
+                self.killed = True
+
+        def start_fn(command, env, cwd, log_path):
             self.executed.append(command)
             os.makedirs(os.path.dirname(log_path), exist_ok=True)
             with open(log_path, "a") as f:
@@ -53,10 +68,13 @@ class TestRunner(unittest.TestCase):
                                    label.replace("mmlupro-", "mmlupro100-"))
                 os.makedirs(out, exist_ok=True)
                 open(os.path.join(out, ".done"), "w").close()
-            return rc
+            proc = DoneProc(rc)
+            self.started.append(proc)
+            return proc
 
         return runner.Runner(self.p, self.registry, self.baselines,
-                             exec_fn=exec_fn, probe=FakeProbe(mem),
+                             start_fn=start_fn, probe=FakeProbe(mem),
+                             sleep=lambda _s: None,
                              capture_fn=lambda: fingerprint.capture(
                                  runner=lambda cmd, **kw:
                                  args if cmd[0] == "ps" else "{}"))
@@ -102,13 +120,19 @@ class TestRunner(unittest.TestCase):
             results = json.load(f)
         self.assertFalse(next(r for r in results if r["name"] == "memory")["ok"])
 
-    def test_fingerprint_drift_blocks_without_running_lm_eval(self):
+    def test_fingerprint_drift_kills_the_run_and_blocks_it(self):
         # The 2026-09-22 Jetson case: no -rea, no --reasoning-budget.
+        #
+        # The command does start, and must: the run script is what configures
+        # the server, so there is nothing truthful to fingerprint until it has
+        # begun. What the check buys is killing it during server load instead
+        # of finding out three hours later.
         job = self.queue_one()
         r = self.make(args=BAD_ARGS)
         self.drain(r)
         self.assertEqual(store.get(self.p, job["id"])["state"], "blocked")
-        self.assertEqual(self.executed, [])
+        self.assertEqual(len(self.executed), 1)
+        self.assertTrue(self.started[0].killed, "a drifting run must be killed")
 
     def test_fingerprint_is_written_even_when_it_blocks(self):
         job = self.queue_one()
@@ -167,8 +191,8 @@ class TestRunner(unittest.TestCase):
         job = self.queue_one()
         def boom(command, env, cwd, log_path):
             raise OSError("no such file")
-        r = runner.Runner(self.p, self.registry, self.baselines, exec_fn=boom,
-                          probe=FakeProbe(),
+        r = runner.Runner(self.p, self.registry, self.baselines, start_fn=boom,
+                          probe=FakeProbe(), sleep=lambda _s: None,
                           capture_fn=lambda: fingerprint.capture(
                               runner=lambda cmd, **kw:
                               GOOD_ARGS if cmd[0] == "ps" else "{}"))
@@ -180,3 +204,148 @@ class TestRunner(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+# ---------------------------------------------------------------------------
+# Fingerprint timing. These are the tests the old suite could not express:
+# capture_fn was injected and returned the same value whenever it was called,
+# so nothing distinguished "captured before the run started" from "after".
+# Capturing before is the bug the whole mechanism exists to prevent — the
+# server is not configured yet, so every mmlupro job blocks on flags that the
+# run script was about to set.
+# ---------------------------------------------------------------------------
+
+class FakeProc:
+    def __init__(self, rc=0, exits_after=None):
+        self.rc, self.pid, self.killed = rc, 4242, False
+        self._polls, self._exits_after = 0, exits_after
+
+    def poll(self):
+        self._polls += 1
+        if self._exits_after is not None and self._polls >= self._exits_after:
+            return self.rc
+        return None
+
+    def wait(self):
+        return self.rc
+
+    def kill(self):
+        self.killed = True
+
+
+class TestFingerprintTiming(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.p = paths.Paths(self.tmp.name, "jetson")
+        os.makedirs(self.p.stdbench)
+        with open(os.path.join(self.p.stdbench,
+                               "mmlupro_subset100_s2_samples.json"), "w") as f:
+            json.dump([1], f)
+        self.registry = kinds.load()
+        self.baselines = fingerprint.load_baselines()
+        self.order = []
+        self.procs = []
+        self.now = [1000.0]           # a clock the fake sleep advances
+
+    def make(self, captures, rc=0, done=True, exits_after=None):
+        """captures: the server argv seen on each successive poll."""
+        seq = list(captures)
+
+        def start_fn(command, env, cwd, log_path):
+            self.order.append("started")
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            open(log_path, "a").close()
+            if done:
+                out = os.path.join(self.p.stdbench, "mmlupro100-e4b-s2")
+                os.makedirs(out, exist_ok=True)
+                open(os.path.join(out, ".done"), "w").close()
+            proc = FakeProc(rc=rc, exits_after=exits_after)
+            self.procs.append(proc)
+            return proc
+
+        def capture_fn():
+            self.order.append("captured")
+            args = seq.pop(0) if seq else (seq[-1] if seq else "")
+            return fingerprint.capture(
+                runner=lambda cmd, **kw: args if cmd[0] == "ps" else "{}")
+
+        def sleep(seconds):
+            self.now[0] += seconds
+
+        return runner.Runner(self.p, self.registry, self.baselines,
+                             start_fn=start_fn, probe=FakeProbe(),
+                             capture_fn=capture_fn, sleep=sleep,
+                             clock=lambda: self.now[0])
+
+    def queue_one(self, **params):
+        p = dict({"model": "e4b", "subset": "s2", "thinking": "off"}, **params)
+        r = kinds.resolve(self.registry, "mmlupro", p, self.p)
+        return store.add(self.p, store.new_job(
+            kind="mmlupro", params=r["params"], label=r["label"],
+            output_dir=r["output_dir"], command=r["command"], env=r["env"]))
+
+    def test_the_fingerprint_is_captured_after_the_run_starts(self):
+        # The regression. Before the fix the order was captured-then-started,
+        # so the flags read belonged to whatever the board had running before.
+        self.queue_one()
+        self.make([GOOD_ARGS]).tick()
+        self.assertEqual(self.order[0], "started")
+        self.assertIn("captured", self.order)
+
+    def test_an_empty_server_is_polled_until_it_appears(self):
+        # The Jetson has no server until the run script launches one, so the
+        # first captures come back empty. That must not be read as drift.
+        job = self.queue_one()
+        self.make(["", "", GOOD_ARGS]).tick()
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "completed", got["note"])
+
+    def test_a_job_completes_once_the_server_matches(self):
+        job = self.queue_one()
+        self.drain_ok = self.make(["", GOOD_ARGS]).tick()
+        names = [e["event"] for e in events.read(self.p, job["id"])[0]]
+        self.assertIn("fingerprint_ok", names)
+        self.assertEqual(store.get(self.p, job["id"])["state"], "completed")
+
+    def test_drift_after_the_server_appears_kills_the_run(self):
+        job = self.queue_one()
+        self.make(["", BAD_ARGS]).tick()
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "blocked")
+        self.assertTrue(self.procs[0].killed, "the run must be killed on drift")
+        self.assertIn("reasoning", got["note"])
+
+    def test_a_server_that_never_appears_is_a_failure_not_a_silent_pass(self):
+        job = self.queue_one()
+        self.make([""] * 200).tick()
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "blocked")
+        self.assertIn("no llama-server", got["note"])
+        self.assertTrue(self.procs[0].killed)
+
+    def test_a_command_that_dies_before_serving_is_judged_on_the_done_marker(self):
+        job = self.queue_one()
+        self.make([""] * 5, done=False, exits_after=2).tick()
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "failed")
+        self.assertIn("no .done marker", got["note"])
+
+    def test_override_lets_a_drifting_run_continue_rather_than_killing_it(self):
+        job = self.queue_one()
+        store.update(self.p, job["id"], override_fingerprint=True)
+        self.make(["", BAD_ARGS]).tick()
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "completed")
+        self.assertFalse(self.procs[0].killed)
+
+    def test_a_kind_without_a_baseline_does_not_wait_for_a_server(self):
+        # raw declares no baseline; it must not sit polling for 420s.
+        r = kinds.resolve(self.registry, "raw",
+                          {"label": "smoke", "command": "true"}, self.p)
+        store.add(self.p, store.new_job(
+            kind="raw", params=r["params"], label=r["label"],
+            output_dir=r["output_dir"], command=r["command"], env=r["env"]))
+        os.makedirs(os.path.join(self.p.stdbench, "smoke"), exist_ok=True)
+        open(os.path.join(self.p.stdbench, "smoke", ".done"), "w").close()
+        self.make([""] * 5, done=False).tick()
+        self.assertNotIn("captured", self.order)

@@ -1669,6 +1669,17 @@ git commit -m "Make the AGENTS §10 check automatic, with the regression as a fi
 
 ## Task 7: The runner state machine
 
+> **Corrected during implementation (2026-09-22).** The code below captures the
+> fingerprint *before* `_execute`, which is the exact bug the spec warned
+> against: the run script is what configures the server, so at that moment the
+> flags belong to whatever the board was already running — the idle deployed
+> server on the Pi, nothing at all on the Jetson. Every `mmlupro` job would
+> block. The shipped `jobqueue/runner.py` instead starts the command, polls for
+> the run's own server, diffs then, and kills the run on drift. The `exec_fn`
+> seam became `start_fn`, returning a still-running process. See the tests in
+> `TestFingerprintTiming`, which assert the ordering the old fakes could not
+> express.
+
 **Files:**
 - Create: `benchmark/jobqueue/runner.py`
 - Test: `benchmark/tests/test_runner.py`
