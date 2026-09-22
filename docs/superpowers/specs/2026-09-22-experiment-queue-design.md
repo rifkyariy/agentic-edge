@@ -297,15 +297,26 @@ launch those runs.
 
 ## 7. Keeping the daemon alive
 
+**The same mechanism works on both boards.** Checked 2026-09-22:
+`systemctl --user` reports `running` on each, and `loginctl enable-linger`
+succeeds **without sudo** on the Jetson as well as the Pi (both now show
+`Linger=yes`). The earlier assumption that the Jetson would need a cron
+fallback was wrong — lingering is a per-user setting, not a privileged one.
+
 | | Pi 5 | Jetson Orin Nano |
 |---|---|---|
-| supervision | systemd **user** unit + `loginctl enable-linger` | `@reboot` cron entry |
-| watchdog | systemd `Restart=always` | `*/5 * * * *` cron checking `runner.pid` |
-| why | passwordless sudo available | **no passwordless sudo**, no apt; cron is per-user |
+| supervision | systemd user unit, `~/.config/systemd/user/agentic-queue.service` | identical |
+| survives logout/reboot | `loginctl enable-linger` (already set) | identical |
+| watchdog | `Restart=always`, `RestartSec=10` | identical |
 
-One entry point, `queue_runner.py --daemon`, on both; only supervision
-differs. Stdlib only, per AGENTS §7 — the Jetson has no reliable pip and its
-venvs are bootstrapped by hand.
+One entry point, `queue_runner.py --daemon`, one unit file, one install path.
+No cron, no `@reboot`, no pidfile watchdog — systemd owns liveness, and
+`runner.pid` is kept only so `check-ssh.mjs` and `queue_ctl.py` can report
+staleness without talking to systemd.
+
+Stdlib only, per AGENTS §7 — the Jetson has no reliable pip and its venvs are
+bootstrapped by hand. Confirmed available: Python 3.13.5 on the Pi, 3.12.3 on
+the Jetson.
 
 ## 8. Failure behaviour
 
@@ -319,6 +330,12 @@ venvs are bootstrapped by hand.
 | job exits 0 but no `.done` | `failed`. `std_mmlupro_jetson.sh` ends on `echo finished` and always returns 0, so exit status is not evidence — `queue_jetson.sh` learned this and the daemon inherits the rule |
 
 ## 9. Testing
+
+Tests use stdlib **`unittest`**, not pytest. Neither the Mac's system
+`python3` nor the Pi has pytest installed, and AGENTS §7 forbids relying on
+pip on the devices; `unittest` runs identically on the Mac, the Pi and the
+Jetson with nothing to install. Tests live in `benchmark/tests/` and run with
+`python3 -m unittest discover -s benchmark/tests -v`.
 
 `queue_runner.py` is stdlib-only and its state machine does not need a board:
 
