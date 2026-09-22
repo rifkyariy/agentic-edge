@@ -206,32 +206,55 @@ The fingerprint is re-checked once mid-run (a cheap `ps`), because the Pi's
 model switch goes through va-web's `/model`, which recomputes
 `VA_LLM_SPEC_ARGS` and can drop flags underneath a running job.
 
-### Open question: what `-rea` actually is
+### Settled 2026-09-22: what `-rea` is, and why nothing caught the drift
 
-The repository contradicts itself, and `baselines.json` cannot be written
-until this is settled.
+Checked against `llama-server --help` on both boards (Pi build `661643e`,
+Jetson `a894dae`). The run-script comments were right and AGENTS.md §5 was
+wrong; §5 has been corrected.
 
-- **AGENTS.md §5** states: "`-rea` is `--reasoning-format`, not a reasoning
-  switch: the model thinks either way, and the flag only decides whether that
-  text is returned inline in `content` or split into `reasoning_content`."
-- **`std_mmlupro.sh` and `std_mmlupro_jetson.sh`** state the opposite:
-  "`-rea on|off` is the thinking switch itself. `--reasoning-format` is a
-  different flag and defaults to auto, which lifts the thoughts out into
-  `reasoning_content`." Both scripts act on this reading, passing
-  `-rea $THINKING` *and* a separate `--reasoning-format none` when thinking is
-  on.
+```
+-rea,  --reasoning [on|off|auto]   Use reasoning/thinking in the chat
+                                   (default: 'auto' (detect from template))
+--reasoning-format FORMAT          none: leaves thoughts unparsed in message.content
+                                   deepseek: puts thoughts in message.reasoning_content
+                                   (default: auto)
+--reasoning-budget N               -1 unrestricted (default: -1)
+```
 
-The scripts are self-consistent and are what produced the current results, so
-they are the likely-correct reading. There is a second gap: AGENTS §5 says the
-baseline serves `-rea off --reasoning-budget -1` **on both boards**, but
-`std_mmlupro.sh` never passes `--reasoning-budget`; on the Pi it can only come
-from va-llm's own defaults.
+`-rea` is `--reasoning`, the thinking switch. `--reasoning-budget -1` is
+already the default, so the baseline's explicit form is redundant but worth
+keeping — it puts the value in the resolved command line where the fingerprint
+records it. The first `baselines.json` entry follows directly.
 
-Resolution is the first implementation task and needs no code: run
-`llama-server --help` on either board, then `ps -o args= -C llama-server`
-during a baseline run on each. That output *is* the first `baselines.json`
-entry, and it settles both questions. Whatever it shows, AGENTS.md §5 or the
-script comments must be corrected so the repository stops asserting both.
+**The more important finding is that `meta.json` could not have answered this.**
+`run_measured.sh` writes `meta.json` — including `server_args` from
+`ps -o args= -C llama-server` — *before* it starts the wrapped command, and it
+is the run script that afterwards restarts va-llm, or launches the Jetson's
+server, with the run's real settings. The captured argv is therefore always
+the **previous** state:
+
+| board | archived `server_args` | why |
+|---|---|---|
+| Pi | the idle deployed server — 4 of 6 runs name the wrong model, all 6 say `-c 4096` where the run sets `8192` | va-llm still serving the last job's config |
+| Jetson | **empty, all 9 runs** | the previous run's `pkill` left no process to sample |
+
+Confirmed by inspection: the Pi's live idle argv today is byte-for-byte what
+all six archived runs recorded.
+
+This is why a missing `-rea` survived for days. The check AGENTS §10
+prescribes was being performed against a field that describes a different
+moment, and on the Jetson against nothing at all.
+
+Two consequences for this design, both already load-bearing above:
+
+1. **Capture timing is the whole point.** The fingerprint must be taken after
+   the server is up and before lm-eval starts — not at job start. A
+   fingerprint captured the way `meta.json` captures would reproduce the
+   original bug exactly.
+2. **`run_measured.sh` needs a second capture** written to `meta.json` after
+   the wrapped command's server is serving, so runs launched outside the queue
+   keep an honest record too. Small, and in scope: without it the two paths
+   disagree about what a run's own `meta.json` means.
 
 ## 6. Dashboard changes
 
@@ -322,7 +345,7 @@ No test may run a real benchmark as part of the suite.
 **In:** the daemon, `queue_ctl.py`, the `mmlupro` and `raw` job kinds,
 prechecks, the fingerprint and `baselines.json`, the queue and job-detail UI,
 the `plan.js` changes above, supervision on both boards, the `check-ssh.mjs`
-check.
+check, and the second `server_args` capture in `run_measured.sh` (§5).
 
 **Scheduling is FIFO per board, plus an optional "not before HH:MM" per job**,
 interpreted in the board's own local time — the daemon evaluates it, and the

@@ -145,6 +145,34 @@ per-question samples.
    `runtime.env`, the Jetson launches it directly, so the two drift apart
    silently. `ps -o args= -C llama-server` on each is the check; a difference
    there invalidates the comparison no matter how clean the harness looks.
+
+   **Do this while the run is live — `meta.json` cannot answer it** (verified
+   2026-09-22). `run_measured.sh` writes `meta.json` *before* it starts the
+   wrapped command, but it is the run script that then restarts va-llm, or
+   launches the Jetson's server, with the run's real settings. So
+   `server_args` records whatever was running beforehand:
+   - On the Pi it is the idle deployed server. Four of six archived MMLU-Pro
+     runs name the *wrong model*, and all six say `-c 4096` although the run
+     itself sets `8192`.
+   - On the Jetson it is empty for all nine runs — the previous run's `pkill`
+     left nothing to sample.
+
+   This is why the missing `-rea` survived days of review: the audit trail
+   AGENTS relies on was blank at exactly the moment it mattered. Until
+   `run_measured.sh` takes a second capture after the server is up, treat
+   archived `server_args` as evidence of nothing.
+
+   **The runs themselves are fine** — it is the record that lied. The Pi's
+   journal shows both servers on either side of one capture:
+
+   ```
+   Sep 21 20:48:28  llama-server  n_ctx_slot = 4096   idle server, sampled into meta.json
+   Sep 21 20:50:04  llama-server  n_ctx_slot = 8192   the restart std_mmlupro.sh performs
+   ```
+
+   The run served `8192` as rule 4 requires. Use the journal
+   (`journalctl -u va-llm`) as the Pi's real check until the capture is fixed;
+   note it only covers the current boot.
 11. **Never `next build` in `dashboard/` while `npm run dev` is running.** The
    build wipes `.next` under the dev server and every request 500s until it is
    restarted. Stop the dev server first, or just don't build — dev compiles.
@@ -157,14 +185,32 @@ These are not preferences — breaking them invalidates the paper.
   seeds 20260918/19/20, disjoint, ids committed in `findings/stdbench/`) with
   the identical task config. Only the device differs.
 - **The baseline serves with `-rea off --reasoning-budget -1`** on both boards.
-  `-rea` is `--reasoning-format`, not a reasoning switch: the model thinks
-  either way, and the flag only decides whether that text is returned inline in
-  `content` or split into `reasoning_content`. lm-eval reads `content` alone,
-  so without it answers arrive truncated or empty. The Jetson ran without it
-  until 2026-09-22 and lost the thinking from every answer — median response
-  993 characters against the Pi's 1,880, and 11 of 100 completely empty. The
-  thinking-on row is a *separate* condition (`THINKING=on`, budget 320), not
-  this flag.
+  These are **two different flags**, and an earlier version of this section had
+  them confused — verified 2026-09-22 against `llama-server --help` on both
+  boards (Pi build `661643e`, Jetson `a894dae`):
+
+  | flag | what it does | default |
+  |---|---|---|
+  | `-rea`, `--reasoning [on\|off\|auto]` | **the thinking switch itself** | `auto` — detect from template |
+  | `--reasoning-format none\|deepseek\|deepseek-legacy` | where the thoughts go: `none` leaves them inline in `message.content`, `deepseek` moves them to `message.reasoning_content` | `auto` |
+  | `--reasoning-budget N` | token budget for thinking; `-1` unrestricted | `-1` |
+
+  So `-rea off` means the model **does not think**, and the baseline is a
+  genuine no-chain-of-thought condition — not, as previously written here, a
+  thinking model whose thoughts are merely displayed inline. `--reasoning-budget
+  -1` is already llama.cpp's default; it is passed explicitly so the resolved
+  command line records it.
+
+  Omitting `-rea` is what cost the Jetson: it falls back to `auto`, Gemma's
+  template turns thinking **on**, and the default `--reasoning-format auto` then
+  files the thoughts under `reasoning_content`, which lm-eval never reads. Every
+  Jetson run before 2026-09-22 lost its answer that way — median response 993
+  characters against the Pi's 1,880, and 11 of 100 completely empty.
+
+  The thinking-on row is a *separate* condition (`THINKING=on`, budget 320). It
+  sets `-rea on` **and must pin `--reasoning-format none`**, or the thoughts
+  vanish into `reasoning_content` exactly as above. Both run scripts already do
+  this correctly.
 - **Report every run, including failures and superseded ones.** No quiet
   replacement of a bad run with a good one.
 - **Greedy decoding**, so repeats of the same questions measure only ~1 point of
