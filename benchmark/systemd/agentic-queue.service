@@ -1,0 +1,18 @@
+[Unit]
+Description=Agentic Edge benchmark queue
+After=network.target
+
+[Service]
+Type=simple
+# install_queue.sh substitutes the board's real benchmark directory:
+# ~/Research/agentic-edge/benchmark on the Pi, ~/research/... on the Jetson.
+# The case differs per board (AGENTS §2), so it is never hardcoded here.
+WorkingDirectory=__BENCH_DIR__
+ExecStart=/usr/bin/env python3 __BENCH_DIR__/queue_runner.py --daemon
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
