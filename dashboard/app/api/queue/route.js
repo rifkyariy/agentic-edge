@@ -31,9 +31,14 @@ async function ctl(box, args, timeout = 30000) {
   }
 }
 
-export async function GET() {
+// ?describe=1 returns each board's job-kind registry. It is static per board,
+// so the page fetches it once on mount rather than shipping it with every 5s
+// status poll.
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const describe = searchParams.get("describe") === "1";
   const boxes = await Promise.all(HOSTS.map(async (h) => {
-    const r = await ctl(h, ["--status"]);
+    const r = await ctl(h, [describe ? "--describe" : "--status"]);
     return r.ok ? { ...h, ok: true, ...r.data }
                 : { ...h, ok: false, error: r.error, hint: r.hint, jobs: [] };
   }));
