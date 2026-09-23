@@ -4,7 +4,8 @@
 > MMLU-Pro subset protocol — its serving flags are whatever is recorded in the
 > sections below, not the current baseline. The benchmark suite's baseline now
 > serves with `-rea off --reasoning-budget -1 -c 8192 --cache-ram 0` on both
-> boards; `-rea` is `--reasoning-format`, not a reasoning switch. See
+> boards; `-rea` is `--reasoning`, the thinking switch itself, and
+> `--reasoning-format` is the separate flag that places the thoughts. See
 > AGENTS.md §5.
 
 Two engines × two models, measured on one box the same afternoon. The headline:

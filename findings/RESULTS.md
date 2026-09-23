@@ -25,9 +25,11 @@ Protocol: lm-eval `mmlu_pro`, 5-shot CoT, greedy, `max_gen_toks` 2048, extractio
 Server: llama.cpp, `-c 8192` (the longest prompt is 2362 tokens, so the
 deployed 4096 would truncate), `--cache-ram 0`, and
 **`-rea off --reasoning-budget -1`** — the baseline, thinking-off serving
-config. `-rea` is `--reasoning-format`, not a reasoning switch: without it
-llama.cpp splits Gemma's thinking into `reasoning_content`, which lm-eval never
-reads. Both boards must carry it; see §8.1.
+config. `-rea` is `--reasoning`, the thinking switch itself — `off` means the
+model does not reason, so this is a genuine no-chain-of-thought baseline.
+`--reasoning-format` is the separate flag that places any thoughts, and its
+default `auto` hides them in `reasoning_content`, which lm-eval never reads.
+Both boards must carry both; see §7.1 and AGENTS.md §5.
 
 **This is a consistency check, not a controlled comparison.** The Gemma 4 model
 card states neither precision, shot count nor thinking mode, so the Δ column
@@ -207,13 +209,17 @@ conversion loss, so it is consistent between runs but is not wall power. State
 that whenever the number is quoted, and use the same method on the Jetson (its
 INA3221 rails, not `vcgencmd`) for the comparison to hold.
 
-## 7.1 The Jetson's reasoning-format defect (2026-09-21)
+## 7.1 The Jetson's missing `-rea` (2026-09-21)
 
 Recorded here because it invalidated runs, and every run gets reported.
 
 The Jetson's `std_mmlupro_jetson.sh` launched llama-server **without**
 `-rea off --reasoning-budget -1`, which the Pi carries via va-llm's
-`runtime.env`. The lm-eval invocation was identical on both boards; only the
+`runtime.env`. `-rea` is `--reasoning`, the thinking switch: unset it defaults
+to `auto`, Gemma's template turns thinking **on**, and the separate
+`--reasoning-format` — also `auto` — then files those thoughts under
+`reasoning_content`. So the Jetson was reasoning when the Pi was not, *and*
+discarding the result. Two differences at once, not one. The lm-eval invocation was identical on both boards; only the
 server differed. Measured on one board, one model, one flag apart:
 
 | | `content` | `reasoning_content` |

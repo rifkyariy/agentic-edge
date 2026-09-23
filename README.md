@@ -37,11 +37,14 @@ llama-server -m <model> -c 8192 --host 127.0.0.1 --port 8080 \
   -rea off --reasoning-budget -1 --cache-ram 0
 ```
 
-`-rea` is `--reasoning-format`, **not** a reasoning toggle. The model reasons
-either way; the flag only decides whether that text comes back inline in
-`content` or split into `reasoning_content`. lm-eval reads `content` alone, so
-omitting it silently truncates answers — on the Jetson it halved the median
-response and returned 11 of 100 completely empty. See AGENTS.md §5.
+`-rea` is `--reasoning`, **the thinking switch itself** — `off` means the model
+does not reason at all, so this is a genuine no-chain-of-thought baseline.
+`--reasoning-format` is a different flag, and it decides where any thoughts go:
+`none` leaves them inline in `content`, the default `auto` files them under
+`reasoning_content`. Omitting `-rea` falls back to `auto`, Gemma's template
+turns thinking on, and the thoughts then land in a field lm-eval never reads —
+on the Jetson that halved the median response and returned 11 of 100 completely
+empty. See AGENTS.md §5.
 
 The reasoning-on row is a separate condition (`THINKING=on`, budget 320) and is
 not what this flag controls.

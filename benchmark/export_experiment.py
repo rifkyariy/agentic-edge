@@ -76,10 +76,12 @@ def main():
             "questions_per_subset": 100,
             "condition": "baseline, thinking off",
             "serving": "llama.cpp, -c 8192 --cache-ram 0 -rea off --reasoning-budget -1",
-            "note": ("-rea is --reasoning-format, not a reasoning toggle. Without it "
-                     "llama.cpp splits the model's thinking into reasoning_content, "
-                     "which lm-eval does not read. Jetson runs before 2026-09-22 "
-                     "lacked it and are archived, not included here."),
+            "note": ("-rea is --reasoning: the thinking switch itself, so off is a "
+                     "genuine no-chain-of-thought baseline. --reasoning-format is a "
+                     "separate flag placing any thoughts, and its default auto hides "
+                     "them in reasoning_content, which lm-eval does not read. Jetson "
+                     "runs before 2026-09-22 omitted -rea, defaulted to thinking on, "
+                     "and lost it that way; they are archived, not included here."),
             "power": ("board DC draw; PMIC rails on the Pi, INA3221 VDD_IN on the "
                       "Jetson. Excludes PSU conversion loss. Not wall power."),
         },

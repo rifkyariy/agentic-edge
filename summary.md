@@ -9,11 +9,14 @@ orchestration layer this project proposes on top.
 path is paper 2.
 
 **Baseline serving config:** both boards run `-rea off --reasoning-budget -1`
-(plus `-c 8192 --cache-ram 0`). `-rea` is `--reasoning-format`, not a reasoning
-switch — without it llama.cpp splits Gemma's thinking into `reasoning_content`,
-which lm-eval never reads, and answers arrive truncated or empty. The Jetson ran
-without it until 2026-09-22; those runs are archived under `stdbench/failed/`.
-Thinking-on (`THINKING=on`, budget 320) is a separate condition.
+(plus `-c 8192 --cache-ram 0`). `-rea` is `--reasoning`, **the thinking switch
+itself**, so `off` is a genuine no-chain-of-thought baseline. `--reasoning-format`
+is a separate flag deciding where any thoughts go, and its default `auto` files
+them under `reasoning_content`, which lm-eval never reads. Omit `-rea` and it
+defaults to `auto`, Gemma's template turns thinking on, and the answer is lost
+that way — the Jetson ran like that until 2026-09-22 and those runs are archived
+under `stdbench/failed/`. Thinking-on (`THINKING=on`) is a separate condition and
+must pin `--reasoning-format none`.
 
 Read next: [`benchmark/EXPERIMENT_PLAN.md`](benchmark/EXPERIMENT_PLAN.md) for the
 protocol and statistical design, [`findings/RESULTS.md`](findings/RESULTS.md)

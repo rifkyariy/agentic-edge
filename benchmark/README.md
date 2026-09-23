@@ -138,9 +138,11 @@ exceeds the board's RAM and gets OOM-killed on 100 distinct prompts), and
 `-rea off --reasoning-budget -1`.
 
 That last pair is the **baseline, thinking-off** config and both boards must
-carry it. `-rea` is `--reasoning-format`, not a reasoning switch: without it
-llama.cpp splits Gemma's thinking into `reasoning_content`, lm-eval reads only
-`content`, and answers arrive truncated or empty. Verify with
+carry it. `-rea` is `--reasoning`, the thinking switch itself: `off` means the
+model does not reason. Omitting it falls back to `auto`, Gemma's template turns
+thinking on, and the separate `--reasoning-format` (also `auto` by default) then
+files those thoughts under `reasoning_content`, which lm-eval never reads — so
+answers arrive truncated or empty. Verify with
 `ps -o args= -C llama-server` on each board before trusting a cross-device
 comparison — the Pi reaches these flags through va-llm's `runtime.env` while
 the Jetson passes them directly, so they can drift apart silently.
