@@ -94,7 +94,7 @@ for b in "${TARGETS[@]}"; do
     use="$CTRL"
     echo "   busy — deploying the queue's control files only:"
     echo "$busy" | sed 's/^/     /'
-    rsync -a --dry-run --itemize-changes --files-from="$LIST" ./ "$H:$R/" |
+    rsync -a --checksum --dry-run --itemize-changes --files-from="$LIST" ./ "$H:$R/" |
       awk '$1 ~ /^[<>]f/ {print $2}' | grep -vE "$CONTROL" | sed 's/^/     deferred until idle: /'
   else
     use="$LIST"
