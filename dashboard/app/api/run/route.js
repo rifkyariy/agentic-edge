@@ -10,7 +10,9 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const box = byId(searchParams.get("box"));
   const runName = searchParams.get("run");
-  if (!box || !runName || !/^[\w.-]+$/.test(runName)) {
+  // failed/ and archive/ hold past runs the history page opens; nothing else
+  // may carry a slash, and a leading \w rules out "." and "..".
+  if (!box || !runName || !/^(?:(?:failed|archive)\/)?\w[\w.-]*$/.test(runName)) {
     return Response.json({ error: "bad box or run" }, { status: 400 });
   }
   // run_detail.py needs `datasets` to map answers to questions mid-run, so it

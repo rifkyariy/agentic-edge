@@ -39,17 +39,66 @@ def _rows(csv_path):
             for i, r in enumerate(sorted(rows, key=lambda r: float(r["start_epoch"])))]
 
 
-def measured_dir(model, subset):
-    """The measured run that produced this benchmark run, matched on model and
-    subset — never just the newest, since both boards work through a queue."""
-    for d in sorted(glob.glob(f"{ROOT}/measured/*"), key=os.path.getmtime, reverse=True):
-        base = os.path.basename(d).lower()
-        if model not in base:
+# A benchmark run directory: mmlupro100-<model>[-<subset>][-think][-<tag>],
+# where the tag is what failed/ and archive/ append (oom-<stamp>,
+# reasoningfmt-<stamp>, before-rerun-<stamp>) and .bak is an old copy.
+RUN_NAME = re.compile(r"^mmlupro100-(e2b|e4b)(?:-(s\d))?(-think)?(?:[.-](.+))?$", re.I)
+# A measured directory: <label>-<YYYYMMDD-HHMMSS>[-tag], label as the queue
+# builds it (mmlupro-<model>[-<subset>][-think]).
+MEASURED_NAME = re.compile(
+    r"^mmlupro-(e2b|e4b)(?:-(s\d))?(-think)?-(\d{8}-\d{6})(?:-.+)?$", re.I)
+
+
+def parse_run(name):
+    """model, subset, thinking and tag from a run path (failed/x works too)."""
+    m = RUN_NAME.match(os.path.basename(name.rstrip("/")))
+    if not m:
+        return None
+    return {"model": m[1].lower(), "subset": (m[2] or "s1").lower(),
+            "thinking": "on" if m[3] else "off", "tag": m[4]}
+
+
+def _stamp(text):
+    return time.mktime(time.strptime(text, "%Y%m%d-%H%M%S"))
+
+
+def measured_dir(model, subset, thinking="off", ended=None):
+    """The measured run that produced this benchmark run.
+
+    Matched on model, subset AND thinking — never just the newest, since both
+    boards work through a queue, and a thinking run must never borrow the
+    baseline's telemetry. `ended` (epoch) picks the latest measured run that
+    started before the benchmark finished, so an archived or failed run gets
+    its own telemetry rather than its rerun's. Failed measured runs are moved
+    to measured/failed/, so that is searched too."""
+    best, best_t = None, None
+    for d in glob.glob(f"{ROOT}/measured/*") + glob.glob(f"{ROOT}/measured/failed/*"):
+        m = MEASURED_NAME.match(os.path.basename(d))
+        if not m or not os.path.isdir(d):
             continue
-        got = re.search(r"-(s\d)-\d{8}", base)
-        if (got[1] if got else "s1") != subset:
+        if (m[1].lower(), (m[2] or "s1").lower(), "on" if m[3] else "off") \
+                != (model, subset, thinking):
             continue
-        return d
+        try:
+            t = _stamp(m[4])
+        except ValueError:
+            continue
+        if ended is not None and t > ended:
+            continue
+        if best_t is None or t > best_t:
+            best, best_t = d, t
+    return best
+
+
+def ended_at(run_dir):
+    """When a run finished: its results file, else the last lm-eval write.
+    None for a run that is still going (no .done yet and log fresh)."""
+    res = sorted(glob.glob(f"{run_dir}/*/results_*.json"), key=os.path.getmtime)
+    if res:
+        return os.path.getmtime(res[-1])
+    log = os.path.join(run_dir, "lm_eval.log")
+    if os.path.exists(log) and time.time() - os.path.getmtime(log) > 600:
+        return os.path.getmtime(log)
     return None
 
 
@@ -127,10 +176,10 @@ def timeline(run_dir, run, model, subset, mdir=None):
     return []
 
 
-def telemetry_for(run, model, subset):
+def telemetry_for(run, model, subset, thinking="off", ended=None):
     """The 1Hz device samples belonging to this run, matched the same way the
-    request timings are: by model and subset, never just the newest."""
-    d = measured_dir(model, subset)
+    request timings are: by model, subset and thinking, never just the newest."""
+    d = measured_dir(model, subset, thinking, ended)
     if d:
         path = os.path.join(d, "telemetry.csv")
         if not os.path.exists(path):
@@ -340,65 +389,83 @@ def live_device(tele, tl, tdir):
     }
 
 
+def _results(run_dir):
+    """Score, stderr, minutes, task and finish time from lm-eval's results."""
+    res = sorted(glob.glob(f"{run_dir}/*/results_*.json"), key=os.path.getmtime)
+    if not res:
+        return {}
+    try:
+        j = json.load(open(res[-1]))
+        keys = list(j["results"])
+        task = next((k for k in ("mmlu_pro", "tinyGSM8k", "gsm8k", "ifeval")
+                     if k in keys), keys[0])
+        r = j["results"][task]
+        sc = _f(r.get("exact_match,custom-extract"))
+        if sc is None:
+            sc = _f(r.get("exact_match,flexible-extract"))
+        se = _f(r.get("exact_match_stderr,custom-extract"))
+        return {"task": task,
+                "score": round(100 * sc, 1) if sc is not None else None,
+                "stderr": round(100 * se, 1) if se is not None else None,
+                "minutes": round((_f(j.get("total_evaluation_time_seconds")) or 0) / 60),
+                "at": time.strftime("%Y-%m-%d %H:%M",
+                                    time.localtime(os.path.getmtime(res[-1])))}
+    except (OSError, KeyError, ValueError, IndexError, StopIteration):
+        return {}
+
+
+def _device(mdir):
+    sp = os.path.join(mdir, "summary.json") if mdir else None
+    if not (sp and os.path.exists(sp)):
+        return None
+    try:
+        j = json.load(open(sp))
+        u, t = j["utilisation"], j["tokens"]
+        return {
+            "energy_wh": j["power"]["energy_wh"],
+            "idle_w": j["power"]["idle_w"],
+            "mean_w": j["power"]["work_mean_w"],
+            "peak_w": j["power"]["work_peak_w"],
+            "j_per_token": j["efficiency"]["j_per_generated_token"],
+            "tok_s_per_w": j["efficiency"]["decode_tok_s_per_w"],
+            "decode_tok_s": t["decode_tok_s"], "prefill_tok_s": t["prefill_tok_s"],
+            "gen_tokens": t["generated_tokens"],
+            "temp_max": (j["thermal"]["temp_c"] or {}).get("max"),
+            "throttled": j["thermal"]["throttled_nonzero_samples"],
+            "cpu_mean": (u["cpu_pct"] or {}).get("mean"),
+            "gpu_mean": (u.get("gpu_pct") or {}).get("mean"),
+            "gpu_max": (u.get("gpu_pct") or {}).get("max"),
+            "gpu_mhz_mean": (u.get("gpu_mhz") or {}).get("mean"),
+            "dir": os.path.basename(mdir),
+        }
+    except (OSError, KeyError, ValueError, TypeError):
+        return None
+
+
 def baseline():
-    """Every finished MMLU-Pro run on this box, paired with what it cost.
+    """Every finished MMLU-Pro baseline run on this box, paired with what it cost.
 
     The score comes from lm-eval's results file, the device cost from the
     measured run that produced it. Runs without a results file (killed, still
     going) are reported with score None rather than dropped — a failure is a
-    result too.
+    result too. Thinking-on runs are a different condition and are left to
+    history().
     """
     runs = []
     for d in sorted(glob.glob(f"{ROOT}/stdbench/mmlupro100-*")):
         if not os.path.isdir(d):
             continue
         run = os.path.basename(d)
-        m = re.match(r"^mmlupro100-(e2b|e4b)(?:-(s\d))?$", run, re.I)
-        if not m:
+        p = parse_run(run)
+        if not p or p["tag"] or p["thinking"] != "off":
             continue                      # smoke tests, .bak dirs, anything else
-        model, sub = m[1].lower(), (m[2] or "s1").lower()
-
-        row = {"run": run, "model": model, "subset": sub,
+        row = {"run": run, "model": p["model"], "subset": p["subset"],
                "done": os.path.exists(os.path.join(d, ".done"))}
-        res = sorted(glob.glob(f"{d}/*/results_*.json"))
-        if res:
-            try:
-                j = json.load(open(res[-1]))
-                r = j["results"]["mmlu_pro"]
-                sc, se = _f(r.get("exact_match,custom-extract")), _f(r.get("exact_match_stderr,custom-extract"))
-                row.update(score=round(100 * sc, 1) if sc is not None else None,
-                           stderr=round(100 * se, 1) if se is not None else None,
-                           minutes=round((_f(j.get("total_evaluation_time_seconds")) or 0) / 60),
-                           at=time.strftime("%Y-%m-%d %H:%M",
-                                            time.localtime(os.path.getmtime(res[-1]))))
-            except (OSError, KeyError, ValueError):
-                pass
-
-        mdir = measured_dir(model, sub)
-        sp = os.path.join(mdir, "summary.json") if mdir else None
-        if sp and os.path.exists(sp):
-            try:
-                j = json.load(open(sp))
-                u, t = j["utilisation"], j["tokens"]
-                row["device"] = {
-                    "energy_wh": j["power"]["energy_wh"],
-                    "idle_w": j["power"]["idle_w"],
-                    "mean_w": j["power"]["work_mean_w"],
-                    "peak_w": j["power"]["work_peak_w"],
-                    "j_per_token": j["efficiency"]["j_per_generated_token"],
-                    "tok_s_per_w": j["efficiency"]["decode_tok_s_per_w"],
-                    "decode_tok_s": t["decode_tok_s"], "prefill_tok_s": t["prefill_tok_s"],
-                    "gen_tokens": t["generated_tokens"],
-                    "temp_max": (j["thermal"]["temp_c"] or {}).get("max"),
-                    "throttled": j["thermal"]["throttled_nonzero_samples"],
-                    "cpu_mean": (u["cpu_pct"] or {}).get("mean"),
-                    "gpu_mean": (u.get("gpu_pct") or {}).get("mean"),
-                    "gpu_max": (u.get("gpu_pct") or {}).get("max"),
-                    "gpu_mhz_mean": (u.get("gpu_mhz") or {}).get("mean"),
-                    "dir": os.path.basename(mdir),
-                }
-            except (OSError, KeyError, ValueError):
-                pass
+        r = _results(d)
+        row.update({k: r[k] for k in ("score", "stderr", "minutes", "at") if k in r})
+        dev = _device(measured_dir(p["model"], p["subset"], "off", ended_at(d)))
+        if dev:
+            row["device"] = dev
         runs.append(row)
 
     # runs that were archived after failing still belong in the record
@@ -408,10 +475,77 @@ def baseline():
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S")}
 
 
+# Where a run directory sits says what became of it. AGENTS §5: every run is
+# reported, including failures and superseded ones.
+PLACES = (("", "current"), ("failed/", "failed"), ("archive/", "superseded"))
+
+
+def _queue_jobs():
+    """output_dir -> the queue job that produced it, if the queue ran it."""
+    try:
+        with open(os.path.join(ROOT, "queue", "queue.json")) as f:
+            jobs = json.load(f).get("jobs", [])
+    except (OSError, ValueError):
+        return {}
+    return {j.get("output_dir"): {"id": j.get("id"), "state": j.get("state")}
+            for j in jobs if j.get("output_dir")}
+
+
+def history():
+    """Every benchmark run this box has on disk, newest first.
+
+    Current runs, failed ones and superseded ones alike, each with its score,
+    what it cost, and where it sits — so a past experiment can be found and
+    opened without knowing its directory name."""
+    queue = _queue_jobs()
+    rows = []
+    for prefix, place in PLACES:
+        for d in glob.glob(f"{ROOT}/stdbench/{prefix}*"):
+            name = os.path.basename(d)
+            if not os.path.isdir(d) or (not prefix and name in ("failed", "archive")):
+                continue
+            p = parse_run(name) or {}
+            r = _results(d)
+            done = os.path.exists(os.path.join(d, ".done"))
+            end = ended_at(d)
+            if place != "current":
+                status = place
+            elif r:
+                status = "done"
+            elif end is None and os.path.exists(os.path.join(d, "lm_eval.log")):
+                status = "running"
+            else:
+                status = "incomplete"
+            if p.get("tag") and place == "current":
+                status = "extra"          # a smoke test or .bak copy, kept aside
+            row = {"run": prefix + name, "place": place, "status": status,
+                   "model": p.get("model"), "subset": p.get("subset"),
+                   "thinking": p.get("thinking"), "tag": p.get("tag"),
+                   "done": done, "task": r.get("task"),
+                   "score": r.get("score"), "stderr": r.get("stderr"),
+                   "minutes": r.get("minutes"),
+                   "ended": end,
+                   "at": r.get("at") or (time.strftime("%Y-%m-%d %H:%M",
+                                         time.localtime(end)) if end else None)}
+            if p:
+                row["device"] = _device(
+                    measured_dir(p["model"], p["subset"], p["thinking"], end))
+            job = queue.get(name) if place == "current" else None
+            if job:
+                row["job"] = job
+            rows.append(row)
+    rows.sort(key=lambda x: x["ended"] or float("inf"), reverse=True)
+    return {"root": ROOT, "runs": rows,
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S")}
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--run", help="directory name under stdbench/")
+    ap.add_argument("--run", help="directory name under stdbench/ "
+                                  "(failed/<name> and archive/<name> too)")
+    ap.add_argument("--history", action="store_true",
+                    help="every run on this box, current, failed and superseded")
     ap.add_argument("--baseline", action="store_true",
                     help="every finished run on this box with its device cost")
     ap.add_argument("--max-questions", type=int, default=400)
@@ -421,14 +555,21 @@ def main():
 
     if args.baseline:
         print(json.dumps(baseline())); return
+    if args.history:
+        print(json.dumps(history())); return
     if not args.run:
         print(json.dumps({"error": "--run or --baseline required"})); return
 
+    if not re.match(r"^(?:(?:failed|archive)/)?[\w][\w.-]*$", args.run):
+        print(json.dumps({"error": f"bad run name: {args.run}"})); return
     run_dir = os.path.join(ROOT, "stdbench", args.run)
     if not os.path.isdir(run_dir):
         print(json.dumps({"error": f"no such run: {args.run}"})); return
-    sub = (re.search(r"-(s\d)$", args.run) or [None, "s1"])[1]
-    model = "e4b" if "e4b" in args.run.lower() else "e2b"
+    parsed = parse_run(args.run) or {}
+    sub = parsed.get("subset", "s1")
+    model = parsed.get("model") or ("e4b" if "e4b" in args.run.lower() else "e2b")
+    thinking = parsed.get("thinking", "off")
+    ended = ended_at(run_dir)
 
     res_files = glob.glob(f"{run_dir}/*/results_*.json")
     summary, note = {}, None
@@ -452,15 +593,15 @@ def main():
         status = "done"
     else:
         qs, note = partial(run_dir, sub)
-        status = "running"
+        status = "running" if ended is None else "incomplete"
         graded = [q for q in qs if q.get("ok") is not None]
         if graded:
             summary = {"score": round(100 * sum(q["ok"] for q in graded) / len(graded), 1),
                        "graded": len(graded), "provisional": True}
 
-    mdir = measured_dir(model, sub)
+    mdir = measured_dir(model, sub, thinking, ended)
     tl = timeline(run_dir, args.run, model, sub, mdir)
-    tele, tsummary, tdir = telemetry_for(args.run, model, sub)
+    tele, tsummary, tdir = telemetry_for(args.run, model, sub, thinking, ended)
     tl = attach_device(tl, tele)
     t0 = tl[0]["start_epoch"] if tl else (tele[0]["t"] if tele else 0)
     device = None

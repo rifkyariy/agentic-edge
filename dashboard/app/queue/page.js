@@ -202,6 +202,7 @@ export default function QueuePage() {
         </div>
         <div className="status">
           <Link className="pill muted nav" href="/">&larr; live monitor</Link>
+          <Link className="pill muted nav" href="/history">history &rarr;</Link>
         </div>
       </header>
 

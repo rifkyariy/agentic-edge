@@ -566,3 +566,49 @@ button.primary:disabled{background:var(--panel-2);color:var(--ink-3);border-colo
 
 .logview{margin:0;padding:12px;max-height:60vh;overflow:auto;font:11.5px/1.5 var(--mono);white-space:pre-wrap;
   background:#101215;color:#d6dbe1;border-radius:10px;border:1px solid var(--line)}
+
+/* ---- history page ---- */
+.status .pill.nav + .pill.nav{margin-top:0}
+.filters{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.chips{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.chips span{font:600 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-right:4px}
+.chips button{font:500 11.5px var(--mono);color:var(--ink-2);background:var(--panel-2);border:1px solid var(--line);
+  border-radius:999px;padding:4px 11px;cursor:pointer}
+.chips button:hover{border-color:var(--line-2);color:var(--ink)}
+.chips button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.filters .search{font:500 13px var(--sans);color:var(--ink);background:var(--panel-2);border:1px solid var(--line);
+  border-radius:8px;padding:6px 10px;width:200px;margin-left:auto}
+.filters .search:focus-visible{outline:none;border-color:var(--cpu);box-shadow:0 0 0 3px color-mix(in srgb,var(--cpu) 22%,transparent)}
+.filters .refresh{font:500 11.5px var(--mono);color:var(--ink-2);background:var(--panel);border:1px solid var(--line-2);
+  border-radius:8px;padding:6px 12px;cursor:pointer}
+.filters .refresh:disabled{opacity:.6;cursor:progress}
+
+.history-table{width:100%;border-collapse:collapse;font-size:13px;min-width:860px}
+.history-table th{font:600 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);
+  text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.history-table td{padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.history-table .num{text-align:right;font-variant-numeric:tabular-nums}
+.history-table tbody tr{cursor:pointer;transition:background .1s ease}
+.history-table tbody tr:hover{background:var(--panel-2)}
+.history-table tbody tr:focus-visible{outline:2px solid var(--cpu);outline-offset:-2px}
+.history-table .runname{font:500 12.5px var(--mono);color:var(--ink);white-space:normal;overflow-wrap:anywhere;min-width:220px}
+.history-table td.num b{font-weight:600}
+.history-table td.num i{font-style:normal;font-size:11px;color:var(--ink-3)}
+.history-table .when{font:12px var(--mono);color:var(--ink-3)}
+.history-table tr.st-failed .runname,.history-table tr.st-superseded .runname,
+.history-table tr.st-extra .runname{color:var(--ink-2)}
+.history-table tr.st-failed td.num b,.history-table tr.st-superseded td.num b{color:var(--ink-3);font-weight:500}
+.board-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;background:var(--ink-3);vertical-align:0}
+.board-dot.b-pi{background:var(--pi)}
+.board-dot.b-jetson{background:var(--jetson)}
+.think-on{font:600 11.5px var(--mono);color:var(--power)}
+.joblink{margin-left:8px;font:500 10.5px var(--mono);color:var(--cpu);text-decoration:none;
+  padding:1px 7px;border-radius:999px;background:color-mix(in srgb,var(--cpu) 10%,transparent)}
+.joblink:hover{text-decoration:underline}
+.state-pill.hist-done{background:color-mix(in srgb,var(--ok) 15%,var(--panel));color:var(--ok)}
+.state-pill.hist-running{background:color-mix(in srgb,var(--cpu) 18%,var(--panel));color:var(--cpu)}
+.state-pill.hist-failed,.state-pill.hist-incomplete{background:color-mix(in srgb,var(--danger) 14%,var(--panel));color:var(--danger)}
+.state-pill.hist-superseded{background:color-mix(in srgb,var(--warn) 16%,var(--panel));color:var(--warn)}
+.state-pill.hist-extra{background:var(--panel-2);color:var(--ink-3)}
+.foot{font-size:12px;color:var(--ink-3);margin:0}
+.foot code{font:11.5px var(--mono);margin:0 3px}
