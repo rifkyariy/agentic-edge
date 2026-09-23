@@ -59,11 +59,12 @@ function JobForm({ box, onQueued }) {
   const override = waive && reason.trim().length >= 8
     ? { checks: ["memory"], reason: reason.trim() } : null;
 
-  const send = useCallback(async (preflight) => {
-    if (!combos.length) return;
+  const send = useCallback(async (preflight, only = null) => {
+    const list = only || combos;
+    if (!list.length) return;
     setBusy(true);
     try {
-      const jobs = combos.map((params) => ({
+      const jobs = list.map((params) => ({
         kind, params, not_before: notBefore || null,
         ...(override ? { override } : {}) }));
       const res = await fetch(`/api/queue${preflight ? "?preflight=1" : ""}`, {
@@ -103,6 +104,11 @@ function JobForm({ box, onQueued }) {
   const single = results.length === 1 ? results[0] : null;
   const allOk = pre?.ok === true;
   const n = combos.length;
+  // Runs already done, running or queued are refused, which is exactly what
+  // "the rest of this batch" should leave out. Queue only the ready ones.
+  const ready = results.length === combos.length
+    ? combos.filter((_, i) => results[i].ok) : [];
+  const skipping = results.length - ready.length;
 
   return (
     <div className="jobform">
@@ -211,11 +217,12 @@ function JobForm({ box, onQueued }) {
           </span>
         )}
         <button type="button" className="primary"
-                disabled={busy || !pre || !allOk || !!pre.error || (waive && !override)}
-                onClick={() => send(false)}>
+                disabled={busy || !pre || !!pre.error || (waive && !override) || !ready.length}
+                onClick={() => send(false, ready)}>
           {!pre ? "checking…" : pre.error ? "fix the request first"
             : waive && !override ? "give a reason to waive"
-            : !allOk ? "prechecks failed"
+            : !ready.length ? "prechecks failed"
+            : skipping ? `queue ${ready.length} ready, skip ${skipping}`
             : n > 1 ? `queue ${n} runs` : "queue this run"}
         </button>
       </div>
