@@ -59,13 +59,15 @@ FINGERPRINT_TIMEOUT_SECONDS = 420
 
 class Runner:
     def __init__(self, paths, registry, baselines, start_fn=None, probe=None,
-                 capture_fn=None, clock=time.time, sleep=time.sleep):
+                 capture_fn=None, clock=time.time, sleep=time.sleep,
+                 pids_fn=None):
         self.paths = paths
         self.registry = registry
         self.baselines = baselines
         self.start_fn = start_fn or default_start
         self.probe = probe
         self.capture_fn = capture_fn or fp.capture
+        self.pids_fn = pids_fn or fp.server_pids
         self.clock = clock
         self.sleep = sleep
 
@@ -121,6 +123,10 @@ class Runner:
         # idle deployed server on the Pi, nothing at all on the Jetson -- which
         # is exactly the mistake meta.json makes and this check exists to catch.
         log_path = os.path.join(self.paths.job_dir(jid), "command.log")
+        # Which servers were already up. The Pi's va-llm is always serving, so
+        # without this the very first poll finds the idle deployed server
+        # (-c 4096, no --cache-ram) and blocks the job for drift it never had.
+        preexisting = self.pids_fn()
         store.update(self.paths, jid, state="fingerprinting", started=self.clock())
         events.emit(self.paths, jid, "started", command=job["command"])
         try:
@@ -133,14 +139,19 @@ class Runner:
             return
 
         name, baseline = self._baseline_for(job)
-        if baseline and not self._await_fingerprint(job, proc, name, baseline):
+        if baseline and not self._await_fingerprint(job, proc, name, baseline,
+                                                    preexisting):
             return                                    # killed and marked already
 
         store.update(self.paths, jid, state="running")
         self._finish(job, proc, log_path)
 
-    def _await_fingerprint(self, job, proc, name, baseline):
+    def _await_fingerprint(self, job, proc, name, baseline, preexisting=()):
         """Wait for the run's own server, then diff it against the baseline.
+
+        "Own" means a llama-server that was not running before the job
+        started: on the Pi the run script restarts va-llm, which gives it a
+        new pid; on the Jetson there was none to begin with.
 
         Returns True to let the run continue, False if it was stopped. Polls
         rather than sleeping a fixed time because server load varies with the
@@ -149,10 +160,13 @@ class Runner:
         jid = job["id"]
         deadline = self.clock() + FINGERPRINT_TIMEOUT_SECONDS
         captured = None
+        stale = False
 
         while self.clock() < deadline:
             captured = self.capture_fn()
-            if captured["server_args"]:
+            pids = set(captured.get("pids") or ())
+            stale = bool(pids) and pids <= set(preexisting)
+            if captured["server_args"] and not stale:
                 break
             if proc.poll() is not None:
                 # It died before serving anything. There is nothing to compare;
@@ -162,9 +176,13 @@ class Runner:
                 return True
             self.sleep(FINGERPRINT_POLL_SECONDS)
 
-        if not (captured and captured["server_args"]):
+        if not (captured and captured["server_args"]) or stale:
             note = ("no llama-server appeared within %ds, so the serving flags "
                     "could not be verified" % FINGERPRINT_TIMEOUT_SECONDS)
+            if stale:
+                note = ("the run never replaced the server that was already "
+                        "up within %ds, so its serving flags could not be "
+                        "verified" % FINGERPRINT_TIMEOUT_SECONDS)
             self._kill(proc)
             events.emit(self.paths, jid, "fingerprint_timeout", detail=note)
             store.update(self.paths, jid, state="blocked",

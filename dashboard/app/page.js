@@ -15,7 +15,13 @@ const dur = (s) => {
   return h ? `${h}h ${m}m` : `${m}m`;
 };
 
-function Matrix({ boxes, onOpen }) {
+const QUEUE_MS = 15000;                       // the queue changes on the scale of hours
+
+// One row per model and reasoning condition. The thinking row is the S2
+// experiment (THINKING=on, budget 320); it stays empty until those runs exist.
+const ROWS = PLAN.thinking.flatMap((t) => PLAN.models.map((m) => ({ m, t })));
+
+function Matrix({ boxes, queues, onOpen }) {
   return (
     <section className="matrix card">
       <div className="card-head">
@@ -23,11 +29,11 @@ function Matrix({ boxes, onOpen }) {
         <p className="sub">MMLU-Pro · three disjoint 100-question subsets per model, pooled to n=300.
           Greyed cells are results from the earlier batch, before telemetry — they are not part of this rerun.</p>
         <p className="scope-line">
-          <b>Baseline condition</b> on both boards: llama.cpp, thinking off
-          (<code>-rea off --reasoning-budget -1</code>), greedy. Reasoning-on is a
-          planned second row; the inference engine is not settled either — llama.cpp
-          here is the current choice, not a conclusion.{" "}
-          <Link href="/compare">scope and caveats →</Link>
+          <b>Baseline</b> rows: llama.cpp, thinking off
+          (<code>-rea off --reasoning-budget -1</code>), greedy.{" "}
+          <b>Thinking</b> rows: <code>-rea on --reasoning-budget 320 --reasoning-format none</code>.{" "}
+          <Link href="/compare">scope and caveats →</Link>{" "}
+          <Link href="/queue">queue a run →</Link>
         </p>
       </div>
       <div className="matrix-grid">
@@ -39,22 +45,29 @@ function Matrix({ boxes, onOpen }) {
                 <tr><th />{PLAN.subsets.map((s) => <th key={s}>{s}</th>)}</tr>
               </thead>
               <tbody>
-                {PLAN.models.map((m) => (
-                  <tr key={m}>
-                    <th>{m.toUpperCase()}</th>
+                {ROWS.map(({ m, t }) => (
+                  <tr key={`${m}-${t}`}>
+                    <th>{m.toUpperCase()}{t === "on" ? <i className="row-tag"> think</i> : null}</th>
                     {PLAN.subsets.map((s) => {
-                      const c = cell(box, m, s);
+                      const c = cell(box, m, s, t, queues[box.id]);
+                      // Queued and blocked jobs have no results yet; their
+                      // page is the job's timeline, not the run drill-down.
+                      const open = c.job && (c.status === "queued" || c.status === "blocked")
+                        ? () => { window.location.href = `/queue/${box.id}/${c.job}`; }
+                        : c.run ? () => onOpen(box, c.run) : null;
                       return (
                         <td key={s}>
                           <button type="button"
                             className={`cellbox ${c.status}`}
-                            disabled={!c.run}
-                            onClick={() => c.run && onOpen(box, c.run)}
-                            title={`${m} ${s}: ${c.status} — click for questions and timeline`}>
+                            disabled={!open}
+                            onClick={() => open && open()}
+                            title={`${m} ${s} thinking ${t}: ${c.status}${c.note ? ` — ${c.note}` : ""}`}>
                             {c.status === "done" && <><b>{fmt(c.score, 1)}%</b><i>±{fmt(c.stderr, 1)}</i></>}
                             {c.status === "prior" && <><b>{fmt(c.score, 1)}%</b><i>{c.at?.slice(5, 10)} · earlier batch</i></>}
-                            {c.status === "running" && <><b>{c.pct}%</b><i>{c.eta} left</i></>}
-                            {c.status === "pending" && <i>queued</i>}
+                            {c.status === "running" && <><b>{c.pct ?? "…"}{c.pct != null ? "%" : ""}</b><i>{c.eta ? `${c.eta} left` : "starting"}</i></>}
+                            {c.status === "queued" && <i>queued</i>}
+                            {c.status === "blocked" && <><b>blocked</b><i>see job</i></>}
+                            {c.status === "pending" && <i>not run</i>}
                             {c.status === "unknown" && <i>—</i>}
                           </button>
                         </td>
@@ -70,8 +83,10 @@ function Matrix({ boxes, onOpen }) {
       <div className="legend">
         <span><i className="sw done" />complete</span>
         <span><i className="sw running" />running</span>
+        <span><i className="sw queued" />queued</span>
+        <span><i className="sw blocked" />blocked</span>
         <span><i className="sw prior" />earlier batch (no telemetry)</span>
-        <span><i className="sw pending" />queued</span>
+        <span><i className="sw pending" />not run</span>
         <span className="hint">click a finished or running cell for its timeline and answers</span>
         <span className="ref">this batch since {BATCH_START.slice(5)} · published: E2B 60.0% · E4B 69.4%</span>
       </div>
@@ -209,7 +224,28 @@ export default function Page() {
   const [state, setState] = useState({ boxes: [], ts: null });
   const [err, setErr] = useState(null);
   const [detail, setDetail] = useState(null);   // {box, run}
+  const [queues, setQueues] = useState({});     // board id -> queue_ctl --status
   const hist = useRef({});
+
+  // The queue is the authority on what is queued, running or blocked; without
+  // it the matrix can only guess from process names. A failed poll keeps the
+  // last answer, and cell() falls back to the heuristic for a board with none.
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      try {
+        const r = await fetch("/api/queue", { cache: "no-store" });
+        const j = await r.json();
+        if (!alive) return;
+        const next = {};
+        for (const b of j.boxes || []) if (b.ok) next[b.id] = { jobs: b.jobs };
+        setQueues(next);
+      } catch { /* keep the last answer */ }
+    };
+    tick();
+    const id = setInterval(tick, QUEUE_MS);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -261,7 +297,7 @@ export default function Page() {
       </header>
 
       {state.boxes.length > 0 && (
-        <Matrix boxes={state.boxes} onOpen={(box, run) => setDetail({ box, run })} />
+        <Matrix boxes={state.boxes} queues={queues} onOpen={(box, run) => setDetail({ box, run })} />
       )}
 
       <div className="grid">

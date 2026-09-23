@@ -60,6 +60,14 @@ def _run(cmd, timeout=10):
         return ""
 
 
+def server_pids(runner=None):
+    """Pids of every running llama-server. Only whole-number lines count, so a
+    runner that answers some other ps question cannot pass for a pid list."""
+    out = (runner or _run)(["ps", "-o", "pid=", "-C", "llama-server"])
+    return sorted(int(line) for line in (out or "").split("\n")
+                  if line.strip().isdigit())
+
+
 def capture(runner=None):
     run = runner or _run
     args = run(["ps", "-o", "args=", "-C", "llama-server"])
@@ -70,6 +78,7 @@ def capture(runner=None):
         model = ""
     return {
         "server_args": args,
+        "pids": server_pids(run),
         "model_path": model,
         "governor": run(["cat", "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"]),
         "kernel": run(["uname", "-sr"]),

@@ -29,6 +29,11 @@ THINKING="${THINKING:-off}"
 # baseline needs nothing and its completed runs stay valid.
 FMT=""
 [ "$THINKING" = on ] && FMT=" --reasoning-format none"
+# The thinking-on condition caps thoughts at 320 tokens (baselines.json,
+# AGENTS §5); off keeps llama.cpp's -1. Without this the thinking row served
+# -1 and the queue's fingerprint refused it.
+BUDGET=-1
+[ "$THINKING" = on ] && BUDGET="${BUDGET_ON:-320}"
 SUBSET="${SUBSET:-s1}"
 RT=/etc/voice-agent/runtime.env
 S=~/Research/stdbench
@@ -45,15 +50,15 @@ mkdir -p "$OUT"
 sudo -n sed -i -e "s|^VA_LLM_MODEL_PATH=.*|VA_LLM_MODEL_PATH=$M|" \
                -e "s|^VA_LLM_SPEC_ARGS=.*|VA_LLM_SPEC_ARGS=--cache-ram 0$FMT|" \
                -e "s|^VA_LLM_REASONING=.*|VA_LLM_REASONING=$THINKING|" \
-               -e '/^VA_LLM_CTX=/d' "$RT"
-echo "VA_LLM_CTX=8192" | sudo -n tee -a "$RT" >/dev/null
+               -e '/^VA_LLM_CTX=/d' -e '/^VA_LLM_REASONING_BUDGET=/d' "$RT"
+printf 'VA_LLM_CTX=8192\nVA_LLM_REASONING_BUDGET=%s\n' "$BUDGET" | sudo -n tee -a "$RT" >/dev/null
 sudo -n systemctl restart va-llm
 for _ in $(seq 150); do
   curl -s -m 3 localhost:8080/props | grep -q "\"model_path\":\"$M\"" && break
   sleep 2
 done
 ps -o args= -C llama-server
-echo "$(date) start MMLU-Pro subset100/$SUBSET  model=$TAG thinking=$THINKING"
+echo "$(date) start MMLU-Pro subset100/$SUBSET  model=$TAG thinking=$THINKING budget=$BUDGET"
 
 # Stock lm-eval mmlu_pro config: 5-shot CoT, greedy, max_gen_toks 2048,
 # 'answer is (X)' extraction. Only the question set is restricted.
@@ -68,6 +73,7 @@ echo "$(date) end rc=$?"
 # Back to the deployed defaults.
 sudo -n sed -i -e 's|^VA_LLM_SPEC_ARGS=.*|VA_LLM_SPEC_ARGS=|' \
                -e 's|^VA_LLM_REASONING=.*|VA_LLM_REASONING=off|' \
-               -e '/^VA_LLM_CTX=/d' "$RT"
+               -e '/^VA_LLM_CTX=/d' -e '/^VA_LLM_REASONING_BUDGET=/d' "$RT"
+echo "VA_LLM_REASONING_BUDGET=-1" | sudo -n tee -a "$RT" >/dev/null
 sudo -n systemctl restart va-llm
 echo finished

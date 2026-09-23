@@ -86,5 +86,59 @@ class TestPrechecks(unittest.TestCase):
         self.assertTrue(self.by_name(out, "memory")["ok"])
 
 
+class TestBusyProcesses(unittest.TestCase):
+    """The probe itself, with only the process table faked."""
+
+    def probe(self, table, deployed=0):
+        class P(prechecks.Probe):
+            def _pgrep(self, pattern):
+                return table.get(pattern, [])
+
+            def deployed_server_pid(self):
+                return deployed
+        return P()
+
+    def test_the_pis_deployed_va_llm_server_does_not_count_as_busy(self):
+        # The regression: va-llm is always up on the Pi, so board_idle
+        # refused every job there before a single run could start.
+        probe = self.probe({"[l]lama-server": [812]}, deployed=812)
+        self.assertEqual(probe.busy_processes(), [])
+
+    def test_a_second_llama_server_still_counts(self):
+        probe = self.probe({"[l]lama-server": [812, 990]}, deployed=812)
+        self.assertEqual(probe.busy_processes(), ["llama-server"])
+
+    def test_a_jetson_server_counts_when_no_unit_owns_it(self):
+        probe = self.probe({"[l]lama-server": [4100]}, deployed=0)
+        self.assertEqual(probe.busy_processes(), ["llama-server"])
+
+    def test_lm_eval_counts_even_with_only_the_deployed_server(self):
+        probe = self.probe({"[l]m_eval": [77], "[l]lama-server": [812]},
+                           deployed=812)
+        self.assertEqual(probe.busy_processes(), ["lm_eval"])
+
+
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestReclaimableMemory(unittest.TestCase):
+    def test_the_deployed_servers_memory_counts_as_available(self):
+        # The Pi idles with E4B resident in va-llm; the run restarts it, so
+        # that memory is the run's. 4816 free alone refused every Pi E4B run.
+        class P(FakeProbe):
+            def reclaimable_mb(self):
+                return 2778
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        p = paths.Paths(tmp.name, "pi")
+        got = prechecks._memory(p, {"memory_mb": 5400}, P(mem=4816))
+        self.assertTrue(got["ok"], got["detail"])
+        self.assertEqual(got["measured"], 7594)
+
+    def test_without_a_deployed_server_nothing_is_added(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        p = paths.Paths(tmp.name, "jetson")
+        got = prechecks._memory(p, {"memory_mb": 5400}, FakeProbe(mem=4816))
+        self.assertFalse(got["ok"])

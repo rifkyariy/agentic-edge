@@ -24,6 +24,9 @@ NGL="${NGL:-99}"
 THINKING="${THINKING:-off}"
 FMT=""
 [ "$THINKING" = on ] && FMT="--reasoning-format none"
+# Thinking-on caps thoughts at 320 tokens, as on the Pi (baselines.json).
+BUDGET=-1
+[ "$THINKING" = on ] && BUDGET="${BUDGET_ON:-320}"
 R=~/research
 M_DIR=$R/models
 S=$R/stdbench
@@ -47,7 +50,7 @@ echo "$(date) starting llama.cpp (CUDA, -ngl $NGL) on $TAG"
 # come back truncated or entirely empty. That cost every Jetson MMLU-Pro run
 # before 2026-09-22, ~5 points pooled.
 nohup sh -c "$SERVER -m $M -c 8192 --host 127.0.0.1 --port 8080 \
-  -ngl $NGL -rea $THINKING --reasoning-budget -1 $FMT --cache-ram 0 2>&1 | python3 $PWD/stamp.py" \
+  -ngl $NGL -rea $THINKING --reasoning-budget $BUDGET $FMT --cache-ram 0 2>&1 | python3 $PWD/stamp.py" \
   > "$SRVLOG" 2>&1 < /dev/null &
 for _ in $(seq 150); do curl -sf localhost:8080/health >/dev/null 2>&1 && break; sleep 2; done
 curl -s localhost:8080/props | grep -o '"model_path":"[^"]*"'

@@ -275,7 +275,8 @@ class TestFingerprintTiming(unittest.TestCase):
         return runner.Runner(self.p, self.registry, self.baselines,
                              start_fn=start_fn, probe=FakeProbe(),
                              capture_fn=capture_fn, sleep=sleep,
-                             clock=lambda: self.now[0])
+                             clock=lambda: self.now[0],
+                             pids_fn=lambda: [])
 
     def queue_one(self, **params):
         p = dict({"model": "e4b", "subset": "s2", "thinking": "off"}, **params)
@@ -349,3 +350,52 @@ class TestFingerprintTiming(unittest.TestCase):
         open(os.path.join(self.p.stdbench, "smoke", ".done"), "w").close()
         self.make([""] * 5, done=False).tick()
         self.assertNotIn("captured", self.order)
+
+
+PI_IDLE = ("llama-server -m /m/gemma-4-E4B.gguf -t 3 -c 4096 --host 127.0.0.1 "
+           "--port 8080 -rea off --reasoning-budget -1")
+
+
+class TestPiDeployedServer(TestFingerprintTiming):
+    """The Pi's va-llm serves all the time, so a server is up before the run
+    touches anything. Only a server the run itself started is evidence."""
+
+    def make_pi(self, seen, before=(812,)):
+        """seen: (pid, argv) on each successive poll."""
+        seq = list(seen)
+        r = self.make([""])
+
+        def capture_fn():
+            self.order.append("captured")
+            pid, args = seq.pop(0) if len(seq) > 1 else seq[0]
+            return {"server_args": args, "pids": [pid], "model_path": "",
+                    "flags": fingerprint.parse_flags(args)}
+        r.capture_fn = capture_fn
+        r.pids_fn = lambda: list(before)
+        return r
+
+    def test_the_idle_deployed_server_is_not_mistaken_for_the_runs(self):
+        # The regression: the first poll saw the idle -c 4096 server, read
+        # it as the run's, and blocked every Pi job for drift.
+        job = self.queue_one()
+        self.make_pi([(812, PI_IDLE), (812, PI_IDLE), (905, GOOD_ARGS)]).tick()
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "completed", got["note"])
+
+    def test_the_restarted_server_is_still_diffed(self):
+        job = self.queue_one()
+        self.make_pi([(812, PI_IDLE), (905, BAD_ARGS)]).tick()
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "blocked")
+        self.assertTrue(self.procs[0].killed)
+
+    def test_a_run_that_never_restarts_the_server_is_blocked_not_passed(self):
+        job = self.queue_one()
+        self.make_pi([(812, PI_IDLE)]).tick()
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "blocked")
+        self.assertIn("never replaced", got["note"])
+
+
+if __name__ == "__main__":
+    unittest.main()

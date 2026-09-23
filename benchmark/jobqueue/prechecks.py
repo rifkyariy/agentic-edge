@@ -37,38 +37,76 @@ class Probe:
                 totals[parts[0]] = totals.get(parts[0], 0) + int(parts[1]) // 1024
         return {u: mb for u, mb in totals.items() if mb > 50}
 
-    def busy_processes(self):
-        """Benchmark processes already running. Uses pgrep -f with a bracketed
-        first character so the pattern cannot match the pgrep call itself
-        (AGENTS §4.2)."""
-        found = []
-        for name, pattern in (("lm_eval", "[l]m_eval"),
-                              ("run_measured", "[r]un_measured"),
-                              ("llama-server", "[l]lama-server")):
-            try:
-                rc = subprocess.run(["pgrep", "-f", pattern],
-                                    capture_output=True, timeout=10).returncode
-            except (OSError, subprocess.SubprocessError):
-                continue
-            if rc == 0:
-                found.append(name)
-        return found
+    def _pgrep(self, pattern):
+        """Pids whose command line matches. The bracketed first character
+        stops the pattern matching the pgrep call itself (AGENTS §4.2)."""
+        try:
+            out = subprocess.run(["pgrep", "-f", pattern], capture_output=True,
+                                 text=True, timeout=10).stdout
+        except (OSError, subprocess.SubprocessError):
+            return []
+        return [int(t) for t in out.split() if t.isdigit()]
 
+    def deployed_server_pid(self):
+        """The Pi's voice agent keeps a llama-server up as va-llm, always.
+
+        It is not a benchmark: the run script restarts it with the run's own
+        flags and restores it afterwards. Counting it as busy made the Pi
+        refuse every job. No such unit on the Jetson, so this is 0 there."""
+        try:
+            out = subprocess.run(
+                ["systemctl", "show", "-p", "MainPID", "--value", "va-llm"],
+                capture_output=True, text=True, timeout=10).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            return 0
+        return int(out) if out.isdigit() else 0
+
+    def reclaimable_mb(self):
+        """Memory the run frees by restarting the deployed server.
+
+        Only RssAnon: the model's file-backed pages are page cache, which
+        MemAvailable already counts. Without this the idle Pi, holding E4B
+        in va-llm, showed ~4.8 GB and refused every E4B run."""
+        pid = self.deployed_server_pid()
+        if not pid:
+            return 0
+        try:
+            with open("/proc/%d/status" % pid) as f:
+                for line in f:
+                    if line.startswith("RssAnon:"):
+                        return int(line.split()[1]) // 1024
+        except (OSError, ValueError, IndexError):
+            pass
+        return 0
+
+    def busy_processes(self):
+        """Benchmark processes already running."""
+        found = [name for name, pattern in (("lm_eval", "[l]m_eval"),
+                                            ("run_measured", "[r]un_measured"))
+                 if self._pgrep(pattern)]
+        deployed = self.deployed_server_pid()
+        if [pid for pid in self._pgrep("[l]lama-server") if pid != deployed]:
+            found.append("llama-server")
+        return found
 
 def _memory(paths, resolved, probe):
     need = resolved.get("memory_mb")
     if not need:
         return {"name": "memory", "ok": True, "measured": None,
                 "detail": "this job kind declares no memory requirement"}
-    have = probe.mem_available_mb()
+    free = probe.mem_available_mb()
+    back = getattr(probe, "reclaimable_mb", lambda: 0)()
+    have = free + back
+    note = (" (%d free + %d the deployed va-llm releases on restart)"
+            % (free, back)) if back else ""
     if have >= need:
         return {"name": "memory", "ok": True, "measured": have,
-                "detail": "%d MB available, need ~%d MB" % (have, need)}
+                "detail": "%d MB available%s, need ~%d MB" % (have, note, need)}
     others = probe.rss_by_user()
     who = "; ".join("%s %d MB" % (u, mb) for u, mb in sorted(others.items()))
     return {"name": "memory", "ok": False, "measured": have,
-            "detail": "only %d MB available, need ~%d MB%s"
-                      % (have, need, (" — on the board: " + who) if who else "")}
+            "detail": "only %d MB available%s, need ~%d MB%s"
+                      % (have, note, need, (" — on the board: " + who) if who else "")}
 
 
 def _output_dir(paths, resolved, probe):
