@@ -10,6 +10,7 @@ this file is the process wrapper around it.
 import argparse
 import glob
 import hashlib
+import json
 import os
 import signal
 import sys
@@ -66,6 +67,11 @@ def main(argv=None):
     write_pid(p)
     stopping = {"now": False}
     loaded = code_stamp()
+    # What this process is running, for deploy.sh: the file on disk can be
+    # newer than the code a daemon loaded, so only the daemon can say.
+    with open(os.path.join(p.queue_dir, "daemon.json"), "w") as f:
+        json.dump({"pid": os.getpid(), "code": loaded, "self_reload": True,
+                   "started": time.time()}, f)
 
     # A job the previous daemon left active: follow it to its end, or judge
     # it now if its process is gone. The unit uses KillMode=process, so a

@@ -75,7 +75,11 @@ for b in "${TARGETS[@]}"; do
 
   # A daemon started before self-reload existed cannot pick up new code by
   # itself; it needs one restart, which is only safe when its queue is idle.
-  legacy=$(ssh "$H" "grep -q code_stamp ~/$R/benchmark/queue_runner.py 2>/dev/null || echo yes")
+  # Asked of the running daemon, not the file on disk: a deploy may already
+  # have replaced queue_runner.py under a daemon still running the old code.
+  legacy=$(ssh "$H" 'q=$HOME/'"${R%/agentic-edge}"'/queue
+    d=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))[\"pid\"])" "$q/daemon.json" 2>/dev/null)
+    [ -n "$d" ] && [ "$d" = "$(cat "$q/runner.pid" 2>/dev/null)" ] || echo yes')
 
   # 1. stage and test on the board
   ssh "$H" "rm -rf ~/$R/.deploy-staging && mkdir -p ~/$R/.deploy-staging" || { STATUS=1; continue; }
