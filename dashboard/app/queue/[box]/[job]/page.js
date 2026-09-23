@@ -137,7 +137,7 @@ export default function JobDetail({ params }) {
       <section className="card">
         <div className="card-head">
           <h3>Logs</h3>
-          <div className="tabs">
+          <div className="tabs jobtabs">
             {STREAMS.map((s) => (
               <button key={s} type="button"
                       className={s === stream ? "on" : ""}

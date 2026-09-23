@@ -27,7 +27,11 @@ function JobForm({ box, onQueued }) {
     }
     setParams(next);
     setPre(null);
-  }, [kind, box.id]);                       // eslint-disable-line react-hooks/exhaustive-deps
+    // `spec` is in the key because the registry arrives in its own request.
+    // When the 5s status poll won that race the form mounted without it, this
+    // effect never re-ran, params stayed {} and no preflight ever fired —
+    // and "queue this run" then posted a job with no model or subset.
+  }, [kind, box.id, Boolean(spec)]);        // eslint-disable-line react-hooks/exhaustive-deps
 
   const send = useCallback(async (preflight) => {
     setBusy(true);
@@ -53,10 +57,12 @@ function JobForm({ box, onQueued }) {
     return () => clearTimeout(t);
   }, [params, notBefore]);                  // eslint-disable-line react-hooks/exhaustive-deps
 
+  if (!box.kinds) return <p className="sub">Loading this board&rsquo;s job kinds&hellip;</p>;
   if (!spec) return <p className="sub">This board reported no job kinds.</p>;
 
   return (
     <div className="jobform">
+      <div className="fields">
       <label>kind
         <select value={kind} onChange={(e) => setKind(e.target.value)}>
           {Object.keys(kinds).map((k) => <option key={k} value={k}>{k}</option>)}
@@ -78,11 +84,11 @@ function JobForm({ box, onQueued }) {
         </label>
       ))}
 
-      <label>not before
+      <label>not before <i className="tz">{box.timezone} · board time</i>
         <input value={notBefore} placeholder="HH:MM" size={6}
                onChange={(e) => setNotBefore(e.target.value)} />
-        <i className="sub"> {box.timezone} (board time)</i>
       </label>
+      </div>
 
       {pre?.error && (
         <p className="pre-error"><b>{pre.error}</b>{pre.hint ? <><br />{pre.hint}</> : null}</p>
@@ -92,18 +98,31 @@ function JobForm({ box, onQueued }) {
         <ul className="prechecks">
           {pre.prechecks.map((c) => (
             <li key={c.name} className={c.ok ? "ok" : "bad"}>
-              <b>{c.ok ? "✓" : "✗"} {c.name}</b> {c.detail}
+              <i className="mark">{c.ok ? "✓" : "✗"}</i>
+              <b>{c.name}</b><span>{c.detail}</span>
             </li>
           ))}
         </ul>
       )}
 
-      {pre?.resolved && <pre className="resolved">{pre.resolved.command}</pre>}
+      {pre?.resolved && (
+        <div className="resolved"><span>resolves to</span>
+          <pre>{pre.resolved.command}</pre></div>
+      )}
 
-      <button type="button" disabled={busy || (pre && pre.ok === false)}
-              onClick={() => send(false)}>
-        {pre && pre.ok === false ? "prechecks failed" : "queue this run"}
-      </button>
+      <div className="submit-row">
+        {pre?.prechecks && (
+          <span className={`check-sum ${pre.ok ? "ok" : "bad"}`}>
+            {pre.prechecks.filter((c) => c.ok).length}/{pre.prechecks.length} checks passed
+          </span>
+        )}
+        <button type="button" className="primary"
+                disabled={busy || !pre || pre.ok === false || !!pre.error}
+                onClick={() => send(false)}>
+          {!pre ? "checking…" : pre.error ? "fix the request first"
+            : pre.ok === false ? "prechecks failed" : "queue this run"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -114,8 +133,9 @@ function QueueList({ box, onChange }) {
     onChange();
   };
   const jobs = (box.jobs || []).filter((j) => j.state !== "cancelled");
-  if (!jobs.length) return <p className="sub">Nothing queued.</p>;
+  if (!jobs.length) return <p className="empty">Nothing queued on this board.</p>;
   return (
+    <div className="table-wrap">
     <table className="queue-table">
       <thead><tr><th>job</th><th>state</th><th>when</th><th /></tr></thead>
       <tbody>
@@ -125,7 +145,7 @@ function QueueList({ box, onChange }) {
               <Link href={`/queue/${box.id}/${j.id}`}>{j.label}</Link>
               {j.note ? <i className="note"> {j.note}</i> : null}
             </td>
-            <td>{j.state}</td>
+            <td><i className={`state-pill state-${j.state}`}>{j.state}</i></td>
             <td>{fmtTime(j.started || j.not_before_epoch || j.created) || "—"}</td>
             <td>{j.state === "queued"
               ? <button type="button" onClick={() => cancel(j.id)}>cancel</button>
@@ -134,6 +154,7 @@ function QueueList({ box, onChange }) {
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 
@@ -169,29 +190,46 @@ export default function QueuePage() {
 
   return (
     <main>
-      <header className="card-head">
-        <h2>Queue</h2>
-        <p className="sub">
-          One job per board at a time. Each run is prechecked for memory and a
-          stale output directory, and its serving flags are diffed against the
-          declared baseline before lm-eval starts.{" "}
-          <Link href="/">&larr; live monitor</Link>
-        </p>
+      <header className="top">
+        <div>
+          <p className="eyebrow">Agentic Edge</p>
+          <h1>Run queue</h1>
+          <p className="sub qintro">
+            One job per board at a time. Each run is prechecked for memory and a
+            stale output directory, and its serving flags are diffed against the
+            declared baseline before lm-eval starts.
+          </p>
+        </div>
+        <div className="status">
+          <Link className="pill muted nav" href="/">&larr; live monitor</Link>
+        </div>
       </header>
 
+      {!boxes.length && <p className="empty">Asking both boards for their queues&hellip;</p>}
+      <div className="qgrid">
       {boxes.map((box) => (
-        <section key={box.id} className="card">
+        <section key={box.id} className={`card qbox qbox-${box.id}`}>
           <div className="card-head">
-            <h3>{box.label}</h3>
+            <div>
+              <h2>{box.label}</h2>
+              <p className="sub">{box.sub}</p>
+            </div>
             {box.ok
-              ? <p className="sub">{box.daemon_alive
-                  ? "queue daemon running" : "⚠ queue daemon is not running"}</p>
-              : <p className="pre-error"><b>{box.error}</b>{box.hint ? <><br />{box.hint}</> : null}</p>}
+              ? <span className={`pill ${box.daemon_alive ? "live" : "danger"}`}>
+                  <i className="dot" />{box.daemon_alive ? "daemon running" : "daemon down"}
+                </span>
+              : <span className="pill danger">unreachable</span>}
           </div>
+          {!box.ok && (
+            <p className="pre-error"><b>{box.error}</b>{box.hint ? <><br />{box.hint}</> : null}</p>
+          )}
+          {box.ok && <h4 className="qsec">New run</h4>}
           {box.ok && <JobForm box={{ ...box, ...(specs[box.id] || {}) }} onQueued={load} />}
+          {box.ok && <h4 className="qsec">Jobs</h4>}
           {box.ok && <QueueList box={box} onChange={load} />}
         </section>
       ))}
+      </div>
     </main>
   );
 }
