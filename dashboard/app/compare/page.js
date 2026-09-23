@@ -638,12 +638,7 @@ export default function Compare() {
                       <tr key={`${b.id}-${m}-${s}`} className={r?.score == null ? "dim" : ""}>
                         <td>{DEV[b.id].short}</td>
                         <td>{m.toUpperCase()}</td><td>{s}</td>
-                        {/* The Pi's s1 runs predate the subset suffix and sit in
-                            directories called mmlupro100-e2b / -e4b. Showing the
-                            real name keeps every row traceable on the board. */}
-                        <td className="runname">{r?.run ?? "—"}
-                          {r && !/-s\d$/.test(r.run) && <em title="named before the subsets existed; this is s1"> ·s1</em>}
-                        </td>
+                        <td className="runname">{r?.run ?? "—"}</td>
                         <td>{r?.score == null ? (r ? "running" : "—") : fmt(r.score, 1)}</td>
                         <td>{fmt(dv.decode_tok_s, 2)}</td><td>{fmt(dv.j_per_token, 2)}</td>
                         <td>{fmt(dv.mean_w, 2)}</td><td>{fmt(dv.energy_wh, 2)}</td>
@@ -659,11 +654,7 @@ export default function Compare() {
         </div>
         <p className="foot">
           n/a in the GPU column is the Pi 5, which has no CUDA device to sample —
-          not a missing measurement. Two Pi directories predate the subset
-          suffix — <code>mmlupro100-e2b</code> and <code>mmlupro100-e4b</code>{" "}
-          are both s1 — so there is no <code>-e2b-s1</code> on that board;{" "}
-          <code>mmlupro100-e4b</code> is superseded by <code>-e4b-s1</code> and is
-          not counted twice.
+          not a missing measurement.
         </p>
       </section>
     </main>
