@@ -80,7 +80,7 @@ class Probe:
         return 0
 
     def busy_processes(self):
-        """Benchmark processes already running."""
+        """Benchmark processes already running, the deployed server aside."""
         found = [name for name, pattern in (("lm_eval", "[l]m_eval"),
                                             ("run_measured", "[r]un_measured"))
                  if self._pgrep(pattern)]
@@ -88,6 +88,37 @@ class Probe:
         if [pid for pid in self._pgrep("[l]lama-server") if pid != deployed]:
             found.append("llama-server")
         return found
+
+class FixedProbe:
+    """A probe with fixed answers, for queue_ctl's tests (AGENTIC_TEST_PROBE).
+
+    queue_ctl runs as a subprocess in its tests, so the probe cannot be
+    injected; without this its answers came from whatever the test machine
+    happened to be running."""
+
+    def __init__(self, mem=9000, busy=(), reclaim=0):
+        self._mem, self._busy, self._reclaim = mem, list(busy), reclaim
+
+    def mem_available_mb(self):
+        return self._mem
+
+    def busy_processes(self):
+        return list(self._busy)
+
+    def rss_by_user(self):
+        return {}
+
+    def reclaimable_mb(self):
+        return self._reclaim
+
+
+def probe_from_env(env=None):
+    raw = (env if env is not None else os.environ).get("AGENTIC_TEST_PROBE")
+    if not raw:
+        return None
+    import json
+    return FixedProbe(**json.loads(raw))
+
 
 def _memory(paths, resolved, probe):
     need = resolved.get("memory_mb")
@@ -146,11 +177,83 @@ def _board_idle(paths, resolved, probe):
 
 CHECKS = (_memory, _output_dir, _subset_ids, _board_idle)
 
+# Checks about the board's state right now, as opposed to the job's own
+# inputs. While another job is running or queued ahead, "now" says nothing
+# about the moment this job will start, so these are postponed to the runner,
+# which repeats every check at start. Checking them at queue time is what made
+# the web form refuse to queue anything behind a running job.
+BOARD_STATE = ("memory", "board_idle")
 
-def run_all(paths, resolved, probe=None):
-    probe = probe or Probe()
-    return [check(paths, resolved, probe) for check in CHECKS]
+# The only check a person may override, and only with a recorded reason. A
+# stale output_dir replays an old lm-eval cache instead of running; a missing
+# subset cannot run at all; a second concurrent run invalidates both runs'
+# telemetry (AGENTS §9). Memory is a judgement call on a threshold.
+OVERRIDABLE = ("memory",)
+
+
+def _defer(result, why):
+    return dict(result, ok=True, deferred=True,
+                detail="checked when this job starts — %s (now: %s)"
+                       % (why, result["detail"]))
+
+
+def _duplicate(resolved, pending):
+    """A job for the same output directory already waiting or running."""
+    for j in pending:
+        if j.get("output_dir") == resolved["output_dir"]:
+            return {"name": "not_queued", "ok": False, "measured": j.get("id"),
+                    "detail": "%s is already %s as job %s"
+                              % (resolved["output_dir"], j.get("state", "queued"),
+                                 j.get("id"))}
+    return {"name": "not_queued", "ok": True, "measured": None,
+            "detail": "no other job writes %s" % resolved["output_dir"]}
+
+
+def run_all(paths, resolved, probe=None, pending=None, ahead=None):
+    """Every check, each result marked overridable or not.
+
+    pending is given only at queue time (queue_ctl): the jobs already queued
+    or running, for the duplicate check. At queue time the board-state checks
+    are postponed when something runs first (ahead names it) or the board is
+    busy. The runner passes neither, so at start every check is real."""
+    probe = probe or probe_from_env() or Probe()
+    results = [check(paths, resolved, probe) for check in CHECKS]
+    if pending is not None:
+        results.append(_duplicate(resolved, pending))
+    busy = next((r for r in results if r["name"] == "board_idle" and not r["ok"]), None)
+    if pending is not None and (ahead or busy):
+        why = ("%s runs first" % ahead) if ahead else "the board is busy now; the queue waits for it"
+        results = [_defer(r, why) if r["name"] in BOARD_STATE and not r["ok"] else r
+                   for r in results]
+    for r in results:
+        r["overridable"] = r["name"] in OVERRIDABLE
+    return results
 
 
 def passed(results):
     return all(r["ok"] for r in results)
+
+
+def blocking(results, override=None):
+    """Failed checks that an override does not cover. Empty means go."""
+    allowed = set((override or {}).get("checks") or ()) & set(OVERRIDABLE)
+    return [r for r in results if not r["ok"] and r["name"] not in allowed]
+
+
+def validate_override(override):
+    """{"checks": [...], "reason": "..."} or ValueError saying why not."""
+    if not override:
+        return None
+    if not isinstance(override, dict):
+        raise ValueError("override must be an object with checks and reason")
+    checks = override.get("checks") or []
+    bad = [c for c in checks if c not in OVERRIDABLE]
+    if not checks or bad:
+        raise ValueError("only %s can be overridden (got %s)"
+                         % (", ".join(OVERRIDABLE), ", ".join(checks) or "nothing"))
+    reason = (override.get("reason") or "").strip()
+    if len(reason) < 8:
+        raise ValueError("an override needs a reason of at least 8 characters; "
+                         "it is recorded with the run (AGENTS §5)")
+    return {"checks": sorted(set(checks)), "reason": reason,
+            "by": override.get("by", "unknown")}

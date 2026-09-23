@@ -11,6 +11,10 @@ WorkingDirectory=__BENCH_DIR__
 ExecStart=/usr/bin/env python3 __BENCH_DIR__/queue_runner.py --daemon
 Restart=always
 RestartSec=10
+# Stop only the daemon, never the benchmark it started. With the default
+# (control-group) any restart killed the run in progress, hours in. The next
+# daemon adopts the run by the pid stored in queue.json.
+KillMode=process
 StandardOutput=journal
 StandardError=journal
 

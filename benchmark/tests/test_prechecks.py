@@ -142,3 +142,77 @@ class TestReclaimableMemory(unittest.TestCase):
         p = paths.Paths(tmp.name, "jetson")
         got = prechecks._memory(p, {"memory_mb": 5400}, FakeProbe(mem=4816))
         self.assertFalse(got["ok"])
+
+
+class TestQueueTime(unittest.TestCase):
+    """What queue_ctl sees when a job is added, as opposed to the runner."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.p = paths.Paths(self.tmp.name, "jetson")
+        os.makedirs(self.p.stdbench)
+        with open(os.path.join(self.p.stdbench,
+                               "mmlupro_subset100_s1_samples.json"), "w") as f:
+            json.dump([1], f)
+        self.resolved = {"label": "mmlupro-e4b-s1-think",
+                         "output_dir": "mmlupro100-e4b-s1-think",
+                         "memory_mb": 5400, "params": {"subset": "s1"}}
+
+    def by(self, results, name):
+        return next(r for r in results if r["name"] == name)
+
+    def test_a_job_behind_a_running_one_can_be_queued(self):
+        # The regression: board_idle failed at queue time whenever a job was
+        # running, so the web form could never queue the next one.
+        busy = FakeProbe(mem=600, busy=["lm_eval", "run_measured"])
+        got = prechecks.run_all(self.p, self.resolved, busy, pending=[
+            {"id": "j1", "state": "running", "output_dir": "mmlupro100-e2b-s3-think"}],
+            ahead="mmlupro-e2b-s3-think")
+        self.assertTrue(prechecks.passed(got), got)
+        self.assertTrue(self.by(got, "board_idle")["deferred"])
+        self.assertTrue(self.by(got, "memory")["deferred"])
+
+    def test_a_run_outside_the_queue_postpones_rather_than_refuses(self):
+        got = prechecks.run_all(self.p, self.resolved,
+                                FakeProbe(mem=600, busy=["lm_eval"]), pending=[])
+        self.assertTrue(prechecks.passed(got))
+
+    def test_the_runner_still_sees_a_busy_board(self):
+        got = prechecks.run_all(self.p, self.resolved, FakeProbe(busy=["lm_eval"]))
+        self.assertFalse(self.by(got, "board_idle")["ok"])
+
+    def test_an_idle_board_short_of_memory_still_fails_at_queue_time(self):
+        got = prechecks.run_all(self.p, self.resolved, FakeProbe(mem=4000), pending=[])
+        mem = self.by(got, "memory")
+        self.assertFalse(mem["ok"])
+        self.assertTrue(mem["overridable"])
+
+    def test_the_same_run_cannot_be_queued_twice(self):
+        got = prechecks.run_all(self.p, self.resolved, FakeProbe(), pending=[
+            {"id": "j9", "state": "queued", "output_dir": "mmlupro100-e4b-s1-think"}])
+        dup = self.by(got, "not_queued")
+        self.assertFalse(dup["ok"])
+        self.assertFalse(dup["overridable"])
+        self.assertIn("j9", dup["detail"])
+
+
+class TestOverride(unittest.TestCase):
+    def test_memory_can_be_overridden_with_a_reason(self):
+        o = prechecks.validate_override({"checks": ["memory"],
+                                         "reason": "measured peak is 5,008 MB"})
+        self.assertEqual(o["checks"], ["memory"])
+
+    def test_nothing_else_can_be_overridden(self):
+        for check in ("output_dir", "board_idle", "subset_ids", "not_queued"):
+            with self.assertRaises(ValueError):
+                prechecks.validate_override({"checks": [check], "reason": "because I said so"})
+
+    def test_a_reason_is_required(self):
+        with self.assertRaises(ValueError):
+            prechecks.validate_override({"checks": ["memory"], "reason": "ok"})
+
+    def test_blocking_ignores_only_the_overridden_checks(self):
+        results = [{"name": "memory", "ok": False}, {"name": "output_dir", "ok": False}]
+        left = prechecks.blocking(results, {"checks": ["memory"]})
+        self.assertEqual([r["name"] for r in left], ["output_dir"])

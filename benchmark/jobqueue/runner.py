@@ -56,6 +56,11 @@ def default_start(command, env, cwd, log_path):
 FINGERPRINT_POLL_SECONDS = 5
 FINGERPRINT_TIMEOUT_SECONDS = 420
 
+# Memory right after the previous job can lag while its server is torn down,
+# so a memory-only refusal is retried briefly before the job is blocked.
+MEMORY_RETRIES = 3
+MEMORY_RETRY_SECONDS = 20
+
 
 class Runner:
     def __init__(self, paths, registry, baselines, start_fn=None, probe=None,
@@ -99,22 +104,80 @@ class Runner:
         job = store.next_eligible(self.paths, now=self.clock())
         if job is None:
             return False
+        # A run started outside the queue (by hand over ssh) holds the board.
+        # Wait for it rather than blocking the job: the queue exists so a
+        # person does not have to come back and requeue.
+        busy = self._probe().busy_processes()
+        if busy:
+            note = ("waiting: the board is busy with %s, started outside the "
+                    "queue" % ", ".join(busy))
+            if job.get("note") != note:
+                store.update(self.paths, job["id"], note=note)
+                events.emit(self.paths, job["id"], "waiting", detail=note)
+            return False
+        if (job.get("note") or "").startswith("waiting:"):
+            store.update(self.paths, job["id"], note=None)
         self._run_one(job)
         return True
+
+    def _probe(self):
+        return self.probe or prechecks.probe_from_env() or prechecks.Probe()
+
+    # -- recovery ----------------------------------------------------------
+
+    def recover(self, alive=None, find=None):
+        """Called once when the daemon starts. A job left active by a previous
+        daemon is either still running (adopt it and judge it when it ends)
+        or gone (judge it now). Before this, a restart mid-job left the queue
+        stuck on a job no process was watching."""
+        job = store.active(self.paths)
+        if job is None:
+            return None
+        alive = alive or _pid_alive
+        pid = job.get("pid") or (find or _find_run)(job)
+        running = bool(pid) and alive(pid)
+        if running:
+            events.emit(self.paths, job["id"], "adopted", pid=pid,
+                        detail="the daemon restarted; following the run by pid")
+            store.update(self.paths, job["id"], state="running", pid=pid)
+            while alive(pid):
+                self.sleep(FINGERPRINT_POLL_SECONDS * 6)
+        self._judge(job, rc=None,
+                    log_path=os.path.join(self.paths.job_dir(job["id"]), "command.log"),
+                    lost=not running)
+        return job["id"]
 
     def _run_one(self, job):
         jid = job["id"]
 
         store.update(self.paths, jid, state="prechecking")
-        results = prechecks.run_all(self.paths, self._resolved(job), self.probe)
+        override = job.get("override_prechecks")
+        for attempt in range(MEMORY_RETRIES + 1):
+            results = prechecks.run_all(self.paths, self._resolved(job), self.probe)
+            failed = [r for r in results if not r["ok"]]
+            if [r["name"] for r in failed] != ["memory"] or attempt == MEMORY_RETRIES:
+                break
+            self.sleep(MEMORY_RETRY_SECONDS)
         self._write(jid, "precheck.json", results)
-        if not prechecks.passed(results):
-            failed = [r["detail"] for r in results if not r["ok"]]
-            events.emit(self.paths, jid, "precheck_failed", detail="; ".join(failed))
+        left = prechecks.blocking(results, override)
+        if left:
+            detail = "; ".join(r["detail"] for r in left)
+            events.emit(self.paths, jid, "precheck_failed", detail=detail)
             store.update(self.paths, jid, state="blocked",
-                         finished=self.clock(), note="; ".join(failed))
+                         finished=self.clock(), note=detail)
             return
-        events.emit(self.paths, jid, "precheck_passed")
+        waived = [r for r in results if not r["ok"]]
+        if waived:
+            # AGENTS §5: an overridden run is reported as such, permanently.
+            detail = "; ".join(r["detail"] for r in waived)
+            events.emit(self.paths, jid, "precheck_overridden",
+                        detail=detail, reason=override.get("reason"),
+                        by=override.get("by"))
+            store.update(self.paths, jid,
+                         note="precheck overridden: %s — %s"
+                              % (detail, override.get("reason")))
+        else:
+            events.emit(self.paths, jid, "precheck_passed")
 
         # The run script is what configures the server, so the only truthful
         # moment to read the serving flags is after the command has started and
@@ -138,6 +201,7 @@ class Runner:
                          finished=self.clock(), note=repr(exc))
             return
 
+        store.update(self.paths, jid, pid=proc.pid)
         name, baseline = self._baseline_for(job)
         if baseline and not self._await_fingerprint(job, proc, name, baseline,
                                                     preexisting):
@@ -237,7 +301,10 @@ class Runner:
             store.update(self.paths, jid, state="failed",
                          finished=self.clock(), note=repr(exc))
             return
+        self._judge(job, rc, log_path)
 
+    def _judge(self, job, rc, log_path, lost=False):
+        jid = job["id"]
         # Exit status is not evidence: std_mmlupro_jetson.sh ends on
         # `echo finished` and always returns 0. The .done marker is the signal.
         marker = os.path.join(self.paths.stdbench, job["output_dir"], ".done")
@@ -246,10 +313,12 @@ class Runner:
             store.update(self.paths, jid, state="completed",
                          finished=self.clock(), exit_code=rc)
         else:
+            why = ("the daemon restarted and the run's process was gone"
+                   if lost else "no .done marker at %s" % marker)
             events.emit(self.paths, jid, "failed", exit_code=rc,
-                        detail="no .done marker", tail=self._tail(log_path))
+                        detail=why, tail=self._tail(log_path))
             store.update(self.paths, jid, state="failed", finished=self.clock(),
-                         exit_code=rc, note="no .done marker at %s" % marker)
+                         exit_code=rc, note=why)
 
     @staticmethod
     def _tail(path, lines=20):
@@ -258,3 +327,23 @@ class Runner:
                 return f.read().splitlines()[-lines:]
         except OSError:
             return []
+
+
+def _pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def _find_run(job):
+    """The pid of a job's run_measured.sh, for jobs queued before pids were
+    stored. Matched on the label, which is unique per queued run."""
+    try:
+        out = subprocess.run(["pgrep", "-f", "[r]un_measured.sh %s " % job["label"]],
+                             capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    pids = [int(t) for t in out.split() if t.isdigit()]
+    return min(pids) if pids else None

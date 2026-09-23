@@ -612,3 +612,35 @@ button.primary:disabled{background:var(--panel-2);color:var(--ink-3);border-colo
 .state-pill.hist-extra{background:var(--panel-2);color:var(--ink-3)}
 .foot{font-size:12px;color:var(--ink-3);margin:0}
 .foot code{font:11.5px var(--mono);margin:0 3px}
+
+/* ---- queue: batches and waivers ---- */
+.jobform .field-chips{display:flex;flex-direction:column;gap:5px}
+.jobform .field-chips > span{font:600 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.jobform .field-chips .chips button{padding:6px 12px;font-size:12px}
+.batch-note{font-size:12px;color:var(--ink-3);margin:0}
+.prechecks li.later{background:color-mix(in srgb,var(--cpu) 6%,var(--panel));
+  border-color:color-mix(in srgb,var(--cpu) 22%,var(--line))}
+.prechecks li.later .mark{background:transparent;color:var(--cpu);font-size:13px}
+ol.batch{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;counter-reset:job}
+ol.batch li{counter-increment:job;display:grid;grid-template-columns:22px minmax(170px,auto) 1fr;gap:4px 10px;
+  align-items:center;padding:7px 10px;border-radius:8px;font-size:12px;
+  background:color-mix(in srgb,var(--ok) 6%,var(--panel));border:1px solid color-mix(in srgb,var(--ok) 18%,var(--line))}
+ol.batch li::before{content:counter(job);font:600 11px var(--mono);color:var(--ink-3)}
+ol.batch li.bad{background:color-mix(in srgb,var(--danger) 8%,var(--panel));border-color:color-mix(in srgb,var(--danger) 35%,var(--line))}
+ol.batch li b{font:600 12px var(--mono);color:var(--ink)}
+ol.batch .batch-checks{display:flex;flex-wrap:wrap;gap:4px}
+ol.batch .batch-checks i{font:500 10.5px var(--mono);font-style:normal;padding:1px 7px;border-radius:999px;
+  background:var(--panel-2);color:var(--ink-2)}
+ol.batch .batch-checks i.ok{color:var(--ok)}
+ol.batch .batch-checks i.bad{color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,var(--panel))}
+ol.batch .batch-checks i.later{color:var(--cpu)}
+ol.batch li em{grid-column:2 / -1;font-style:normal;color:var(--danger);overflow-wrap:anywhere}
+.waive{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:8px;
+  background:color-mix(in srgb,var(--warn) 8%,var(--panel));border:1px solid color-mix(in srgb,var(--warn) 35%,var(--line))}
+.waive .sub{font-size:11.5px;margin:0}
+.waive-toggle{display:flex;align-items:center;gap:8px;font:600 12.5px var(--sans);color:var(--ink);cursor:pointer}
+.waive-reason{font:500 13px var(--sans);color:var(--ink);background:var(--panel);border:1px solid var(--line-2);
+  border-radius:8px;padding:7px 10px}
+.waive-reason:focus-visible{outline:none;border-color:var(--warn);box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 22%,transparent)}
+.deployed{font:11px var(--mono);color:var(--ink-3)}
+.deployed.stale{color:var(--warn)}

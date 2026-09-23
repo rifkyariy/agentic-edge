@@ -8,6 +8,8 @@ goes through a device-side script, not an ad-hoc ssh command in the web app.
     queue_ctl.py --describe
     queue_ctl.py --preflight '{"kind":"mmlupro","params":{...}}'
     queue_ctl.py --add       '{"kind":"mmlupro","params":{...},"not_before":"02:00"}'
+    queue_ctl.py --add       '{"jobs":[{...},{...}]}'   a batch, queued in order
+                  a job may carry "override": {"checks":["memory"],"reason":"..."}
     queue_ctl.py --cancel <job_id>
     queue_ctl.py --status [--from <offset>]
     queue_ctl.py --log <job_id> --stream lm_eval|server|command [--from <offset>]
@@ -70,6 +72,15 @@ def daemon_alive(p):
         return False
 
 
+def deployed():
+    """What deploy.sh last put here: commit, time, and whether it was clean."""
+    try:
+        with open(os.path.join(paths.bench_dir(), "DEPLOYED.json")) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
 def resolve_request(registry, p, body):
     kind = body.get("kind")
     params = body.get("params") or {}
@@ -111,33 +122,80 @@ def main(argv=None):
             body = json.loads(raw)
         except ValueError as exc:
             fail("could not parse request JSON: %s" % exc)
-        try:
-            resolved = resolve_request(registry, p, body)
-        except kinds.ValidationError as exc:
-            fail(exc)
+        batch = body.get("jobs") if isinstance(body.get("jobs"), list) else [body]
+        if not batch:
+            fail("no jobs in the request")
 
-        # resolve() already carries the normalised params, so nothing needs
-        # validating a second time here.
-        checks = prechecks.run_all(p, resolved)
-        if args.preflight:
-            ok({"resolved": resolved, "prechecks": checks,
-                "ok": prechecks.passed(checks)})
+        # Everything already waiting or running on this board. Each job in the
+        # batch is checked against it and against the batch jobs before it, so
+        # a batch cannot queue the same run twice either.
+        pending = [j for j in store.load(p)["jobs"]
+                   if j["state"] == "queued" or j["state"] in store.ACTIVE]
+        ahead = next((j["label"] for j in pending if j["state"] in store.ACTIVE),
+                     pending[-1]["label"] if pending else None)
 
-        not_before = None
-        if body.get("not_before"):
+        plans = []
+        for item in batch:
             try:
-                not_before = parse_not_before(body["not_before"])
-            except ValueError as exc:
+                resolved = resolve_request(registry, p, item)
+                override = prechecks.validate_override(item.get("override"))
+            except (kinds.ValidationError, ValueError) as exc:
                 fail(exc)
+            checks = prechecks.run_all(p, resolved, pending=list(pending), ahead=ahead)
+            left = prechecks.blocking(checks, override)
+            plans.append({"item": item, "resolved": resolved, "prechecks": checks,
+                          "override": override, "ok": not left,
+                          "blocking": [c["name"] for c in left]})
+            pending.append({"id": "(this batch)", "state": "queued",
+                            "output_dir": resolved["output_dir"],
+                            "label": resolved["label"]})
+            ahead = resolved["label"]
 
-        job = store.add(p, store.new_job(
-            kind=body["kind"], params=resolved["params"],
-            label=resolved["label"], output_dir=resolved["output_dir"],
-            command=resolved["command"], env=resolved["env"],
-            not_before_epoch=not_before))
-        events.emit(p, job["id"], "queued", by=body.get("by", "queue_ctl"),
-                    label=job["label"])
-        ok({"job": job})
+        if args.preflight:
+            if "jobs" in body:
+                ok({"results": plans, "ok": all(x["ok"] for x in plans)})
+            x = plans[0]
+            ok({"resolved": x["resolved"], "prechecks": x["prechecks"],
+                "ok": x["ok"], "blocking": x["blocking"]})
+
+        # --add enforces what the form shows. Before, it queued anything and
+        # left the refusal to the runner, hours later.
+        refused = [x for x in plans if not x["ok"]]
+        if refused:
+            fail("; ".join("%s: %s" % (x["resolved"]["label"], ", ".join(
+                c["detail"] for c in x["prechecks"] if c["name"] in x["blocking"]))
+                for x in refused))
+
+        added = []
+        for x in plans:
+            item, resolved = x["item"], x["resolved"]
+            not_before = None
+            if item.get("not_before"):
+                try:
+                    not_before = parse_not_before(item["not_before"])
+                except ValueError as exc:
+                    fail(exc)
+            job = store.new_job(
+                kind=item["kind"], params=resolved["params"],
+                label=resolved["label"], output_dir=resolved["output_dir"],
+                command=resolved["command"], env=resolved["env"],
+                not_before_epoch=not_before)
+            if x["override"]:
+                job["override_prechecks"] = dict(x["override"],
+                                                 by=item.get("by", "queue_ctl"))
+            job = store.add(p, job)
+            events.emit(p, job["id"], "queued", by=item.get("by", "queue_ctl"),
+                        label=job["label"])
+            if x["override"]:
+                # Recorded at queue time as well as when it takes effect: the
+                # decision was made here, by whoever queued it.
+                events.emit(p, job["id"], "precheck_override_requested",
+                            checks=x["override"]["checks"],
+                            reason=x["override"]["reason"])
+            added.append(job)
+        if "jobs" in body:
+            ok({"jobs": added})
+        ok({"job": added[0]})
 
     if args.cancel:
         try:
@@ -160,6 +218,7 @@ def main(argv=None):
                     j[key] = None
         ok({"board": p.board, "jobs": jobs,
             "active": store.active(p), "daemon_alive": daemon_alive(p),
+            "deployed": deployed(),
             "events": recent, "offset": offset, "ts": time.time()})
 
     if args.log:

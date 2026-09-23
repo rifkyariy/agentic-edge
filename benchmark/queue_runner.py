@@ -8,14 +8,35 @@ Stdlib only (AGENTS §7). Everything interesting lives in jobqueue/runner.py;
 this file is the process wrapper around it.
 """
 import argparse
+import glob
+import hashlib
 import os
 import signal
 import sys
 import time
 
-from jobqueue import fingerprint, kinds, paths, runner
+from jobqueue import fingerprint, kinds, paths, runner, store
 
 POLL_SECONDS = 5
+
+
+def code_stamp(bench=None):
+    """A hash of the files this daemon has loaded. deploy.sh replaces them;
+    the daemon notices between jobs and reloads itself, so a deploy never has
+    to restart it mid-run. Content, not mtime: rsync -a carries the Mac's
+    mtimes, which can be older than what was on the board."""
+    bench = bench or paths.bench_dir()
+    files = sorted([os.path.join(bench, n) for n in
+                    ("queue_runner.py", "job_kinds.json", "baselines.json")]
+                   + glob.glob(os.path.join(bench, "jobqueue", "*.py")))
+    h = hashlib.sha1()
+    for f in files:
+        try:
+            with open(f, "rb") as fh:
+                h.update(f.encode() + b"\0" + fh.read())
+        except OSError:
+            pass
+    return h.hexdigest()
 
 
 def write_pid(p):
@@ -44,11 +65,21 @@ def main(argv=None):
 
     write_pid(p)
     stopping = {"now": False}
+    loaded = code_stamp()
+
+    # A job the previous daemon left active: follow it to its end, or judge
+    # it now if its process is gone. The unit uses KillMode=process, so a
+    # restart stops only this daemon, never the run it started.
+    try:
+        adopted = r.recover()
+        if adopted:
+            print("queue_runner: recovered job %s" % adopted, flush=True)
+    except Exception as exc:                          # noqa: BLE001
+        print("queue_runner: recovery failed: %r" % (exc,), file=sys.stderr, flush=True)
 
     def stop(signum, frame):
-        # A running job is deliberately left alone: it is a detached
-        # run_measured.sh with its own telemetry, and killing it mid-run
-        # would cost hours. systemd restarts us and we pick the job back up.
+        # A running job is left alone: KillMode=process means systemd stops
+        # only this process, and the next daemon adopts the run by its pid.
         stopping["now"] = True
 
     signal.signal(signal.SIGTERM, stop)
@@ -56,6 +87,10 @@ def main(argv=None):
 
     print("queue_runner: watching %s on %s" % (p.queue_dir, p.board), flush=True)
     while not stopping["now"]:
+        # Only between jobs: tick() blocks for the whole of a run.
+        if store.active(p) is None and code_stamp() != loaded:
+            print("queue_runner: code changed on disk; reloading", flush=True)
+            os.execv(sys.executable, [sys.executable] + sys.argv)
         try:
             if not r.tick():
                 time.sleep(POLL_SECONDS)

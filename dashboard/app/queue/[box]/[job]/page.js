@@ -113,6 +113,13 @@ export default function JobDetail({ params }) {
         <p className="sub">{box.label} &middot; {job.kind} &middot;{" "}
           {Object.entries(job.params).map(([k, v]) => `${k}=${v}`).join(" ")}{" "}
           <Link href="/queue">&larr; queue</Link></p>
+        {job.override_prechecks && (
+          <p className="pre-error">
+            Queued with the {job.override_prechecks.checks.join(", ")} check
+            waived: &ldquo;{job.override_prechecks.reason}&rdquo;. Report it as
+            such (AGENTS §5).
+          </p>
+        )}
         {job.override_fingerprint && (
           <p className="pre-error">
             This run was started with a fingerprint override. It is not

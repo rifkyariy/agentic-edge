@@ -50,13 +50,18 @@ export async function POST(request) {
   const preflight = searchParams.get("preflight") === "1";
   const body = await request.json().catch(() => null);
   const box = byId(body?.box);
-  if (!box || !body?.kind) {
+  if (!box || !(body?.kind || (Array.isArray(body?.jobs) && body.jobs.length))) {
     return Response.json({ error: "bad box or kind" }, { status: 400 });
   }
-  const payload = JSON.stringify({
-    kind: body.kind, params: body.params || {},
-    not_before: body.not_before || null, by: "dashboard",
+  // A batch ({jobs: [...]}) goes out as one queue_ctl call — one ssh round
+  // trip, and queue_ctl checks the jobs against each other as well.
+  const one = (j) => ({
+    kind: j.kind, params: j.params || {}, not_before: j.not_before || null,
+    ...(j.override ? { override: { ...j.override, by: "dashboard" } } : {}),
+    by: "dashboard",
   });
+  const payload = JSON.stringify(Array.isArray(body.jobs)
+    ? { jobs: body.jobs.map(one) } : one(body));
   const r = await ctl(box, [preflight ? "--preflight" : "--add", shq(payload)]);
   return r.ok ? Response.json(r.data)
               : Response.json({ error: r.error, hint: r.hint }, { status: 400 });

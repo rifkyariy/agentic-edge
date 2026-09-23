@@ -20,9 +20,12 @@ class TestQueueCtl(unittest.TestCase):
                                "mmlupro_subset100_s2_samples.json"), "w") as f:
             json.dump([1], f)
 
+    probe = '{"mem": 9000}'                   # an idle board with room to spare
+
     def ctl(self, *args):
         env = dict(os.environ,
-                   AGENTIC_QUEUE_ROOT=self.root, AGENTIC_BOARD="jetson")
+                   AGENTIC_QUEUE_ROOT=self.root, AGENTIC_BOARD="jetson",
+                   AGENTIC_TEST_PROBE=self.probe)
         proc = subprocess.run([sys.executable, CTL] + list(args),
                               capture_output=True, text=True, env=env,
                               cwd=paths.bench_dir())
@@ -133,6 +136,66 @@ class TestQueueCtl(unittest.TestCase):
         rc, out = self.ctl("--log", "whatever", "--stream", "../../etc/passwd")
         self.assertEqual(rc, 1)
         self.assertIn("error", out)
+
+
+class TestBatchAndOverride(TestQueueCtl):
+    def setUp(self):
+        super().setUp()
+        for sub in ("s1", "s3"):
+            with open(os.path.join(self.root, "stdbench",
+                                   "mmlupro_subset100_%s_samples.json" % sub), "w") as f:
+                json.dump([1], f)
+
+    def batch(self, *params, **extra):
+        return json.dumps({"jobs": [dict({"kind": "mmlupro", "params": p}, **extra)
+                                    for p in params]})
+
+    def test_a_batch_is_queued_in_the_order_given(self):
+        rc, out = self.ctl("--add", self.batch(
+            {"model": "e2b", "subset": "s1", "thinking": "on"},
+            {"model": "e4b", "subset": "s1", "thinking": "on"},
+            {"model": "e2b", "subset": "s2", "thinking": "on"}))
+        self.assertEqual(rc, 0, out)
+        self.assertEqual([j["label"] for j in out["jobs"]],
+                         ["mmlupro-e2b-s1-think", "mmlupro-e4b-s1-think",
+                          "mmlupro-e2b-s2-think"])
+
+    def test_a_batch_cannot_hold_the_same_run_twice(self):
+        rc, out = self.ctl("--add", self.batch(
+            {"model": "e2b", "subset": "s1"}, {"model": "e2b", "subset": "s1"}))
+        self.assertEqual(rc, 1)
+        _, status = self.ctl("--status")
+        self.assertEqual(status["jobs"], [], "nothing is queued when any job is refused")
+
+    def test_a_run_already_queued_is_refused(self):
+        self.ctl("--add", '{"kind":"mmlupro","params":{"model":"e4b","subset":"s2"}}')
+        rc, out = self.ctl("--add", '{"kind":"mmlupro","params":{"model":"e4b","subset":"s2"}}')
+        self.assertEqual(rc, 1)
+        self.assertIn("already queued", out["error"])
+
+    def test_add_refuses_what_preflight_would_refuse(self):
+        self.probe = '{"mem": 4000}'
+        rc, out = self.ctl("--add", '{"kind":"mmlupro","params":{"model":"e4b","subset":"s2"}}')
+        self.assertEqual(rc, 1)
+        self.assertIn("4000 MB", out["error"])
+
+    def test_a_memory_override_is_queued_and_recorded(self):
+        self.probe = '{"mem": 4000}'
+        rc, out = self.ctl("--add", json.dumps({
+            "kind": "mmlupro", "params": {"model": "e4b", "subset": "s2"},
+            "override": {"checks": ["memory"], "reason": "peak measured at 5,008 MB"}}))
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(out["job"]["override_prechecks"]["checks"], ["memory"])
+        _, status = self.ctl("--status")
+        names = [e["event"] for e in status["events"]]
+        self.assertIn("precheck_override_requested", names)
+
+    def test_a_job_behind_a_running_one_passes_preflight(self):
+        self.ctl("--add", '{"kind":"mmlupro","params":{"model":"e2b","subset":"s1"}}')
+        self.probe = '{"mem": 500, "busy": ["lm_eval"]}'
+        rc, out = self.ctl("--preflight", '{"kind":"mmlupro","params":{"model":"e4b","subset":"s1"}}')
+        self.assertEqual(rc, 0)
+        self.assertTrue(out["ok"], out)
 
 
 if __name__ == "__main__":

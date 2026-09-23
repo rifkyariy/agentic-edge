@@ -397,5 +397,121 @@ class TestPiDeployedServer(TestFingerprintTiming):
         self.assertIn("never replaced", got["note"])
 
 
+class ScriptedProbe(FakeProbe):
+    """Answers change per call: mem and busy are consumed as lists."""
+
+    def __init__(self, mems=(9000,), busy=((),)):
+        self.mems, self.busys = list(mems), [list(b) for b in busy]
+
+    def mem_available_mb(self):
+        return self.mems.pop(0) if len(self.mems) > 1 else self.mems[0]
+
+    def busy_processes(self):
+        return self.busys.pop(0) if len(self.busys) > 1 else self.busys[0]
+
+
+class TestQueueBehaviour(TestFingerprintTiming):
+    def runner(self, probe, captures=(GOOD_ARGS,), done=True):
+        r = self.make(list(captures), done=done)
+        r.probe = probe
+        return r
+
+    def test_a_run_outside_the_queue_makes_the_job_wait_not_block(self):
+        job = self.queue_one()
+        r = self.runner(ScriptedProbe(busy=[["lm_eval"]]))
+        self.assertFalse(r.tick())
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "queued")
+        self.assertIn("outside the queue", got["note"])
+        self.assertNotIn("started", self.order)
+
+    def test_the_job_starts_once_the_board_frees_up(self):
+        job = self.queue_one()
+        r = self.runner(ScriptedProbe(busy=[["lm_eval"], [], []]))
+        r.tick()
+        r.tick()
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "completed", got["note"])
+        self.assertIsNone(got["note"])
+
+    def test_memory_that_recovers_within_the_retry_window_is_not_a_refusal(self):
+        job = self.queue_one(model="e4b")
+        r = self.runner(ScriptedProbe(mems=[4000, 4200, 6000]))
+        r.tick()
+        self.assertEqual(store.get(self.p, job["id"])["state"], "completed")
+
+    def test_memory_that_stays_short_blocks(self):
+        job = self.queue_one(model="e4b")
+        r = self.runner(ScriptedProbe(mems=[4000]))
+        r.tick()
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "blocked")
+        self.assertIn("4000 MB", got["note"])
+
+    def test_a_recorded_memory_override_runs_and_says_so(self):
+        job = self.queue_one(model="e4b")
+        store.update(self.p, job["id"], override_prechecks={
+            "checks": ["memory"], "reason": "peak measured at 5,008 MB", "by": "t"})
+        r = self.runner(ScriptedProbe(mems=[4000]))
+        r.tick()
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "completed")
+        self.assertIn("precheck overridden", got["note"])
+        names = [e["event"] for e in events.read(self.p, job["id"])[0]]
+        self.assertIn("precheck_overridden", names)
+
+    def test_an_override_does_not_cover_other_checks(self):
+        job = self.queue_one(model="e4b")
+        os.makedirs(os.path.join(self.p.stdbench, "mmlupro100-e4b-s2"))
+        store.update(self.p, job["id"], override_prechecks={
+            "checks": ["memory"], "reason": "peak measured at 5,008 MB"})
+        r = self.runner(ScriptedProbe(mems=[4000]))
+        r.tick()
+        self.assertEqual(store.get(self.p, job["id"])["state"], "blocked")
+
+    def test_the_pid_is_recorded_so_a_restart_can_find_the_run(self):
+        job = self.queue_one()
+        self.runner(ScriptedProbe()).tick()
+        self.assertEqual(store.get(self.p, job["id"])["pid"], 4242)
+
+
+class TestRecovery(TestFingerprintTiming):
+    def active_job(self, done):
+        job = self.queue_one()
+        store.update(self.p, job["id"], state="running", pid=777)
+        if done:
+            out = os.path.join(self.p.stdbench, "mmlupro100-e4b-s2")
+            os.makedirs(out, exist_ok=True)
+            open(os.path.join(out, ".done"), "w").close()
+        return job
+
+    def test_a_run_still_going_is_adopted_and_judged_when_it_ends(self):
+        job = self.active_job(done=True)
+        polls = iter([True, True, False])
+        r = self.make([""])
+        r.recover(alive=lambda pid: next(polls, False), find=lambda j: None)
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "completed")
+        names = [e["event"] for e in events.read(self.p, job["id"])[0]]
+        self.assertIn("adopted", names)
+
+    def test_a_run_that_vanished_is_failed_not_left_stuck(self):
+        # The regression: the queue stayed "running" forever after a restart.
+        job = self.active_job(done=False)
+        r = self.make([""])
+        r.recover(alive=lambda pid: False, find=lambda j: None)
+        got = store.get(self.p, job["id"])
+        self.assertEqual(got["state"], "failed")
+        self.assertIn("daemon restarted", got["note"])
+
+    def test_a_run_that_finished_while_the_daemon_was_down_is_completed(self):
+        job = self.active_job(done=True)
+        self.make([""]).recover(alive=lambda pid: False, find=lambda j: None)
+        self.assertEqual(store.get(self.p, job["id"])["state"], "completed")
+
+    def test_nothing_active_is_a_no_op(self):
+        self.assertIsNone(self.make([""]).recover())
+
+
 if __name__ == "__main__":
     unittest.main()
