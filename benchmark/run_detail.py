@@ -475,6 +475,45 @@ def baseline():
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S")}
 
 
+def paired():
+    """Per-question correctness of every current MMLU-Pro run, both conditions.
+
+    What the dashboard needs for McNemar: two runs can only be compared on the
+    questions they both answered, so each run ships {question_id: 0|1} rather
+    than a score. question_id is MMLU-Pro's own, so the pairing holds across
+    boards regardless of the order lm-eval wrote the samples in.
+
+    Runs with no samples file yet (running, killed) are listed with correct
+    None so the page can say what it is still waiting for. Failed and
+    superseded runs live under failed/ and archive/ and are not candidates for
+    a comparison; history() reports them.
+    """
+    runs = []
+    for d in sorted(glob.glob(f"{ROOT}/stdbench/mmlupro100-*")):
+        if not os.path.isdir(d):
+            continue
+        run = os.path.basename(d)
+        p = parse_run(run)
+        if not p or p["tag"]:
+            continue
+        correct, no_answer = {}, 0
+        for f in glob.glob(f"{d}/*/samples_mmlu_pro_*.jsonl"):
+            for line in open(f):
+                r = json.loads(line)
+                correct[str(r["doc"]["question_id"])] = 1 if r["exact_match"] else 0
+                # thinking-on runs can spend the budget and never state an
+                # answer; that is part of what the condition costs
+                if not ANS.search(r["resps"][0][0]):
+                    no_answer += 1
+        done = os.path.exists(os.path.join(d, ".done"))
+        runs.append({"run": run, "model": p["model"], "subset": p["subset"],
+                     "thinking": p["thinking"], "done": done,
+                     "correct": correct or None,
+                     "no_answer": no_answer if correct else None})
+    return {"root": ROOT, "runs": runs,
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S")}
+
+
 # Where a run directory sits says what became of it. AGENTS §5: every run is
 # reported, including failures and superseded ones.
 PLACES = (("", "current"), ("failed/", "failed"), ("archive/", "superseded"))
@@ -548,6 +587,8 @@ def main():
                     help="every run on this box, current, failed and superseded")
     ap.add_argument("--baseline", action="store_true",
                     help="every finished run on this box with its device cost")
+    ap.add_argument("--paired", action="store_true",
+                    help="per-question correctness of every current run, for McNemar")
     ap.add_argument("--max-questions", type=int, default=400)
     ap.add_argument("--raw-telemetry", action="store_true",
                     help="every 1Hz sample instead of the ~700-point chart series")
@@ -557,6 +598,8 @@ def main():
         print(json.dumps(baseline())); return
     if args.history:
         print(json.dumps(history())); return
+    if args.paired:
+        print(json.dumps(paired(), separators=(",", ":"))); return
     if not args.run:
         print(json.dumps({"error": "--run or --baseline required"})); return
 

@@ -65,3 +65,43 @@ class TestMeasuredDir(unittest.TestCase):
 
     def test_no_match_is_none_not_a_guess(self):
         self.assertIsNone(run_detail.measured_dir("e2b", "s2", "off"))
+
+
+class TestPaired(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.old = run_detail.ROOT
+        run_detail.ROOT = self.tmp.name
+        self.addCleanup(setattr, run_detail, "ROOT", self.old)
+
+    def run_dir(self, name, samples=None, done=True):
+        d = os.path.join(self.tmp.name, "stdbench", name)
+        os.makedirs(os.path.join(d, "model"))
+        if done:
+            open(os.path.join(d, ".done"), "w").close()
+        if samples is not None:
+            import json
+            with open(os.path.join(d, "model", "samples_mmlu_pro_law_x.jsonl"), "w") as f:
+                for qid, ok, resp in samples:
+                    f.write(json.dumps({"doc": {"question_id": qid},
+                                        "resps": [[resp]], "exact_match": ok}) + "\n")
+
+    def test_correctness_is_keyed_by_mmlu_pro_question_id(self):
+        self.run_dir("mmlupro100-e2b-s1-think",
+                     [(70, 1.0, "the answer is (B)"), (12, 0.0, "I think... no")])
+        r, = run_detail.paired()["runs"]
+        self.assertEqual((r["model"], r["subset"], r["thinking"]), ("e2b", "s1", "on"))
+        self.assertEqual(r["correct"], {"70": 1, "12": 0})
+        self.assertEqual(r["no_answer"], 1)
+
+    def test_a_run_without_samples_is_listed_not_dropped(self):
+        self.run_dir("mmlupro100-e4b-s2", None, done=False)
+        r, = run_detail.paired()["runs"]
+        self.assertIsNone(r["correct"])
+        self.assertFalse(r["done"])
+
+    def test_smoke_tests_and_bak_copies_are_not_candidates(self):
+        self.run_dir("mmlupro100-e2b-smoke", [(1, 1.0, "the answer is (A)")])
+        self.run_dir("mmlupro100-e2b.bak", [(1, 1.0, "the answer is (A)")])
+        self.assertEqual(run_detail.paired()["runs"], [])

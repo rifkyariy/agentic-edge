@@ -6,6 +6,8 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { fmt } from "../Charts";
+import { comparisons } from "../lib/paired";
+import Paired from "./Paired";
 
 const MODELS = [["e2b", "Gemma 4 E2B"], ["e4b", "Gemma 4 E4B"]];
 const DEV = {
@@ -70,7 +72,10 @@ function verdictFor(row, goodWhen, tied) {
 
 function Chart({ title, note, data, unit, decimals = 2, goodWhen = "higher",
                  tied = false, verdict }) {
-  const marks = data.map((row) => verdictFor(row, goodWhen, tied));
+  // tied may be one flag for the chart or one per row (per model), so a model
+  // whose own test is not significant is never coloured by the other's.
+  const marks = data.map((row, i) =>
+    verdictFor(row, goodWhen, Array.isArray(tied) ? tied[i] : tied));
   return (
     <figure className="cmp-fig">
       <figcaption>
@@ -79,7 +84,7 @@ function Chart({ title, note, data, unit, decimals = 2, goodWhen = "higher",
         <ul className="cmp-key">
           <li><i className="swatch better" />better</li>
           <li><i className="swatch worse" />worse</li>
-          {tied && <li><i className="swatch neutral" />no difference</li>}
+          {marks.some((m) => m.pi === "tie") && <li><i className="swatch neutral" />no difference</li>}
           <li className="order">bars: Pi 5 left, Orin right</li>
         </ul>
       </figcaption>
@@ -117,6 +122,22 @@ function Chart({ title, note, data, unit, decimals = 2, goodWhen = "higher",
 export default function Compare() {
   const [d, setD] = useState(null);
   const [err, setErr] = useState(null);
+
+  // Per-question answers for the paired tests. Its own request: reading every
+  // samples file is slower than /api/baseline, and the page should not wait.
+  const [pairedData, setPaired] = useState(null);
+  const [pairedErr, setPairedErr] = useState(null);
+  useEffect(() => {
+    fetch("/api/compare", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => setPaired({
+        ...comparisons(j.boxes.filter((b) => b.ok)),
+        ts: j.ts,
+        unreachable: j.boxes.filter((b) => !b.ok)
+          .map((b) => `${b.label} (${b.error}${b.hint ? ` — ${b.hint}` : ""})`),
+      }))
+      .catch((e) => setPairedErr(String(e)));
+  }, []);
 
   useEffect(() => {
     fetch("/api/baseline", { cache: "no-store" })
@@ -205,6 +226,16 @@ export default function Compare() {
     mhz: devMean("jetson", "e4b", "gpu_mhz_mean"),
   };
 
+  // The baseline accuracy verdict, from the paired test rather than typed in:
+  // tied only while neither model's McNemar p falls below alpha.
+  const [pE2b, pE4b] = pairedData?.board[0].groups || [];
+  const accP = pE2b?.pooled && pE4b?.pooled ? [pE2b.pooled, pE4b.pooled] : null;
+  const accTied = accP ? accP.every((r) => !r.sig) : true;
+  const pStr = (r) => r.p.toFixed(2);
+  const accVerdict = !accP ? "paired test loading…"
+    : accTied ? `No significant difference — paired McNemar p = ${pStr(accP[0])} (E2B), ${pStr(accP[1])} (E4B)`
+    : `Significant difference — paired McNemar p = ${pStr(accP[0])} (E2B), ${pStr(accP[1])} (E4B)`;
+
   const pending = MODELS.flatMap(([m, label]) =>
     Object.entries(runs).flatMap(([id, r]) =>
       ["s1", "s2", "s3"].filter((s) => !r[`${m}-${s}`]?.score)
@@ -262,11 +293,14 @@ export default function Compare() {
             <tr><th>Measure</th><th>Pi 5</th><th>Orin Nano</th><th>Result</th></tr>
           </thead>
           <tbody>
-            <tr className="tie">
-              <th>Accuracy <em>MMLU-Pro, n=300</em></th>
-              <td>51.7% · 65.7%</td><td>52.7% · 66.0%</td>
-              <td><span className="pillv tie">= tied</span>
-                <em>McNemar p = 0.76 / 1.00</em></td>
+            <tr className={accTied ? "tie" : ""}>
+              <th>Accuracy <em>MMLU-Pro, n={accP ? accP[0].n : 300}</em></th>
+              <td>{accP ? `${fmt(accP[0].aAcc, 1)}% · ${fmt(accP[1].aAcc, 1)}%` : "…"}</td>
+              <td>{accP ? `${fmt(accP[0].bAcc, 1)}% · ${fmt(accP[1].bAcc, 1)}%` : "…"}</td>
+              <td>{accTied
+                ? <span className="pillv tie">= tied</span>
+                : <span className="pillv win">≠ differ</span>}
+                <em>McNemar p = {accP ? `${pStr(accP[0])} / ${pStr(accP[1])}` : "…"}</em></td>
             </tr>
             <tr>
               <th>Decode throughput</th>
@@ -306,6 +340,8 @@ export default function Compare() {
           is the efficient one.
         </p>
       </section>
+
+      <Paired data={pairedData} err={pairedErr} />
 
       {/* What is fixed here and what is still open, so the page is not read as
           a final result for the paper. */}
@@ -441,11 +477,11 @@ export default function Compare() {
       </section>
 
       <div className="cmp-grid">
-        {/* tied is asserted, not inferred: McNemar p = 0.71 pooled, 0.76 / 1.00
-            per model. A 1-point bar gap is not a win and is not drawn as one. */}
+        {/* tied comes from the paired test, never from the size of the gap:
+            a 1-point bar gap is not a win and is not drawn as one. */}
         <Chart title="Accuracy" note="MMLU-Pro, pooled n=300 per model"
-               data={acc} unit="%" decimals={1} tied
-               verdict="No significant difference — paired McNemar p = 0.76 (E2B), 1.00 (E4B)" />
+               data={acc} unit="%" decimals={1} tied={accP ? accP.map((r) => !r.sig) : true} goodWhen="higher"
+               verdict={accVerdict} />
         <Chart title="Decode throughput" note="tokens per second, generation only"
                data={series("decode_tok_s")} unit="tok/s" decimals={2} goodWhen="higher"
                verdict="Orin ~3.4x faster on both models" />

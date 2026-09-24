@@ -645,3 +645,17 @@ ol.batch li em{grid-column:2 / -1;font-style:normal;color:var(--danger);overflow
 .deployed{font:11px var(--mono);color:var(--ink-3)}
 .deployed.stale{color:var(--warn)}
 button.pill{border:0;cursor:pointer}
+.paired-card h2 i{font-style:normal;font-size:12px;font-weight:400;margin-left:8px}
+.paired-block{margin-top:16px}
+.paired-block h3{margin:0 0 6px;font-size:13.5px;font-weight:600}
+table.paired td,table.paired th{white-space:nowrap}
+table.paired td:last-child{white-space:normal}
+.paired-cells{font:11.5px var(--mono);color:var(--ink-3)}
+.paired-cells b{color:var(--ink-2);font-weight:600}
+.paired-note{display:block;font:11px var(--mono);font-style:normal;color:var(--ink-3);margin-top:3px}
+.paired-note.bad{color:var(--danger)}
+.paired-toggle{margin-top:6px;background:none;border:0;padding:0;cursor:pointer;
+  font:11px var(--mono);color:var(--ink-3)}
+.paired-toggle:hover{color:var(--ink)}
+.paired-foot{margin-top:12px}
+table.paired th:nth-child(5){white-space:normal;min-width:150px}
