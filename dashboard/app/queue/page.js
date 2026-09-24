@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQueue, latestPerRun } from "../lib/queue-context";
 import { clock as fmtTime } from "../lib/format";
@@ -56,10 +56,16 @@ function JobForm({ box, onQueued }) {
   const combos = spec ? expand(spec, sel, text) : [];
   const override = waive && reason.trim().length >= 8
     ? { checks: ["memory"], reason: reason.trim() } : null;
+  // What a preflight answer belongs to. Answers come back over ssh in a second
+  // or two and not always in order; one for an earlier selection used to land
+  // after the latest and stay on screen, describing runs no longer selected.
+  const key = JSON.stringify([kind, combos, notBefore, override]);
+  const latest = useRef(0);
 
   const send = useCallback(async (preflight, only = null) => {
     const list = only || combos;
     if (!list.length) return;
+    const id = ++latest.current;             // a queue also outdates in-flight checks
     setBusy(true);
     try {
       const jobs = list.map((params) => ({
@@ -71,36 +77,54 @@ function JobForm({ box, onQueued }) {
         body: JSON.stringify({ box: box.id, jobs }),
       });
       const data = await res.json();
-      if (!res.ok) { setPre({ error: data.error, hint: data.hint }); return; }
-      if (preflight) setPre(data);
-      else { setPre(null); onQueued(); }
-    } finally { setBusy(false); }
+      if (preflight && id !== latest.current) return;      // outdated answer
+      if (!res.ok) { setPre({ error: data.error, hint: data.hint, key }); return; }
+      if (preflight) setPre({ ...data, key });
+      else {
+        // Ask again rather than leaving the form on "checking…": the answer
+        // now shows the runs just queued as already queued.
+        await onQueued();
+        send(true);
+      }
+    } finally { if (id === latest.current) setBusy(false); }
   }, [box.id, kind, JSON.stringify(combos), notBefore, JSON.stringify(override), onQueued]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // One preflight for the whole batch, one ssh call: cheap, and the point is
   // to see every check before committing a night of board time.
+  // The old answer is cleared at once, so nothing describes a selection that
+  // has already changed; the button waits on "checking…" meanwhile.
   useEffect(() => {
-    if (!spec || !combos.length) { setPre(null); return undefined; }
+    setPre(null);
+    if (!spec || !combos.length) return undefined;
     const t = setTimeout(() => send(true), 250);
     return () => clearTimeout(t);
-  }, [JSON.stringify(combos), notBefore, JSON.stringify(override)]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key]);                                // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!box.kinds) return <p className="sub">Loading this board&rsquo;s job kinds&hellip;</p>;
   if (!spec) return <p className="sub">This board reported no job kinds.</p>;
 
-  const toggle = (name, v) => {
+  // A plain click picks that value, like any selector. ⌘/Ctrl/Shift-click adds
+  // or removes one, and "all" takes every value, for batches. Clicking used to
+  // always add, so choosing e4b while e2b was on quietly queued both.
+  const pick = (name, v, additive) => {
+    const all = spec.params[name].enum;
     const cur = sel[name] || [];
-    const next = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v];
+    let next;
+    if (v === "*") next = all;
+    else if (!additive) next = [v];
+    else next = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v];
     // keep the declared order, and never let a parameter go empty
-    if (next.length) setSel({ ...sel, [name]: spec.params[name].enum.filter((x) => next.includes(x)) });
+    if (next.length) setSel({ ...sel, [name]: all.filter((x) => next.includes(x)) });
   };
 
-  const results = pre?.results || [];
+  // Only an answer for exactly what is selected now counts.
+  const current = pre?.key === key ? pre : null;
+  const results = current?.results || [];
   const memoryOnly = results.some((r) => !r.ok)
     && results.every((r) => r.ok || r.blocking.every((b) => b === "memory"));
   const waivable = memoryOnly || waive;
   const single = results.length === 1 ? results[0] : null;
-  const allOk = pre?.ok === true;
+  const allOk = current?.ok === true;
   const n = combos.length;
   // Runs already done, running or queued are refused, which is exactly what
   // "the rest of this batch" should leave out. Queue only the ready ones.
@@ -123,8 +147,14 @@ function JobForm({ box, onQueued }) {
             <div className="chips" role="group" aria-label={name}>
               {rule.enum.map((v) => (
                 <button key={v} type="button" aria-pressed={(sel[name] || []).includes(v)}
-                        onClick={() => toggle(name, v)}>{v}</button>
+                        title="click: only this · ⌘/Ctrl/Shift-click: add or remove"
+                        onClick={(e) => pick(name, v, e.metaKey || e.ctrlKey || e.shiftKey)}>{v}</button>
               ))}
+              {rule.enum.length > 1 && (
+                <button type="button" className="chip-all"
+                        aria-pressed={(sel[name] || []).length === rule.enum.length}
+                        onClick={() => pick(name, "*")}>all</button>
+              )}
             </div>
           </div>
         ) : (
@@ -141,6 +171,11 @@ function JobForm({ box, onQueued }) {
         </label>
       </div>
 
+      {Object.values(spec.params).some((r) => r.enum) && (
+        <p className="batch-note">Click picks one value. For a batch, ⌘/Ctrl/Shift-click
+          to add more, or pick <b>all</b>.</p>
+      )}
+
       {n > 1 && (
         <p className="batch-note">
           {n} runs, queued one model at a time — every subset of one model
@@ -148,8 +183,8 @@ function JobForm({ box, onQueued }) {
         </p>
       )}
 
-      {pre?.error && (
-        <p className="pre-error"><b>{pre.error}</b>{pre.hint ? <><br />{pre.hint}</> : null}</p>
+      {current?.error && (
+        <p className="pre-error"><b>{current.error}</b>{current.hint ? <><br />{current.hint}</> : null}</p>
       )}
 
       {single && (
@@ -215,9 +250,9 @@ function JobForm({ box, onQueued }) {
           </span>
         )}
         <button type="button" className="primary"
-                disabled={busy || !pre || !!pre.error || (waive && !override) || !ready.length}
+                disabled={busy || !current || !!current.error || (waive && !override) || !ready.length}
                 onClick={() => send(false, ready)}>
-          {!pre ? "checking…" : pre.error ? "fix the request first"
+          {!current ? "checking…" : current.error ? "fix the request first"
             : waive && !override ? "give a reason to waive"
             : !ready.length ? "prechecks failed"
             : skipping ? `queue ${ready.length} ready, skip ${skipping}`
