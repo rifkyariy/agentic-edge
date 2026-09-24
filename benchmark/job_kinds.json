@@ -18,7 +18,9 @@
       },
       "jetson": {
         "command": "env SUBSET={subset} THINKING={thinking} ./std_mmlupro_jetson.sh {model}",
-        "env": {"SRVLOG": "{stdbench}/{output_dir}/server.log", "SUBSET": "{subset}"}
+        "env": {"SRVLOG": "{stdbench}/{output_dir}/server.log", "SUBSET": "{subset}"},
+        "memory_mb": {"e4b": 5200},
+        "_memory_mb": "E4B on the Jetson peaks at +5,008 MB (worst of 4 runs, baseline and thinking). 5,400 left ~400 MB spare and refused real idle boards at 5,257, costing 10.7 h on 2026-09-24; thinking runs started at 5,238-5,239 have bottomed at 354-441 MB free. 5,200 keeps ~190 MB over the worst peak; raise it again if a run ever comes closer."
       }
     }
   },

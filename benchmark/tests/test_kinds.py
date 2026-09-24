@@ -99,5 +99,23 @@ class TestKinds(unittest.TestCase):
             kinds.validate(self.reg, "raw", {"label": "a; rm -rf /", "command": "true"})
 
 
+class TestBoardMemory(unittest.TestCase):
+    def setUp(self):
+        self.reg = kinds.load()
+
+    def resolve(self, board, model):
+        p = paths.Paths("/tmp/x", board)
+        return kinds.resolve(self.reg, "mmlupro",
+                             {"model": model, "subset": "s1", "thinking": "on"}, p)
+
+    def test_the_jetson_e4b_threshold_is_its_own(self):
+        # 5,400 refused an idle Jetson at 5,257 MB on 2026-09-24; a waived
+        # run then started at 5,239 and never fell below 441 MB free.
+        self.assertEqual(self.resolve("jetson", "e4b")["memory_mb"], 5200)
+
+    def test_the_pi_and_e2b_keep_the_kind_default(self):
+        self.assertEqual(self.resolve("pi", "e4b")["memory_mb"], 5400)
+        self.assertEqual(self.resolve("jetson", "e2b")["memory_mb"], 3900)
+
 if __name__ == "__main__":
     unittest.main()

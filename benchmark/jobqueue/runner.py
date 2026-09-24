@@ -89,7 +89,8 @@ class Runner:
         spec = self.registry.get(job["kind"], {})
         return {"label": job["label"], "output_dir": job["output_dir"],
                 "params": job["params"],
-                "memory_mb": kinds.pick_memory(spec, job["params"])}
+                "memory_mb": kinds.pick_memory(spec, job["params"],
+                                               self.paths.board)}
 
     def _baseline_for(self, job):
         spec = self.registry.get(job["kind"], {})

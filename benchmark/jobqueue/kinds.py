@@ -62,12 +62,20 @@ def pick(mapping, params):
     return table.get(params.get(param))
 
 
-def pick_memory(spec, params):
-    """The MB this job kind needs for this model, or None if it declares none."""
+def pick_memory(spec, params, board=None):
+    """The MB this job kind needs for this model on this board, or None.
+
+    A board's own memory_mb, when it declares one, wins over the kind's: the
+    Jetson's unified memory and the Pi's mmap'd model have different peaks,
+    and one number for both either refuses safe runs or admits unsafe ones."""
+    model = params.get("model")
+    own = ((spec.get("boards") or {}).get(board) or {}).get("memory_mb") or {}
+    if model in own:
+        return own[model]
     table = spec.get("memory_mb")
     if not table:
         return None
-    return table.get(params.get("model"))
+    return table.get(model)
 
 
 def pick_baseline(spec, params):
@@ -107,7 +115,7 @@ def resolve(registry, kind, params, paths):
         "command": "./run_measured.sh %s -- %s" % (label, inner),
         "env": env,
         "baseline": pick_baseline(spec, params),
-        "memory_mb": pick_memory(spec, params),
+        "memory_mb": pick_memory(spec, params, paths.board),
         # The normalised params travel with the result so callers do not have
         # to validate a second time to learn what the defaults filled in.
         "params": params,
