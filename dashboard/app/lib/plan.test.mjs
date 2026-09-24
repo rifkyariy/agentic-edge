@@ -79,3 +79,16 @@ test("a requeued run shows the new job, not the blocked one it replaced", () => 
   assert.equal(c.status, "running");
   assert.equal(c.job, "new");
 });
+
+test("once the requeued job completes, the old blocked attempt does not come back", () => {
+  // 2026-09-24 evening: E4B s2/s3 thinking finished on the Jetson, and the
+  // cells went back to "blocked" — the newest *live* job was last night's.
+  const box = doneBox("mmlupro100-e4b-s2-think", "2026-09-24 13:40");
+  const queue = { jobs: [
+    { id: "old", output_dir: "mmlupro100-e4b-s2-think", state: "blocked" },
+    { id: "new", output_dir: "mmlupro100-e4b-s2-think", state: "completed" },
+  ] };
+  const c = cell(box, "e4b", "s2", "on", queue);
+  assert.equal(c.status, "done");
+  assert.equal(c.score, 66);
+});

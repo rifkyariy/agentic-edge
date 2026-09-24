@@ -32,11 +32,14 @@ export function cell(box, model, subset, thinking = "off", queue = null) {
   // process heuristic below so the matrix still renders. A finished job is
   // deliberately not matched here: once it is done the score comes from
   // lm-eval's own results, which is what the matrix shows.
-  // The newest job for this run wins. A blocked job that was requeued stays in
-  // queue.json as history; taking the first match showed the old "blocked"
-  // attempt over the requeued run that was actually going.
-  const job = [...(queue?.jobs || [])].reverse().find(
-    (j) => matches(j.output_dir, model, subset, thinking) && LIVE.includes(j.state));
+  // The newest job for this run decides, whatever its state. A blocked job
+  // that was requeued stays in queue.json as history: taking the first match
+  // showed it over the requeued run, and taking the newest *live* match
+  // brought it back once the requeued run completed. A newest job that has
+  // finished means the queue has nothing to say; the results do.
+  const newest = [...(queue?.jobs || [])].reverse().find(
+    (j) => matches(j.output_dir, model, subset, thinking));
+  const job = newest && LIVE.includes(newest.state) ? newest : null;
   if (job) {
     if (job.state === "blocked") {
       return { status: "blocked", job: job.id, note: job.note, run: job.output_dir };
