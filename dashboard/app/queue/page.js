@@ -1,16 +1,19 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import JobAlerts from "../JobAlerts";
+import { usePoll } from "../lib/usePoll";
 
 const POLL_MS = 5000;
+// Hidden, the page still asks (slowly) so blocked/failed alerts keep working.
+const HIDDEN_MS = 60000;
 
 const fmtTime = (epoch) =>
   epoch ? new Date(epoch * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null;
 
-// Batches go out in rounds: every model and reasoning setting for s1, then
-// s2, then s3. A complete paired slice (n=100 on both boards) exists after the
-// first round, instead of after every subset of the first model.
-const ROUND_ORDER = ["subset", "thinking", "model"];
+// Batches go out one model at a time: every subset of E2B (s1, s2, s3), then
+// every subset of E4B. A model's row is finished before the next one starts.
+const ROUND_ORDER = ["model", "thinking", "subset"];
 
 // Every combination of the selected values, outermost parameter first.
 function expand(spec, sel, text) {
@@ -145,8 +148,8 @@ function JobForm({ box, onQueued }) {
 
       {n > 1 && (
         <p className="batch-note">
-          {n} runs, queued in rounds — every model and setting for one subset
-          before the next — and run one at a time.
+          {n} runs, queued one model at a time — every subset of one model
+          before the next — and run one at a time, in that order.
         </p>
       )}
 
@@ -285,11 +288,7 @@ export default function QueuePage() {
     })();
   }, []);
 
-  useEffect(() => {
-    load();
-    const t = setInterval(load, POLL_MS);
-    return () => clearInterval(t);
-  }, [load]);
+  usePoll(load, POLL_MS, { hiddenMs: HIDDEN_MS });
 
   return (
     <main>
@@ -304,6 +303,7 @@ export default function QueuePage() {
           </p>
         </div>
         <div className="status">
+          <JobAlerts boxes={boxes} />
           <Link className="pill muted nav" href="/">&larr; live monitor</Link>
           <Link className="pill muted nav" href="/history">history &rarr;</Link>
         </div>

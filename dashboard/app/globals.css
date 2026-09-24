@@ -644,3 +644,4 @@ ol.batch li em{grid-column:2 / -1;font-style:normal;color:var(--danger);overflow
 .waive-reason:focus-visible{outline:none;border-color:var(--warn);box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 22%,transparent)}
 .deployed{font:11px var(--mono);color:var(--ink-3)}
 .deployed.stale{color:var(--warn)}
+button.pill{border:0;cursor:pointer}

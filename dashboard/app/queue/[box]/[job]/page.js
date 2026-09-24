@@ -1,6 +1,7 @@
 "use client";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePoll } from "../../../lib/usePoll";
 
 const POLL_MS = 5000;
 const STREAMS = ["lm_eval", "server", "command"];
@@ -57,6 +58,9 @@ function LogTab({ box, job, stream, active }) {
     if (!active) return undefined;
     let stop = false;
     const tick = async () => {
+      // A hidden tab stops tailing; the offset keeps its place, so coming
+      // back fetches everything written meanwhile in one go.
+      if (document.visibilityState === "hidden") return;
       const res = await fetch(
         `/api/logs?box=${box}&job=${job}&stream=${stream}&from=${offset.current}`);
       const data = await res.json();
@@ -88,11 +92,7 @@ export default function JobDetail({ params }) {
     setBox((data.boxes || []).find((b) => b.id === boxId) || null);
   }, [boxId]);
 
-  useEffect(() => {
-    load();
-    const t = setInterval(load, POLL_MS);
-    return () => clearInterval(t);
-  }, [load]);
+  usePoll(load, POLL_MS);
 
   const job = (box?.jobs || []).find((j) => j.id === jobId);
   const evts = (box?.events || []).filter((e) => e.job === jobId);

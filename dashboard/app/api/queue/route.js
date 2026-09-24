@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { HOSTS, byId, SSH, hint } from "../../lib/hosts";
+import { shared, invalidate } from "../../lib/shared";
 
 const run = promisify(execFile);
 
@@ -37,12 +38,18 @@ async function ctl(box, args, timeout = 30000) {
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const describe = searchParams.get("describe") === "1";
-  const boxes = await Promise.all(HOSTS.map(async (h) => {
-    const r = await ctl(h, [describe ? "--describe" : "--status"]);
-    return r.ok ? { ...h, ok: true, ...r.data }
-                : { ...h, ok: false, error: r.error, hint: r.hint, jobs: [] };
+  // Every page polls this (monitor, queue, job detail), so it is shared across
+  // tabs like /api/status. The registry only changes on a deploy.
+  const key = describe ? "queue:describe" : "queue:status";
+  const ttl = describe ? 60000 : 4000;
+  return Response.json(await shared(key, ttl, async () => {
+    const boxes = await Promise.all(HOSTS.map(async (h) => {
+      const r = await ctl(h, [describe ? "--describe" : "--status"]);
+      return r.ok ? { ...h, ok: true, ...r.data }
+                  : { ...h, ok: false, error: r.error, hint: r.hint, jobs: [] };
+    }));
+    return { ts: Date.now(), boxes };
   }));
-  return Response.json({ ts: Date.now(), boxes });
 }
 
 export async function POST(request) {
@@ -63,6 +70,7 @@ export async function POST(request) {
   const payload = JSON.stringify(Array.isArray(body.jobs)
     ? { jobs: body.jobs.map(one) } : one(body));
   const r = await ctl(box, [preflight ? "--preflight" : "--add", shq(payload)]);
+  if (!preflight) invalidate("queue:status");
   return r.ok ? Response.json(r.data)
               : Response.json({ error: r.error, hint: r.hint }, { status: 400 });
 }
@@ -75,6 +83,7 @@ export async function DELETE(request) {
     return Response.json({ error: "bad box or job" }, { status: 400 });
   }
   const r = await ctl(box, ["--cancel", job]);
+  invalidate("queue:status");
   return r.ok ? Response.json(r.data)
               : Response.json({ error: r.error }, { status: 400 });
 }

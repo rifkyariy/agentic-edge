@@ -1,6 +1,7 @@
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { HOSTS, SSH, hint } from "../../lib/hosts";
+import { shared } from "../../lib/shared";
 
 const run = promisify(exec);
 
@@ -17,7 +18,12 @@ async function probe(h) {
 
 export const dynamic = "force-dynamic";
 
+// Tabs poll every 5 s; a slightly shorter ttl keeps one tab's ticks from
+// landing on its own previous answer, while any other tab shares it.
+const TTL_MS = 4000;
+
 export async function GET() {
-  const boxes = await Promise.all(HOSTS.map(probe));
-  return Response.json({ ts: Date.now(), boxes });
+  return Response.json(await shared("status", TTL_MS, async () => ({
+    ts: Date.now(), boxes: await Promise.all(HOSTS.map(probe)),
+  })));
 }

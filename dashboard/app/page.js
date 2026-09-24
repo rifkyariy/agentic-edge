@@ -1,9 +1,11 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { PLAN, cell, BATCH_START } from "./lib/plan";
 import RunDetail from "./RunDetail";
 import { MetricChart, fmt } from "./Charts";
+import JobAlerts from "./JobAlerts";
+import { usePoll } from "./lib/usePoll";
 
 const POLL_MS = 5000;
 const WINDOW_MIN = 20;                       // charted history
@@ -16,6 +18,9 @@ const dur = (s) => {
 };
 
 const QUEUE_MS = 15000;                       // the queue changes on the scale of hours
+// A hidden tab stops probing the boards (nobody sees the charts) but keeps
+// asking the queue, slowly, so a blocked or failed job still raises an alert.
+const QUEUE_HIDDEN_MS = 60000;
 
 // One row per model and reasoning condition. The thinking row is the S2
 // experiment (THINKING=on, budget 320); it stays empty until those runs exist.
@@ -225,55 +230,50 @@ export default function Page() {
   const [err, setErr] = useState(null);
   const [detail, setDetail] = useState(null);   // {box, run}
   const [queues, setQueues] = useState({});     // board id -> queue_ctl --status
+  const [queueBoxes, setQueueBoxes] = useState([]);   // the raw answer, for alerts
   const hist = useRef({});
 
   // The queue is the authority on what is queued, running or blocked; without
   // it the matrix can only guess from process names. A failed poll keeps the
   // last answer, and cell() falls back to the heuristic for a board with none.
-  useEffect(() => {
-    let alive = true;
-    const tick = async () => {
-      try {
-        const r = await fetch("/api/queue", { cache: "no-store" });
-        const j = await r.json();
-        if (!alive) return;
-        const next = {};
-        for (const b of j.boxes || []) if (b.ok) next[b.id] = { jobs: b.jobs };
-        setQueues(next);
-      } catch { /* keep the last answer */ }
-    };
-    tick();
-    const id = setInterval(tick, QUEUE_MS);
-    return () => { alive = false; clearInterval(id); };
-  }, []);
+  usePoll(async () => {
+    try {
+      const r = await fetch("/api/queue", { cache: "no-store" });
+      const j = await r.json();
+      const next = {};
+      for (const b of j.boxes || []) if (b.ok) next[b.id] = { jobs: b.jobs };
+      setQueues(next);
+      setQueueBoxes(j.boxes || []);
+    } catch { /* keep the last answer */ }
+  }, QUEUE_MS, { hiddenMs: QUEUE_HIDDEN_MS });
 
-  useEffect(() => {
-    let alive = true;
-    const tick = async () => {
-      try {
-        const r = await fetch("/api/status", { cache: "no-store" });
-        const j = await r.json();
-        if (!alive) return;
-        const now = j.ts ? new Date(j.ts).getTime() : Date.now();
-        for (const b of j.boxes) {
-          // a fresh array each tick: Recharts holds on to the one it was
-          // handed, and mutating that one throws in dev.
-          const h = [...(hist.current[b.id] || []), {
-            t: now,
-            power: b.data?.power_w ?? null,
-            cpu: b.data?.cpu_pct ?? null,
-            temp: b.data?.temp_c ?? null,
-            gpu: b.data?.gpu_pct ?? null,
-          }];
-          hist.current[b.id] = h.slice(-HISTORY);
-        }
-        setState(j); setErr(null);
-      } catch (e) { if (alive) setErr(String(e)); }
-    };
-    tick();
-    const id = setInterval(tick, POLL_MS);
-    return () => { alive = false; clearInterval(id); };
-  }, []);
+  // The charts' history is a time axis, so a paused tab must come back to a
+  // gap, not a line drawn straight across the minutes it was hidden: a null
+  // row after the last sample breaks the area (connectNulls is off).
+  usePoll(async () => {
+    try {
+      const r = await fetch("/api/status", { cache: "no-store" });
+      const j = await r.json();
+      const now = j.ts ? new Date(j.ts).getTime() : Date.now();
+      for (const b of j.boxes) {
+        // a fresh array each tick: Recharts holds on to the one it was
+        // handed, and mutating that one throws in dev.
+        const prev = hist.current[b.id] || [];
+        const last = prev[prev.length - 1];
+        const gap = last && now - last.t > 3 * POLL_MS
+          ? [{ t: last.t + 1, power: null, cpu: null, temp: null, gpu: null }] : [];
+        const h = [...prev, ...gap, {
+          t: now,
+          power: b.data?.power_w ?? null,
+          cpu: b.data?.cpu_pct ?? null,
+          temp: b.data?.temp_c ?? null,
+          gpu: b.data?.gpu_pct ?? null,
+        }];
+        hist.current[b.id] = h.slice(-HISTORY);
+      }
+      setState(j); setErr(null);
+    } catch (e) { setErr(String(e)); }
+  }, POLL_MS);
 
   const any = state.boxes.some((b) => b.ok);
   return (
@@ -285,6 +285,7 @@ export default function Page() {
           <p className="sub">Gemma 4 E2B / E4B · Raspberry Pi 5 versus Jetson Orin Nano</p>
         </div>
         <div className="status">
+          <JobAlerts boxes={queueBoxes} />
           <Link className="pill muted nav" href="/history">history →</Link>
           <Link className="pill muted nav" href="/queue">queue →</Link>
           <Link className="pill muted nav" href="/compare">Pi 5 vs Orin →</Link>
@@ -316,7 +317,7 @@ export default function Page() {
       )}
 
       <p className="foot">
-        Polls every {POLL_MS / 1000}s over SSH; each box runs <code>benchmark/probe_status.py</code>.
+        Polls every {POLL_MS / 1000}s over SSH while this tab is visible, shared with any other open tab; each box runs <code>benchmark/probe_status.py</code>.
         Power is board DC draw — the Pi&apos;s PMIC rails summed, the Jetson&apos;s INA3221 VDD_IN —
         excluding power-supply conversion loss, so it is comparable between runs but is not wall power.
       </p>
