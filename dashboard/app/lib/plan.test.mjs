@@ -67,3 +67,15 @@ test("existing three-argument calls still work", () => {
   const box = doneBox("mmlupro100-e2b-s1");
   assert.equal(cell(box, "e2b", "s1").status, "done");
 });
+
+test("a requeued run shows the new job, not the blocked one it replaced", () => {
+  // 2026-09-24: the Jetson's E4B s2/s3 thinking jobs were blocked at 00:44,
+  // requeued with a waiver at 11:27, and the cell kept reading "blocked".
+  const queue = { jobs: [
+    { id: "old", output_dir: "mmlupro100-e4b-s2-think", state: "blocked" },
+    { id: "new", output_dir: "mmlupro100-e4b-s2-think", state: "running" },
+  ] };
+  const c = cell({ data: { procs: {} } }, "e4b", "s2", "on", queue);
+  assert.equal(c.status, "running");
+  assert.equal(c.job, "new");
+});
