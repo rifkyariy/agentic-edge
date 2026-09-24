@@ -2,7 +2,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import RunDetail from "../RunDetail";
-import { fmt } from "../Charts";
+import { fmt, durMinutes as dur } from "../lib/format";
+import PageHeader from "../components/PageHeader";
+import StatePill from "../components/StatePill";
 
 // What each status means, in the words the table shows. AGENTS §5: every run
 // is reported, failures and superseded ones included, so none are hidden by
@@ -16,11 +18,6 @@ const STATUS = {
   extra: "smoke / copy",
 };
 
-const dur = (m) => {
-  if (m === null || m === undefined) return "—";
-  const h = Math.floor(m / 60);
-  return h ? `${h}h ${m % 60}m` : `${m}m`;
-};
 
 function Chips({ label, value, options, onChange }) {
   return (
@@ -70,21 +67,8 @@ export default function HistoryPage() {
 
   return (
     <main>
-      <header className="top">
-        <div>
-          <p className="eyebrow">Agentic Edge</p>
-          <h1>Experiment history</h1>
-          <p className="sub qintro">
-            Every benchmark run on disk on both boards — complete, failed and
-            superseded alike, each with the telemetry of the run that produced
-            it. Click a run for its answers, timeline and device cost.
-          </p>
-        </div>
-        <div className="status">
-          <Link className="pill muted nav" href="/">&larr; live monitor</Link>
-          <Link className="pill muted nav" href="/queue">queue &rarr;</Link>
-        </div>
-      </header>
+      <PageHeader title="Experiment history"
+                  sub="Every benchmark run on disk on both boards — complete, failed and superseded alike, each with the telemetry of the run that produced it. Click a run for its answers, timeline and device cost." />
 
       <section className="card">
         <div className="filters">
@@ -139,7 +123,7 @@ export default function HistoryPage() {
                     <td>{r.model?.toUpperCase() ?? "—"}</td>
                     <td>{r.subset ?? "—"}</td>
                     <td>{r.thinking === "on" ? <b className="think-on">on</b> : r.thinking ?? "—"}</td>
-                    <td><i className={`state-pill hist-${r.status}`}>{STATUS[r.status] ?? r.status}</i></td>
+                    <td><StatePill family="hist" state={r.status} label={STATUS[r.status] ?? r.status} /></td>
                     <td className="num">
                       {r.score != null
                         ? <><b>{fmt(r.score, 1)}%</b>{r.stderr != null && <i> ±{fmt(r.stderr, 1)}</i>}</>

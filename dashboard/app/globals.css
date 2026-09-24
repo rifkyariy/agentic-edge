@@ -659,3 +659,50 @@ table.paired td:last-child{white-space:normal}
 .paired-toggle:hover{color:var(--ink)}
 .paired-foot{margin-top:12px}
 table.paired th:nth-child(5){white-space:normal;min-width:150px}
+
+/* ---- app shell: sidebar + content ---- */
+.shell{display:grid;grid-template-columns:212px minmax(0,1fr);min-height:100vh}
+.shell-main{min-width:0}
+.sidenav{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:18px;
+  padding:22px 14px 16px;border-right:1px solid var(--line);background:var(--panel)}
+.sidenav .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);padding:0 6px}
+.sidenav .brand-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;flex:none;
+  font:600 12px var(--mono);color:var(--panel);background:var(--ink)}
+.sidenav .brand b{display:block;font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+.sidenav .brand i{display:block;font:11px var(--mono);font-style:normal;color:var(--ink-3)}
+.sidenav ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.sidenav ul a{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:8px 10px;border-radius:8px;text-decoration:none;color:var(--ink-2);font-size:13.5px;font-weight:500}
+.sidenav ul a:hover{background:var(--panel-2);color:var(--ink)}
+.sidenav ul a.on{background:var(--panel-2);color:var(--ink);box-shadow:inset 3px 0 0 var(--cpu)}
+.sidenav ul a:focus-visible{outline:2px solid var(--cpu);outline-offset:1px}
+.sidenav .badges{display:flex;gap:3px}
+.sidenav .badges em{font:600 10px/1 var(--mono);font-style:normal;padding:3px 6px;border-radius:999px}
+.sidenav .b-running{background:color-mix(in srgb,var(--cpu) 16%,transparent);color:var(--cpu)}
+.sidenav .b-queued{background:var(--panel-2);color:var(--ink-3);border:1px dashed var(--line-2)}
+.sidenav .b-blocked{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.sidenav .boards{display:flex;flex-direction:column;gap:5px;padding:12px 10px 0;border-top:1px solid var(--line);
+  font:11.5px var(--mono);color:var(--ink-3)}
+.sidenav .boards span{display:flex;align-items:center;gap:7px}
+.dot-static{width:7px;height:7px;border-radius:50%;display:inline-block;background:var(--ink-3)}
+.dot-static.up{background:var(--ok)}
+.dot-static.down{background:var(--danger)}
+.sidenav .nav-foot{margin-top:auto;padding:0 6px}
+.sidenav .nav-foot .pill{width:100%;justify-content:center}
+
+@media (max-width:900px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .sidenav{position:sticky;top:0;z-index:20;height:auto;flex-direction:row;align-items:center;gap:12px;
+    padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));
+    border-right:0;border-bottom:1px solid var(--line);overflow-x:auto}
+  .sidenav .brand > span:last-child,.sidenav .boards{display:none}
+  .sidenav{gap:6px}
+  .sidenav ul a{padding:7px 9px}
+  .sidenav ul{flex-direction:row}
+  .sidenav ul a.on{box-shadow:inset 0 -2px 0 var(--cpu)}
+  .sidenav .nav-foot{margin:0 0 0 auto;padding:0;flex:none}
+  .sidenav .nav-foot .pill{width:auto}
+}
+.queue-table .note.old{color:var(--ink-3)}
+.eyebrow a{color:inherit;text-decoration:none}
+.eyebrow a:hover{color:var(--cpu)}

@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   Bar, BarChart, CartesianGrid, Cell, LabelList,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { fmt } from "../Charts";
+import { fmt } from "../lib/format";
+import PageHeader from "../components/PageHeader";
 import { comparisons } from "../lib/paired";
 import Paired from "./Paired";
 
@@ -243,17 +243,8 @@ export default function Compare() {
 
   return (
     <main className="cmp">
-      <header className="top">
-        <div>
-          <p className="eyebrow">Agentic Edge · baseline</p>
-          <h1>Raspberry Pi 5 versus Jetson Orin Nano</h1>
-          <p className="sub">
-            Gemma 4 E2B and E4B, same Q4_K_XL QAT weights, same MMLU-Pro subsets,
-            greedy decoding. Only the board differs.
-          </p>
-        </div>
-        <Link className="pill muted" href="/">← live monitor</Link>
-      </header>
+      <PageHeader eyebrow="Agentic Edge · baseline" title="Raspberry Pi 5 versus Jetson Orin Nano"
+                  sub="Gemma 4 E2B and E4B, same Q4_K_XL QAT weights, same MMLU-Pro subsets, greedy decoding. Only the board differs." />
 
       {/* The three numbers the comparison exists to produce. */}
       {/* The experiment in one block, then its verdict — so the page reads as

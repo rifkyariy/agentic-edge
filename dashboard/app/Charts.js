@@ -6,9 +6,10 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 
-export const fmt = (n, d = 0) =>
-  n === null || n === undefined || Number.isNaN(n) ? "—"
-    : Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+import { fmt } from "./lib/format";
+// Re-exported so existing `import { fmt } from "./Charts"` keeps working; the
+// definition lives in lib/format.js with the other formatters.
+export { fmt };
 
 const TIP = {
   background: "var(--panel)", border: "1px solid var(--line-2)", borderRadius: "8px",

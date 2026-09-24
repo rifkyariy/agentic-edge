@@ -118,3 +118,21 @@ A run still in flight shows both tabs. Its answers come from lm-eval's response
 cache and are matched to questions by the option text they quote, so a few may
 read `unmatched`; its device figures are marked `so far` and are computed from
 the telemetry written up to that moment.
+
+## Adding a page or a feature
+
+The pieces below exist so a new page is a few lines, not a copy of an old one.
+
+| you need | use | don't |
+|---|---|---|
+| a new page in the sidebar | add `{ href, label, hint }` to `PAGES` in `app/components/Nav.js` | add link rows to page headers |
+| a page title | `<PageHeader title sub>`; put live status in its children | hand-build `<header className="top">` |
+| data from a board | `onBoard(box, "script.py", args)` or `onEveryBoard(...)` from `app/lib/ssh.js`, in a route under `app/api/` | `exec`/`execFile` ssh in the route; ad-hoc ssh commands (AGENTS §7) |
+| a polled endpoint | wrap it in `shared(key, ttl, fn)` (`app/lib/shared.js`) so tabs share one probe | poll the boards per tab |
+| the queue on a page | `useQueue()` (`app/lib/queue-context.js`): `boxes`, `refresh()` | fetch `/api/queue` yourself |
+| "what is this run doing now" | `latestPerRun(jobs)`; a requeued job replaces its earlier attempts | the first or newest *live* job — both showed stale "blocked" cells |
+| a job or run state | `<StatePill state family>` | inline `state-pill` classes |
+| numbers, durations, times | `fmt`, `durSeconds`, `durMinutes`, `clock` from `app/lib/format.js` | a local `dur` or `fmtTime` |
+| a client poll | `usePoll(fn, ms, { hiddenMs })`: pauses or slows in a hidden tab | `setInterval` |
+
+Tests: `node --test dashboard/app/lib/*.test.mjs`.

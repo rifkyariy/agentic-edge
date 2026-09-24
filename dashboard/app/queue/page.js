@@ -1,15 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import JobAlerts from "../JobAlerts";
-import { usePoll } from "../lib/usePoll";
-
-const POLL_MS = 5000;
-// Hidden, the page still asks (slowly) so blocked/failed alerts keep working.
-const HIDDEN_MS = 60000;
-
-const fmtTime = (epoch) =>
-  epoch ? new Date(epoch * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null;
+import { useQueue, latestPerRun } from "../lib/queue-context";
+import { clock as fmtTime } from "../lib/format";
+import PageHeader from "../components/PageHeader";
+import StatePill from "../components/StatePill";
 
 // Batches go out one model at a time: every subset of E2B (s1, s2, s3), then
 // every subset of E4B. A model's row is finished before the next one starts.
@@ -239,6 +234,11 @@ function QueueList({ box, onChange }) {
     onChange();
   };
   const jobs = (box.jobs || []).filter((j) => j.state !== "cancelled");
+  // An attempt that a later job for the same run replaced is history, not a
+  // problem to act on.
+  const latest = new Set(latestPerRun(box.jobs).map((x) => x.id));
+  const superseded = new Set(jobs.filter((x) => !latest.has(x.id)
+    && (x.state === "blocked" || x.state === "failed")).map((x) => x.id));
   if (!jobs.length) return <p className="empty">Nothing queued on this board.</p>;
   return (
     <div className="table-wrap">
@@ -249,9 +249,11 @@ function QueueList({ box, onChange }) {
           <tr key={j.id} className={`state-${j.state}`}>
             <td>
               <Link href={`/queue/${box.id}/${j.id}`}>{j.label}</Link>
-              {j.note ? <i className="note"> {j.note}</i> : null}
+              {j.note ? <i className={`note${superseded.has(j.id) ? " old" : ""}`}> {j.note}</i> : null}
             </td>
-            <td><i className={`state-pill state-${j.state}`}>{j.state}</i></td>
+            <td>{superseded.has(j.id)
+              ? <StatePill state="superseded" label={`${j.state} · requeued`} family="hist" />
+              : <StatePill state={j.state} />}</td>
             <td>{fmtTime(j.started || j.not_before_epoch || j.created) || "—"}</td>
             <td>{j.state === "queued"
               ? <button type="button" onClick={() => cancel(j.id)}>cancel</button>
@@ -265,14 +267,10 @@ function QueueList({ box, onChange }) {
 }
 
 export default function QueuePage() {
-  const [boxes, setBoxes] = useState([]);
+  // The app's one queue feed (the sidebar reads it too); refresh() after a
+  // queue or cancel so the list shows the change at once, not 10 s later.
+  const { boxes, refresh: load } = useQueue();
   const [specs, setSpecs] = useState({});   // board id -> {kinds, timezone}
-
-  const load = useCallback(async () => {
-    const res = await fetch("/api/queue");
-    const data = await res.json();
-    setBoxes(data.boxes || []);
-  }, []);
 
   // The registry does not change while the page is open, so it is fetched once
   // rather than on every poll.
@@ -288,26 +286,10 @@ export default function QueuePage() {
     })();
   }, []);
 
-  usePoll(load, POLL_MS, { hiddenMs: HIDDEN_MS });
-
   return (
     <main>
-      <header className="top">
-        <div>
-          <p className="eyebrow">Agentic Edge</p>
-          <h1>Run queue</h1>
-          <p className="sub qintro">
-            One job per board at a time. Each run is prechecked for memory and a
-            stale output directory, and its serving flags are diffed against the
-            declared baseline before lm-eval starts.
-          </p>
-        </div>
-        <div className="status">
-          <JobAlerts boxes={boxes} />
-          <Link className="pill muted nav" href="/">&larr; live monitor</Link>
-          <Link className="pill muted nav" href="/history">history &rarr;</Link>
-        </div>
-      </header>
+      <PageHeader title="Run queue"
+                  sub="One job per board at a time. Each run is prechecked for memory and a stale output directory, and its serving flags are diffed against the declared baseline before lm-eval starts." />
 
       {!boxes.length && <p className="empty">Asking both boards for their queues&hellip;</p>}
       <div className="qgrid">

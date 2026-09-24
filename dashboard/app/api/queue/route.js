@@ -1,36 +1,12 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import { HOSTS, byId, SSH, hint } from "../../lib/hosts";
+import { byId } from "../../lib/hosts";
+import { onBoard, onEveryBoard, shq } from "../../lib/ssh";
 import { shared, invalidate } from "../../lib/shared";
-
-const run = promisify(execFile);
 
 export const dynamic = "force-dynamic";
 
-// execFile, not exec: the local shell never sees this, so the JSON payload
-// cannot be re-parsed on its way out. Only the REMOTE shell needs quoting,
-// which is the one level shq handles.
-const SSH_ARGS = SSH.trim().split(/\s+/);
-const shq = (s) => `'${String(s).replaceAll("'", `'\\''`)}'`;
-
 // Everything goes through queue_ctl.py, which prints one JSON object and exits
 // 0, or prints {"error": ...} and exits 1 (AGENTS §7 — no ad-hoc ssh here).
-async function ctl(box, args, timeout = 30000) {
-  const remote = `${box.py} ${box.repo}/benchmark/queue_ctl.py ${args.join(" ")}`;
-  try {
-    const { stdout } = await run("ssh", [...SSH_ARGS, box.host, remote],
-                                 { timeout, maxBuffer: 8 * 1024 * 1024 });
-    return { ok: true, data: JSON.parse(stdout) };
-  } catch (e) {
-    // A handled error still prints JSON on stdout and exits 1, so prefer it
-    // over the raw stderr: "e9b is not one of e2b, e4b" beats "exit code 1".
-    let parsed = null;
-    try { parsed = JSON.parse(e.stdout || ""); } catch { /* not ours */ }
-    const error = parsed?.error
-      || (e.stderr || e.message || "failed").toString().trim().slice(0, 400);
-    return { ok: false, error, hint: hint(error, box) };
-  }
-}
+const ctl = (box, args) => onBoard(box, "queue_ctl.py", args, { python: "venv" });
 
 // ?describe=1 returns each board's job-kind registry. It is static per board,
 // so the page fetches it once on mount rather than shipping it with every 5s
@@ -42,14 +18,11 @@ export async function GET(request) {
   // tabs like /api/status. The registry only changes on a deploy.
   const key = describe ? "queue:describe" : "queue:status";
   const ttl = describe ? 60000 : 4000;
-  return Response.json(await shared(key, ttl, async () => {
-    const boxes = await Promise.all(HOSTS.map(async (h) => {
-      const r = await ctl(h, [describe ? "--describe" : "--status"]);
-      return r.ok ? { ...h, ok: true, ...r.data }
-                  : { ...h, ok: false, error: r.error, hint: r.hint, jobs: [] };
-    }));
-    return { ts: Date.now(), boxes };
-  }));
+  return Response.json(await shared(key, ttl, async () => ({
+    ts: Date.now(),
+    boxes: await onEveryBoard("queue_ctl.py", [describe ? "--describe" : "--status"],
+                              { python: "venv" }, { jobs: [] }),
+  })));
 }
 
 export async function POST(request) {

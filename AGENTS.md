@@ -55,16 +55,22 @@ benchmark/          the harness (stdlib only on the devices, no pip needed)
   tests/              stdlib unittest; `python3 -m unittest discover -s tests`
 
 dashboard/          Next.js live monitor (runs on the Mac, not the devices)
-  app/page.js         queue matrix, device cards, live charts
+  app/layout.js       the shell: sidebar + one queue feed for every page
+  app/components/     Nav (sidebar; add a page to PAGES), PageHeader, StatePill
+  app/page.js         monitor: experiment matrix, device cards, live charts
+  app/queue/          queue runs (batches, waivers), prechecks, a job's logs
+  app/history/        every run on disk, failed and superseded included
+  app/compare/        Pi vs Orin, paired tests computed from per-question data
   app/RunDetail.js    drill-down sheet: device tab + questions tab
   app/Charts.js       every chart (recharts): live metric, telemetry track, timeline
+  app/JobAlerts.js    browser notification on blocked/failed jobs, dead daemons
+  app/lib/ssh.js      the ONE way a route reaches a board: onBoard/onEveryBoard
+  app/lib/queue-context.js  the ONE queue poll per tab: useQueue(), latestPerRun()
+  app/lib/format.js   fmt, durations, clock times — shared by every page
   app/lib/plan.js     which runs exist, and run-name matching rules
   app/lib/hosts.js    the two boxes, overridable from .env.local
-  app/api/status      ssh -> probe_status.py on both boxes, every 5s
-  app/api/run         ssh -> run_detail.py for one run
-  app/queue/          queue a run, see its prechecks, follow its logs
-  app/api/queue       ssh -> queue_ctl.py: status, preflight, add, cancel
-  app/api/logs        ssh -> queue_ctl.py --log, offset-based tailing
+  app/lib/shared.js   server-side cache so N tabs cost each board one probe
+  app/api/*           thin routes: status, queue, logs, run, history, baseline, compare
   scripts/check-ssh.mjs  `npm run check` — preflight before a fresh clone runs
 
 findings/           results and analysis (committed)

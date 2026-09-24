@@ -1,8 +1,5 @@
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
-import { byId, SSH, hint } from "../../lib/hosts";
-
-const run = promisify(exec);
+import { byId } from "../../lib/hosts";
+import { onBoard } from "../../lib/ssh";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +14,8 @@ export async function GET(request) {
   }
   // run_detail.py needs `datasets` to map answers to questions mid-run, so it
   // goes through the eval venv rather than the system python the probe uses.
-  const cmd = `ssh ${SSH} ${box.host} '${box.py} ${box.repo}/benchmark/run_detail.py --run ${runName}'`;
-  try {
-    const { stdout } = await run(cmd, { timeout: 120000, maxBuffer: 32 * 1024 * 1024 });
-    return Response.json(JSON.parse(stdout.slice(stdout.indexOf("{"))));
-  } catch (e) {
-    const error = (e.stderr || e.message || "failed").toString().trim().slice(0, 400);
-    return Response.json({ error, hint: hint(error, box) }, { status: 502 });
-  }
+  const r = await onBoard(box, "run_detail.py", ["--run", runName],
+                          { python: "venv", timeout: 120000, maxBuffer: 32 << 20 });
+  return r.ok ? Response.json(r.data)
+              : Response.json({ error: r.error, hint: r.hint }, { status: 502 });
 }

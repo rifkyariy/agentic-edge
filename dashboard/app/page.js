@@ -3,24 +3,15 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { PLAN, cell, BATCH_START } from "./lib/plan";
 import RunDetail from "./RunDetail";
-import { MetricChart, fmt } from "./Charts";
-import JobAlerts from "./JobAlerts";
+import { MetricChart } from "./Charts";
+import { fmt, durSeconds as dur } from "./lib/format";
 import { usePoll } from "./lib/usePoll";
+import { useQueue } from "./lib/queue-context";
+import PageHeader from "./components/PageHeader";
 
 const POLL_MS = 5000;
 const WINDOW_MIN = 20;                       // charted history
 const HISTORY = (WINDOW_MIN * 60) / (POLL_MS / 1000);
-
-const dur = (s) => {
-  if (s === null || s === undefined) return "—";
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
-  return h ? `${h}h ${m}m` : `${m}m`;
-};
-
-const QUEUE_MS = 15000;                       // the queue changes on the scale of hours
-// A hidden tab stops probing the boards (nobody sees the charts) but keeps
-// asking the queue, slowly, so a blocked or failed job still raises an alert.
-const QUEUE_HIDDEN_MS = 60000;
 
 // One row per model and reasoning condition. The thinking row is the S2
 // experiment (THINKING=on, budget 320); it stays empty until those runs exist.
@@ -229,23 +220,15 @@ export default function Page() {
   const [state, setState] = useState({ boxes: [], ts: null });
   const [err, setErr] = useState(null);
   const [detail, setDetail] = useState(null);   // {box, run}
-  const [queues, setQueues] = useState({});     // board id -> queue_ctl --status
-  const [queueBoxes, setQueueBoxes] = useState([]);   // the raw answer, for alerts
   const hist = useRef({});
 
   // The queue is the authority on what is queued, running or blocked; without
-  // it the matrix can only guess from process names. A failed poll keeps the
-  // last answer, and cell() falls back to the heuristic for a board with none.
-  usePoll(async () => {
-    try {
-      const r = await fetch("/api/queue", { cache: "no-store" });
-      const j = await r.json();
-      const next = {};
-      for (const b of j.boxes || []) if (b.ok) next[b.id] = { jobs: b.jobs };
-      setQueues(next);
-      setQueueBoxes(j.boxes || []);
-    } catch { /* keep the last answer */ }
-  }, QUEUE_MS, { hiddenMs: QUEUE_HIDDEN_MS });
+  // it the matrix can only guess from process names. It comes from the app's
+  // one queue feed (lib/queue-context), and cell() falls back to the process
+  // heuristic for a board that did not answer.
+  const { boxes: queueBoxes } = useQueue();
+  const queues = Object.fromEntries(
+    queueBoxes.filter((b) => b.ok).map((b) => [b.id, { jobs: b.jobs }]));
 
   // The charts' history is a time axis, so a paused tab must come back to a
   // gap, not a line drawn straight across the minutes it was hidden: a null
@@ -278,26 +261,16 @@ export default function Page() {
   const any = state.boxes.some((b) => b.ok);
   return (
     <main>
-      <header className="top">
-        <div>
-          <p className="eyebrow">Agentic Edge</p>
-          <h1>Experiment monitor</h1>
-          <p className="sub">Gemma 4 E2B / E4B · Raspberry Pi 5 versus Jetson Orin Nano</p>
-        </div>
-        <div className="status">
-          <JobAlerts boxes={queueBoxes} />
-          <Link className="pill muted nav" href="/history">history →</Link>
-          <Link className="pill muted nav" href="/queue">queue →</Link>
-          <Link className="pill muted nav" href="/compare">Pi 5 vs Orin →</Link>
-          <span className={`pill ${any ? "live" : "danger"}`}>
-            <i className="dot" />{any ? "polling" : "offline"}
-          </span>
-          <p className="clock">
-            {state.ts ? new Date(state.ts).toLocaleTimeString() : "connecting…"}
-            {err ? <em className="warn"> · {err}</em> : null}
-          </p>
-        </div>
-      </header>
+      <PageHeader title="Experiment monitor"
+                  sub="Gemma 4 E2B / E4B · Raspberry Pi 5 versus Jetson Orin Nano">
+        <span className={`pill ${any ? "live" : "danger"}`}>
+          <i className="dot" />{any ? "polling" : "offline"}
+        </span>
+        <p className="clock">
+          {state.ts ? new Date(state.ts).toLocaleTimeString() : "connecting…"}
+          {err ? <em className="warn"> · {err}</em> : null}
+        </p>
+      </PageHeader>
 
       {state.boxes.length > 0 && (
         <Matrix boxes={state.boxes} queues={queues} onOpen={(box, run) => setDetail({ box, run })} />
