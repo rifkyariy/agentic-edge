@@ -25,6 +25,14 @@ LINE = re.compile(
     r"(?P<ms>[\d.]+)\s+ms(?:\s+/\s+(?P<tokens>\d+)\s+tokens"
     r".*?(?P<tok_s>[\d.]+)\s+tokens per second)?")
 
+# little-gemma's engine (via lg_openai_shim.py and stamp.py) logs one line per
+# turn, after it ends; its "in" count and time are the prefill, ttft included:
+# 2026-09-25T18:30:01+0800 host little-gemma[0]: turn: 1097 in 0.69s (1580.8 tok/s),
+#   71 out 2.62s (27.1 tok/s), ttft 0.69s
+LG_TURN = re.compile(
+    r"^(?P<ts>\S+)\s+\S+\s+little-gemma\[\d+\]:\s*turn: (?P<pt>\d+) in (?P<ps>[\d.]+)s "
+    r"\((?P<ptps>[\d.]+) tok/s\), (?P<gt>\d+) out (?P<gs>[\d.]+)s \((?P<gtps>[\d.]+) tok/s\)")
+
 
 def epoch(ts):
     """journalctl -o short-iso stamps, e.g. 2026-09-20T22:31:04+0800."""
@@ -62,6 +70,17 @@ def main():
 
     tasks = {}
     for line in log.splitlines():
+        lg = LG_TURN.match(line)
+        if lg:                                    # a whole request on one line
+            task = str(len(tasks))
+            tasks[task] = {
+                "task": task, "slot": "0", "ts_iso": lg["ts"], "end_iso": lg["ts"],
+                "prompt_ms": float(lg["ps"]) * 1000, "prompt_tokens": int(lg["pt"]),
+                "prompt_tok_s": float(lg["ptps"]),
+                "gen_ms": float(lg["gs"]) * 1000, "gen_tokens": int(lg["gt"]),
+                "gen_tok_s": float(lg["gtps"]),
+            }
+            continue
         m = LINE.match(line)
         if not m:
             continue

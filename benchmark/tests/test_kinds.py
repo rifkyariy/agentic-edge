@@ -33,6 +33,21 @@ class TestKinds(unittest.TestCase):
                            {"model": "e9b", "subset": "s1", "thinking": "off"})
         self.assertIn("e9b", str(cm.exception))
 
+    def test_little_gemma_resolves_on_the_jetson_apart_from_llama_cpp(self):
+        got = kinds.resolve(self.reg, "mmlupro-lg",
+                            {"model": "e4b", "subset": "s2", "thinking": "on"}, self.jetson)
+        self.assertEqual(got["label"], "mmlupro-lg-e4b-s2-think")
+        self.assertEqual(got["output_dir"], "mmlupro100-lg-e4b-s2-think")
+        self.assertEqual(got["baseline"], "lg-thinking-on")
+        self.assertIn("std_mmlupro_lg_jetson.sh e4b", got["command"])
+        self.assertEqual(got["env"]["SRVLOG"],
+                         "/home/ari/research/stdbench/mmlupro100-lg-e4b-s2-think/server.log")
+
+    def test_little_gemma_is_refused_on_the_pi(self):
+        with self.assertRaises(kinds.ValidationError):
+            kinds.resolve(self.reg, "mmlupro-lg",
+                          {"model": "e2b", "subset": "s1"}, self.pi)
+
     def test_validate_rejects_unexpected_param(self):
         with self.assertRaises(kinds.ValidationError):
             kinds.validate(self.reg, "mmlupro",

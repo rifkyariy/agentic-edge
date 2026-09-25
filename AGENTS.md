@@ -35,6 +35,9 @@ benchmark/          the harness (stdlib only on the devices, no pip needed)
   mmlupro_subset.py   draws a seeded, stratified, disjoint MMLU-Pro subset
   std_mmlupro.sh      one MMLU-Pro run on the Pi (SUBSET=, THINKING=)
   std_mmlupro_jetson.sh  same, but launches a CUDA llama-server directly
+  std_mmlupro_lg_jetson.sh  same, through little-gemma (S3, Jetson only)
+  lg_openai_shim.py   OpenAI-style HTTP in front of little-gemma's socket
+  little_gemma/       pinned upstream commit + patch + setup_jetson.sh
   std_run.sh          tinyGSM8k; IFEval and BFCL wired but deferred
 
   run_measured.sh     wraps any run with idle baselines + telemetry
@@ -114,6 +117,10 @@ ssh MITLAB-JETSON
 cd ~/research/agentic-edge/benchmark
 SRVLOG=~/research/stdbench/mmlupro100-e2b-s1/server.log SUBSET=s1 \
   ./run_measured.sh mmlupro-e2b-s1 -- env SUBSET=s1 ./std_mmlupro_jetson.sh e2b
+
+# little-gemma (S3), Jetson only. Build once (pinned + patched, ~5 min):
+./little_gemma/setup_jetson.sh
+./queue_ctl.py --add '{"kind":"mmlupro-lg","params":{"model":"e2b","subset":"s1","thinking":"off"}}'
 
 # the own suite (architectures, MTP x thinking, quant sweep)
 ./pi5_run.sh tier1 ; python3 report.py t1
@@ -242,6 +249,16 @@ These are not preferences — breaking them invalidates the paper.
   sets `-rea on` **and must pin `--reasoning-format none`**, or the thoughts
   vanish into `reasoning_content` exactly as above. Both run scripts already do
   this correctly.
+- **little-gemma (S3) runs the llama.cpp task unchanged** (same GGUFs, subsets,
+  prompt, 2,048 answer budget, 8,192 context); only the engine differs.
+  It has no HTTP, so `lg_openai_shim.py` renders Gemma 4's template itself —
+  held **byte-for-byte** to llama-server's `/apply-template` output by
+  `tests/test_lg_shim.py` — and the engine is patched (`little_gemma/`) for
+  `-raw` prompts, whole-prompt tokenisation, and `SERVE_GEN` 2048 (upstream
+  1024). Flag mapping: `-rea off|on` → shim `--thinking off|on` (`<|think|>` in
+  the system turn); `--reasoning-budget -1|320` → engine `-think -1|320`;
+  thoughts return inline as with `--reasoning-format none`. Verified
+  2026-09-25: prompt token counts match llama.cpp (1,097 = 1,097).
 - **Report every run, including failures and superseded ones.** No quiet
   replacement of a bad run with a good one.
 - **Greedy decoding**, so repeats of the same questions measure only ~1 point of

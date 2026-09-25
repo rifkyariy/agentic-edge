@@ -17,5 +17,23 @@
       "reasoning_budget": "320",
       "reasoning_format": "none"
     }
+  },
+  "lg-baseline": {
+    "description": "S3, little-gemma thinking off: the -rea off counterpart. No <|think|> in the system turn (shim --thinking off) and engine -think -1, the --reasoning-budget -1 counterpart, passed explicitly so it is on the command line. -raw must be on, or the engine wraps the prompt in a second user turn. Context 8192 and the 2048 answer cap are compiled in; engine_build.txt in the run directory records the build.",
+    "flags": {
+      "engine": "little-gemma",
+      "raw": "on",
+      "thinking": "off",
+      "think": "-1"
+    }
+  },
+  "lg-thinking-on": {
+    "description": "S3, little-gemma thinking on: the -rea on --reasoning-budget 320 counterpart. <|think|> in the system turn (shim --thinking on, byte-identical to llama-server's -rea on render) and engine -think 320, which force-closes the thought channel at 320 tokens. Thoughts come back inline, as --reasoning-format none returns them.",
+    "flags": {
+      "engine": "little-gemma",
+      "raw": "on",
+      "thinking": "on",
+      "think": "320"
+    }
   }
 }

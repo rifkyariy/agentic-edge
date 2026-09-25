@@ -74,6 +74,10 @@ WORK_PID=$!
 ( for _ in $(seq 60); do
     sleep 5
     ARGS=$(ps -o args= -C llama-server 2>/dev/null | head -1)
+    # little-gemma (S3): the engine, plus the shim whose --thinking is half the config
+    [ -n "$ARGS" ] || ARGS=$(ps -o args= -C run-cuda-i8 2>/dev/null | head -1)
+    [ -n "$ARGS" ] && [ -z "${ARGS##*run-cuda-i8*}" ] && \
+      ARGS="$ARGS | $(pgrep -af '^python3 .*[l]g_openai_shim[.]py' | head -1 | cut -d' ' -f2-)"
     [ -n "$ARGS" ] || continue
     python3 - "$OUT" "$ARGS" <<'CAPTURE'
 import json, sys

@@ -128,5 +128,64 @@ class TestCapture(unittest.TestCase):
         self.assertEqual(got["model_path"], "")
 
 
+
+LG_ENGINE = ("/home/ari/build/little-gemma/build/run-cuda-i8 "
+             "-m /home/ari/research/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf "
+             "-raw -think -1 -s /tmp/lg-bench.sock")
+LG_SHIM = ("51234 python3 /home/ari/research/agentic-edge/benchmark/lg_openai_shim.py "
+           "--engine /home/ari/build/little-gemma/build/run-cuda-i8 "
+           "-m /home/ari/research/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf "
+           "--thinking off --think -1 --port 8080")
+
+
+def lg_board(engine=LG_ENGINE, shim=LG_SHIM):
+    """A board serving little-gemma: no llama-server at all."""
+    def run(cmd, **kw):
+        if cmd[:4] == ["ps", "-o", "args=", "-C"]:
+            return engine if cmd[4] == fingerprint.ENGINE else ""
+        if cmd[0] == "pgrep":
+            return shim
+        if cmd[:3] == ["ps", "-o", "pid="]:
+            return "4242"
+        return ""
+    return run
+
+
+class TestLittleGemma(unittest.TestCase):
+    def setUp(self):
+        self.baselines = fingerprint.load_baselines()
+
+    def test_capture_reads_engine_and_shim_when_no_llama_server_runs(self):
+        got = fingerprint.capture(runner=lg_board())
+        self.assertIn("run-cuda-i8", got["server_args"])
+        self.assertIn("--thinking off", got["server_args"])
+        self.assertEqual(got["pids"], [4242])
+        self.assertEqual(got["flags"]["engine"], "little-gemma")
+
+    def test_baseline_run_agrees(self):
+        got = fingerprint.capture(runner=lg_board())
+        self.assertTrue(fingerprint.agrees(fingerprint.diff(
+            got["flags"], self.baselines["lg-baseline"]["flags"])))
+
+    def test_missing_raw_is_drift(self):
+        got = fingerprint.capture(runner=lg_board(engine=LG_ENGINE.replace(" -raw", "")))
+        rows = fingerprint.diff(got["flags"], self.baselines["lg-baseline"]["flags"])
+        self.assertEqual([r["key"] for r in rows if not r["ok"]], ["raw"])
+
+    def test_thinking_mismatch_between_engine_and_baseline_is_drift(self):
+        got = fingerprint.capture(runner=lg_board())
+        rows = fingerprint.diff(got["flags"], self.baselines["lg-thinking-on"]["flags"])
+        self.assertEqual(sorted(r["key"] for r in rows if not r["ok"]), ["think", "thinking"])
+
+    def test_a_little_gemma_run_never_passes_a_llama_cpp_baseline(self):
+        got = fingerprint.capture(runner=lg_board())
+        self.assertFalse(fingerprint.agrees(fingerprint.diff(
+            got["flags"], self.baselines["mmlupro-baseline"]["flags"])))
+
+    def test_no_server_at_all_captures_nothing(self):
+        got = fingerprint.capture(runner=lg_board(engine="", shim=""))
+        self.assertEqual(got["server_args"], "")
+
+
 if __name__ == "__main__":
     unittest.main()

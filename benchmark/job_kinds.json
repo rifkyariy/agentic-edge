@@ -25,6 +25,27 @@
     }
   },
 
+  "mmlupro-lg": {
+    "description": "S3: MMLU-Pro through little-gemma (CUDA int8), one 100-question subset, one model. Jetson only: little-gemma's fast path is CUDA.",
+    "params": {
+      "model":    {"enum": ["e2b", "e4b"]},
+      "subset":   {"enum": ["s1", "s2", "s3"]},
+      "thinking": {"enum": ["off", "on"], "default": "off"}
+    },
+    "label": "mmlupro-lg-{model}-{subset}",
+    "output_dir": "mmlupro100-lg-{model}-{subset}",
+    "suffix_when": {"thinking": {"on": "-think"}},
+    "baseline": {"thinking": {"off": "lg-baseline", "on": "lg-thinking-on"}},
+    "memory_mb": {"e2b": 2600, "e4b": 4400},
+    "_memory_mb": "Pilots 2026-09-25 (14 questions each): E2B peaked at +2,340 MB over idle, E4B thinking-on at +3,990 MB (5,898 MB used of 7,485). The engine does not mmap and refuses to load when the tensor data exceeds available memory, so E4B needs ~4.2 GB free regardless. Tighten after the first full runs.",
+    "boards": {
+      "jetson": {
+        "command": "env SUBSET={subset} THINKING={thinking} ./std_mmlupro_lg_jetson.sh {model}",
+        "env": {"SRVLOG": "{stdbench}/{output_dir}/server.log", "SUBSET": "{subset}"}
+      }
+    }
+  },
+
   "raw": {
     "description": "Any command, wrapped in run_measured.sh. The escape hatch.",
     "params": {

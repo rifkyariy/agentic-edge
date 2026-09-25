@@ -82,7 +82,8 @@ class Probe:
     def busy_processes(self):
         """Benchmark processes already running, the deployed server aside."""
         found = [name for name, pattern in (("lm_eval", "[l]m_eval"),
-                                            ("run_measured", "[r]un_measured"))
+                                            ("run_measured", "[r]un_measured"),
+                                            ("little-gemma", "[r]un-cuda-i8 -m"))
                  if self._pgrep(pattern)]
         deployed = self.deployed_server_pid()
         if [pid for pid in self._pgrep("[l]lama-server") if pid != deployed]:

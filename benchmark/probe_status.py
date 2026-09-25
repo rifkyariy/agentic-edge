@@ -134,7 +134,8 @@ def procs():
                                                      if a.startswith("-") or a.isdigit())[:120]}
         for key, pat in (("lm_eval", "lm_eval"), ("run_measured", "run_measured.sh"),
                          ("telemetry", "telemetry.py"), ("queue", "queue_subsets.sh"),
-                         ("build", "cmake --build"), ("download", "jetson_models.sh")):
+                         ("build", "cmake --build"), ("download", "jetson_models.sh"),
+                         ("little_gemma", "run-cuda-i8 -m")):
             if pat in args and "grep" not in args:
                 out.setdefault(key, {"pid": int(pid), "uptime_s": int(et)})
     return out

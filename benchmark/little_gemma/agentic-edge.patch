@@ -1,0 +1,96 @@
+diff --git a/src/run.c b/src/run.c
+index cd24f76..912b295 100644
+--- a/src/run.c
++++ b/src/run.c
+@@ -148,12 +148,23 @@ static void print_piece(const char *s) {
+ #define SERVE_TEXT_FLUSH 256   // accumulated 'T' text (chars) that triggers an
+                                // incremental prefill of the open turn — long
+                                // dictation prefills while the user speaks
+-#define SERVE_GEN 1024   // output cap per turn: there is no repeat penalty, so a
++#define SERVE_GEN 2048   // agentic-edge: 1024 upstream; 2048 = the MMLU-Pro max_gen_toks both llama.cpp rows use
++                         // output cap per turn: there is no repeat penalty, so a
+                          // degenerate greedy loop would otherwise spin until the
+                          // context fills (observed: 8,098 tokens, 270 s, of the
+                          // same sentence about a typo); -temp mostly defuses these
+ 
+ 
++// agentic-edge -raw: the client sends a fully rendered chat prompt (system turn,
++// few-shot model turns, the open <|turn>model\n) and the server adds no turn
++// markers of its own. BOS is still prepended by the tokenizer. One turn per
++// session is the intended use: it is how an OpenAI-style request maps on.
++// The prompt arrives as 'T' frames and is encoded ONCE, whole, when the
++// empty closing line lands — never in the dictation path's space-split
++// pieces — so its tokens are those of a single encode, as llama.cpp's are;
++// and the context budget is checked in tokens, not characters.
++static int g_raw = 0;
++
+ static int send_all(sock_t s, const char *buf, int n) {
+     while (n > 0) {
+         int k = (int)send(s, buf, n, 0);
+@@ -383,7 +394,7 @@ static void serve(const struct gguf_context *ctx, const char *path, const char *
+                                                          // restore repairs ring rows a long previous
+                                                          // session may have wrapped over
+         int saw_think = 0;                               // has this model ever opened a thought channel? (gates the seed)
+-        char line[8192], chat[8704];
++        char line[8192], chat[32768];   // agentic-edge: 8704 upstream; a whole -raw prompt fits
+         int promptv[4096];
+         for (;;) {
+             // A turn: zero or more typed frames (see media.h) — media spans
+@@ -415,7 +426,7 @@ static void serve(const struct gguf_context *ctx, const char *path, const char *
+             int skip = (pos == 0) ? 0 : 1;               // tokenizer_encode always prepends BOS
+             int n = 0, total = 0, best;
+             double tp = 0;                               // prefill seconds, spans + tail
+-            int tl = snprintf(chat, sizeof chat, pos == n_sys ? "<|turn>user\n" : "<turn|>\n<|turn>user\n");
++            int tl = snprintf(chat, sizeof chat, "%s", g_raw ? "" : pos == n_sys ? "<|turn>user\n" : "<turn|>\n<|turn>user\n");
+             char c0 = 0;
+             int dead = 0, full = 0;
+             int *pend = NULL; float *prow = NULL;        // the held span: its mixed ids + rows
+@@ -450,7 +461,7 @@ static void serve(const struct gguf_context *ctx, const char *path, const char *
+                     // SPACE and keep it with the remainder: SentencePiece
+                     // pieces never cross a space, so the split token stream is
+                     // byte-identical to tokenizing the whole turn at once.
+-                    if (tl >= SERVE_TEXT_FLUSH && pos + tl + 64 < SERVE_SEQ) {
++                    if (!g_raw && tl >= SERVE_TEXT_FLUSH && pos + tl + 64 < SERVE_SEQ) {
+                         int split = tl - 1;
+                         while (split > 0 && chat[split] != ' ') split--;
+                         if (split > 0) {
+@@ -506,16 +517,20 @@ static void serve(const struct gguf_context *ctx, const char *path, const char *
+                 break;
+             }
+             // budget: the tail still has the held span, the line and the turn close
+-            if (pos + pend_n * (pend != NULL) + tl + (int)strlen(line) + 64 >= SERVE_SEQ ||
++            if ((!g_raw && pos + pend_n * (pend != NULL) + tl + (int)strlen(line) + 64 >= SERVE_SEQ) ||
+                 tl + (int)strlen(line) + 256 >= (int)sizeof chat) {
+                 free(pend); free(prow);
+                 fprintf(stderr, "context full\n");
+                 break;
+             }
+             double t0 = now_sec();
+-            snprintf(chat + tl, sizeof chat - tl, "%s<turn|>\n<|turn>model\n%s", line,
++            snprintf(chat + tl, sizeof chat - tl, g_raw ? "%s%s" : "%s<turn|>\n<|turn>model\n%s", line,
+                      think == 0 && saw_think ? "<|channel>thought\n<channel|>" : "");
+             n = tokenizer_encode(tk, chat, promptv, 4096);
++            if (g_raw && (n >= 4096 || pos + n + 64 >= SERVE_SEQ)) {   // the token budget -raw skipped above
++                fprintf(stderr, "context full (%d prompt tokens)\n", n);
++                break;
++            }
+             if (pend) {                                  // pack the held span with the tail:
+                 int *ids = realloc(pend, ((size_t)pend_n + n) * sizeof *ids);
+                 if (!ids) { free(pend); free(prow); fprintf(stderr, "turn buffer: out of memory\n"); break; }
+@@ -849,6 +864,7 @@ int main(int argc, char **argv) {
+         else if (!strcmp(argv[i], "-mtp") && i + 1 < argc) mtp   = argv[++i];
+         else if (!strcmp(argv[i], "-sys") && i + 1 < argc) syspath = argv[++i];
+         else if (!strcmp(argv[i], "-end-on-question")) question_turn = 1;
++        else if (!strcmp(argv[i], "-raw")) g_raw = 1;
+         else if (!strcmp(argv[i], "-think") && i + 1 < argc) think = atoi(argv[++i]);
+         else if (!strcmp(argv[i], "-temp") && i + 1 < argc) temp = (float)atof(argv[++i]);
+         else if (!strcmp(argv[i], "-topk") && i + 1 < argc) topk = atoi(argv[++i]);
+@@ -858,7 +874,7 @@ int main(int argc, char **argv) {
+     if (cpath) { client(cpath); return 0; }              // client mode needs no model
+     if (!model) {
+         printf("Usage: %s -m <model.gguf> [-mm <mmproj.gguf>] [-mtp <assistant.gguf>] [-sys <skills.txt>]\n"
+-               "          [-end-on-question] [-think N] [-temp T [-topk K] [-topp P] [-seed N]] [-p \"prompt\" | -s <socket>]\n"
++               "          [-end-on-question] [-raw] [-think N] [-temp T [-topk K] [-topp P] [-seed N]] [-p \"prompt\" | -s <socket>]\n"
+                "          (-think: reasoning-channel token budget; 0 = none, N = up to N, omitted = unlimited)\n"
+                "       %s -c <socket>\n", argv[0], argv[0]);
+         return 1;
