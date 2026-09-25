@@ -27,6 +27,22 @@ class TestParseRun(unittest.TestCase):
     def test_other_benchmarks_are_not_forced_into_the_pattern(self):
         self.assertIsNone(run_detail.parse_run("tiny1024-e2b"))
 
+    def test_the_engine_comes_from_the_name(self):
+        # S3: mmlupro-lg writes mmlupro100-lg-<model>-<subset>[-think]. Before
+        # the engine was parsed these fell through every view, and a looser
+        # pattern would have filed them under the llama.cpp cells.
+        cases = {
+            "mmlupro100-e4b-s2": ("llama.cpp", "e4b", "s2", "off", None),
+            "mmlupro100-lg-e2b-s1": ("little-gemma", "e2b", "s1", "off", None),
+            "mmlupro100-lg-e4b-s3-think": ("little-gemma", "e4b", "s3", "on", None),
+            "failed/mmlupro100-lg-e4b-s2-oom-20260926-0101":
+                ("little-gemma", "e4b", "s2", "off", "oom-20260926-0101"),
+        }
+        for name, want in cases.items():
+            p = run_detail.parse_run(name)
+            self.assertEqual((p["engine"], p["model"], p["subset"], p["thinking"],
+                              p["tag"]), want, name)
+
 
 class TestMeasuredDir(unittest.TestCase):
     def setUp(self):
@@ -39,7 +55,9 @@ class TestMeasuredDir(unittest.TestCase):
                      "mmlupro-e4b-s1-20260922-095215",
                      "mmlupro-e4b-s1-think-20260930-010000",
                      "mmlupro-e4b-s2-20260921-131646",
-                     "failed/mmlupro-e4b-s3-20260921-122643-oom"):
+                     "failed/mmlupro-e4b-s3-20260921-122643-oom",
+                     "mmlupro-lg-e4b-s1-20260926-010000",
+                     "mmlupro-lg-e4b-s1-think-20260926-090000"):
             os.makedirs(os.path.join(self.tmp.name, "measured", name))
 
     def base(self, d):
@@ -52,6 +70,19 @@ class TestMeasuredDir(unittest.TestCase):
                          "mmlupro-e4b-s1-think-20260930-010000")
         self.assertEqual(self.base(run_detail.measured_dir("e4b", "s1", "off")),
                          "mmlupro-e4b-s1-20260922-095215")
+
+    def test_engines_never_share_telemetry(self):
+        # The little-gemma runs are newer; llama.cpp must not borrow them,
+        # and they must not borrow llama.cpp's.
+        self.assertEqual(self.base(run_detail.measured_dir("e4b", "s1", "off")),
+                         "mmlupro-e4b-s1-20260922-095215")
+        self.assertEqual(
+            self.base(run_detail.measured_dir("e4b", "s1", "off", engine="little-gemma")),
+            "mmlupro-lg-e4b-s1-20260926-010000")
+        self.assertEqual(
+            self.base(run_detail.measured_dir("e4b", "s1", "on", engine="little-gemma")),
+            "mmlupro-lg-e4b-s1-think-20260926-090000")
+        self.assertIsNone(run_detail.measured_dir("e4b", "s2", "off", engine="little-gemma"))
 
     def test_an_archived_run_gets_its_own_telemetry_not_its_reruns(self):
         ended = time.mktime(time.strptime("20260922-0950", "%Y%m%d-%H%M"))
@@ -105,3 +136,18 @@ class TestPaired(unittest.TestCase):
         self.run_dir("mmlupro100-e2b-smoke", [(1, 1.0, "the answer is (A)")])
         self.run_dir("mmlupro100-e2b.bak", [(1, 1.0, "the answer is (A)")])
         self.assertEqual(run_detail.paired()["runs"], [])
+
+    def test_each_run_says_which_engine_served_it(self):
+        self.run_dir("mmlupro100-e2b-s1", [(70, 1.0, "the answer is (B)")])
+        self.run_dir("mmlupro100-lg-e2b-s1", [(70, 0.0, "the answer is (C)")])
+        engines = {r["run"]: r["engine"] for r in run_detail.paired()["runs"]}
+        self.assertEqual(engines, {"mmlupro100-e2b-s1": "llama.cpp",
+                                   "mmlupro100-lg-e2b-s1": "little-gemma"})
+
+    def test_the_board_baseline_is_llama_cpp_only(self):
+        # /compare's Pi-vs-Orin block is a llama.cpp comparison; a little-gemma
+        # run must not appear in it as a second Jetson E2B s1.
+        self.run_dir("mmlupro100-e2b-s1", [(70, 1.0, "the answer is (B)")])
+        self.run_dir("mmlupro100-lg-e2b-s1", [(70, 0.0, "the answer is (C)")])
+        self.assertEqual([r["run"] for r in run_detail.baseline()["runs"]],
+                         ["mmlupro100-e2b-s1"])

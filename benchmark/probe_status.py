@@ -126,16 +126,23 @@ def procs():
         if len(p) < 4:
             continue
         pid, rss, et, args = p
-        if "llama-server" in args and "grep" not in args:
-            out["llama_server"] = {"pid": int(pid), "rss_mb": round(int(rss) / 1024),
-                                   "uptime_s": int(et),
-                                   "model": (re.search(r"-m (\S+)", args) or [None, ""])[1].split("/")[-1],
-                                   "flags": " ".join(a for a in args.split()
-                                                     if a.startswith("-") or a.isdigit())[:120]}
+        # The two engines a run can be served by, reported alike so the device
+        # card can name the model whichever is up. little-gemma is the CUDA
+        # int8 binary the S3 shim spawns (lg_openai_shim.py -> run-cuda-i8).
+        # Matched on the executable: the shim's own command line names the
+        # engine binary too (--engine .../run-cuda-i8 -m ...).
+        exe = os.path.basename(args.split()[0])
+        for key, pat in (("llama_server", "llama-server"), ("little_gemma", "run-cuda-i8")):
+            if (pat not in args if key == "llama_server" else exe != pat) or "grep" in args:
+                continue
+            out[key] = {"pid": int(pid), "rss_mb": round(int(rss) / 1024),
+                        "uptime_s": int(et),
+                        "model": (re.search(r"-m (\S+)", args) or [None, ""])[1].split("/")[-1],
+                        "flags": " ".join(a for a in args.split()
+                                          if a.startswith("-") or a.isdigit())[:120]}
         for key, pat in (("lm_eval", "lm_eval"), ("run_measured", "run_measured.sh"),
                          ("telemetry", "telemetry.py"), ("queue", "queue_subsets.sh"),
-                         ("build", "cmake --build"), ("download", "jetson_models.sh"),
-                         ("little_gemma", "run-cuda-i8 -m")):
+                         ("build", "cmake --build"), ("download", "jetson_models.sh")):
             if pat in args and "grep" not in args:
                 out.setdefault(key, {"pid": int(pid), "uptime_s": int(et)})
     return out
@@ -209,10 +216,15 @@ def _num(x):
 
 
 def completed():
-    """Scores of finished lm-eval runs, newest first."""
+    """Scores of finished lm-eval runs, newest first.
+
+    The matrix fills its cells from this list, so it must reach back over the
+    whole grid: 12 llama.cpp runs per board plus the Jetson's 12 little-gemma
+    ones. At the old limit of 12, each new S3 result pushed a llama.cpp score
+    out and its cell fell back to "not run"."""
     out = []
     for p in sorted(glob.glob(f"{ROOT}/stdbench/*/*/results_*.json"),
-                    key=os.path.getmtime, reverse=True)[:12]:
+                    key=os.path.getmtime, reverse=True)[:48]:
         try:
             j = json.load(open(p))
             # prefer the aggregate task over its per-subject children

@@ -27,7 +27,10 @@ function expand(spec, sel, text) {
 const MARK = (c) => (c.deferred ? "⏳" : c.ok ? "✓" : "✗");
 
 function JobForm({ box, onQueued }) {
-  const kinds = box.kinds || {};
+  // Only the kinds this board can run: job_kinds.json is one file for both
+  // boards, and mmlupro-lg (little-gemma, CUDA) declares the Jetson alone.
+  const kinds = Object.fromEntries(Object.entries(box.kinds || {})
+    .filter(([, k]) => !k.boards || k.boards[box.id]));
   const [kind, setKind] = useState("mmlupro");
   const [sel, setSel] = useState({});        // enum param -> [selected values]
   const [text, setText] = useState({});      // free-text param -> value
@@ -140,6 +143,7 @@ function JobForm({ box, onQueued }) {
             {Object.keys(kinds).map((k) => <option key={k} value={k}>{k}</option>)}
           </select>
         </label>
+        {spec.description && <p className="kind-desc">{spec.description}</p>}
 
         {Object.entries(spec.params).map(([name, rule]) => rule.enum ? (
           <div key={name} className="field-chips">

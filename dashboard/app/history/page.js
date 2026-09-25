@@ -37,6 +37,7 @@ export default function HistoryPage() {
   const [board, setBoard] = useState("all");
   const [status, setStatus] = useState("all");
   const [thinking, setThinking] = useState("all");
+  const [engine, setEngine] = useState("all");
   const [q, setQ] = useState("");
   const [detail, setDetail] = useState(null);   // {box, run}
 
@@ -58,6 +59,7 @@ export default function HistoryPage() {
     (board === "all" || r.box.id === board)
     && (status === "all" || r.status === status)
     && (thinking === "all" || r.thinking === thinking)
+    && (engine === "all" || r.engine === engine)
     && (!q || r.run.toLowerCase().includes(q.toLowerCase())))
     .sort((a, b) => (b.ended ?? Infinity) - (a.ended ?? Infinity));
 
@@ -76,6 +78,8 @@ export default function HistoryPage() {
                  options={[["all", "both"], ...boxes.map((b) => [b.id, b.label])]} />
           <Chips label="thinking" value={thinking} onChange={setThinking}
                  options={[["all", "any"], ["off", "off"], ["on", "on"]]} />
+          <Chips label="engine" value={engine} onChange={setEngine}
+                 options={[["all", "any"], ["llama.cpp", "llama.cpp"], ["little-gemma", "little-gemma"]]} />
           <Chips label="status" value={status} onChange={setStatus} options={statusOptions} />
           <input className="search" value={q} placeholder="search run name…"
                  onChange={(e) => setQ(e.target.value)} aria-label="search run name" />
@@ -97,7 +101,7 @@ export default function HistoryPage() {
             <table className="history-table">
               <thead>
                 <tr>
-                  <th>board</th><th>run</th><th>model</th><th>subset</th><th>think</th>
+                  <th>board</th><th>run</th><th>engine</th><th>model</th><th>subset</th><th>think</th>
                   <th>status</th><th className="num">score</th><th className="num">time</th>
                   <th className="num">energy</th><th className="num">J/token</th><th>finished</th>
                 </tr>
@@ -120,6 +124,7 @@ export default function HistoryPage() {
                               onClick={(e) => e.stopPropagation()}>queue job</Link>
                       )}
                     </td>
+                    <td>{r.engine ?? "—"}</td>
                     <td>{r.model?.toUpperCase() ?? "—"}</td>
                     <td>{r.subset ?? "—"}</td>
                     <td>{r.thinking === "on" ? <b className="think-on">on</b> : r.thinking ?? "—"}</td>

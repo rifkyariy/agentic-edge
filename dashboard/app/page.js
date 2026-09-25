@@ -16,6 +16,9 @@ const HISTORY = (WINDOW_MIN * 60) / (POLL_MS / 1000);
 // One row per model and reasoning condition. The thinking row is the S2
 // experiment (THINKING=on, budget 320); it stays empty until those runs exist.
 const ROWS = PLAN.thinking.flatMap((t) => PLAN.models.map((m) => ({ m, t })));
+// Then one group of those rows per engine the board runs: llama.cpp on both,
+// little-gemma (S3) on the Jetson alone.
+const enginesFor = (boxId) => PLAN.engines.filter((e) => e.boards.includes(boxId));
 
 function Matrix({ boxes, queues, onOpen }) {
   return (
@@ -28,6 +31,8 @@ function Matrix({ boxes, queues, onOpen }) {
           <b>Baseline</b> rows: llama.cpp, thinking off
           (<code>-rea off --reasoning-budget -1</code>), greedy.{" "}
           <b>Thinking</b> rows: <code>-rea on --reasoning-budget 320 --reasoning-format none</code>.{" "}
+          <b>LG</b> rows (Jetson only): the same task through little-gemma,
+          thinking off (<code>-think -1</code>) or on (<code>-think 320</code>).{" "}
           <Link href="/compare">scope and caveats →</Link>{" "}
           <Link href="/queue">queue a run →</Link>
         </p>
@@ -40,12 +45,16 @@ function Matrix({ boxes, queues, onOpen }) {
               <thead>
                 <tr><th />{PLAN.subsets.map((s) => <th key={s}>{s}</th>)}</tr>
               </thead>
-              <tbody>
+              {enginesFor(box.id).map((e, _, all) => (
+              <tbody key={e.id}>
+                {all.length > 1 && (
+                  <tr className="engine-row"><th colSpan={PLAN.subsets.length + 1}>{e.id}</th></tr>
+                )}
                 {ROWS.map(({ m, t }) => (
                   <tr key={`${m}-${t}`}>
-                    <th>{m.toUpperCase()}{t === "on" ? <i className="row-tag"> think</i> : null}</th>
+                    <th>{e.short ? <i className="row-tag">{e.short} </i> : null}{m.toUpperCase()}{t === "on" ? <i className="row-tag"> think</i> : null}</th>
                     {PLAN.subsets.map((s) => {
-                      const c = cell(box, m, s, t, queues[box.id]);
+                      const c = cell(box, m, s, t, queues[box.id], e.id);
                       // Queued and blocked jobs have no results yet; their
                       // page is the job's timeline, not the run drill-down.
                       const open = c.job && (c.status === "queued" || c.status === "blocked")
@@ -57,7 +66,7 @@ function Matrix({ boxes, queues, onOpen }) {
                             className={`cellbox ${c.status}`}
                             disabled={!open}
                             onClick={() => open && open()}
-                            title={`${m} ${s} thinking ${t}: ${c.status}${c.note ? ` — ${c.note}` : ""}`}>
+                            title={`${e.id} ${m} ${s} thinking ${t}: ${c.status}${c.note ? ` — ${c.note}` : ""}`}>
                             {c.status === "done" && <><b>{fmt(c.score, 1)}%</b><i>±{fmt(c.stderr, 1)}</i></>}
                             {c.status === "prior" && <><b>{fmt(c.score, 1)}%</b><i>{c.at?.slice(5, 10)} · earlier batch</i></>}
                             {c.status === "running" && <><b>{c.pct ?? "…"}{c.pct != null ? "%" : ""}</b><i>{c.eta ? `${c.eta} left` : "starting"}</i></>}
@@ -72,6 +81,7 @@ function Matrix({ boxes, queues, onOpen }) {
                   </tr>
                 ))}
               </tbody>
+              ))}
             </table>
           </div>
         ))}
@@ -107,7 +117,10 @@ function Device({ box, hist, onOpen }) {
   }
   const p = d.progress, m = d.measured, s = d.setup, procs = d.procs || {};
   const throttled = d.throttled && d.throttled !== "0x0";
-  const model = procs.llama_server?.model?.replace(/gemma-4-|-it-qat-UD-Q4_K_XL\.gguf/g, "");
+  // Whichever engine is serving: llama-server, or little-gemma's run-cuda-i8.
+  const engine = procs.little_gemma ? "little-gemma" : procs.llama_server ? "llama.cpp" : null;
+  const model = (procs.little_gemma || procs.llama_server)?.model
+    ?.replace(/gemma-4-|-it-qat-UD-Q4_K_XL\.gguf/g, "");
   const activity = procs.lm_eval ? "benchmark" : procs.build ? "building" :
     procs.download ? "downloading" : "idle";
   const live = activity !== "idle";
@@ -129,7 +142,7 @@ function Device({ box, hist, onOpen }) {
           <div className="run-top">
             <button type="button" className="run-name link" onClick={() => onOpen(box, p.run)}
               title="open this run's timeline and answers">
-              {p.run}{model ? <em> · {model}</em> : null}
+              {p.run}{model ? <em> · {model} · {engine}</em> : null}
             </button>
             <span className="run-count">{p.done}<i>/{p.total}</i></span>
           </div>

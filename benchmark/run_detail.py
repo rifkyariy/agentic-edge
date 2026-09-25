@@ -39,35 +39,42 @@ def _rows(csv_path):
             for i, r in enumerate(sorted(rows, key=lambda r: float(r["start_epoch"])))]
 
 
-# A benchmark run directory: mmlupro100-<model>[-<subset>][-think][-<tag>],
-# where the tag is what failed/ and archive/ append (oom-<stamp>,
+# A benchmark run directory: mmlupro100-[lg-]<model>[-<subset>][-think][-<tag>],
+# where lg- marks the S3 little-gemma engine (job kind mmlupro-lg; no prefix is
+# llama.cpp), the tag is what failed/ and archive/ append (oom-<stamp>,
 # reasoningfmt-<stamp>, before-rerun-<stamp>) and .bak is an old copy.
-RUN_NAME = re.compile(r"^mmlupro100-(e2b|e4b)(?:-(s\d))?(-think)?(?:[.-](.+))?$", re.I)
+RUN_NAME = re.compile(
+    r"^mmlupro100-(lg-)?(e2b|e4b)(?:-(s\d))?(-think)?(?:[.-](.+))?$", re.I)
 # A measured directory: <label>-<YYYYMMDD-HHMMSS>[-tag], label as the queue
-# builds it (mmlupro-<model>[-<subset>][-think]).
+# builds it (mmlupro-[lg-]<model>[-<subset>][-think]).
 MEASURED_NAME = re.compile(
-    r"^mmlupro-(e2b|e4b)(?:-(s\d))?(-think)?-(\d{8}-\d{6})(?:-.+)?$", re.I)
+    r"^mmlupro-(lg-)?(e2b|e4b)(?:-(s\d))?(-think)?-(\d{8}-\d{6})(?:-.+)?$", re.I)
+
+
+def _engine(prefix):
+    return "little-gemma" if prefix else "llama.cpp"
 
 
 def parse_run(name):
-    """model, subset, thinking and tag from a run path (failed/x works too)."""
+    """engine, model, subset, thinking and tag from a run path (failed/x too)."""
     m = RUN_NAME.match(os.path.basename(name.rstrip("/")))
     if not m:
         return None
-    return {"model": m[1].lower(), "subset": (m[2] or "s1").lower(),
-            "thinking": "on" if m[3] else "off", "tag": m[4]}
+    return {"engine": _engine(m[1]), "model": m[2].lower(),
+            "subset": (m[3] or "s1").lower(),
+            "thinking": "on" if m[4] else "off", "tag": m[5]}
 
 
 def _stamp(text):
     return time.mktime(time.strptime(text, "%Y%m%d-%H%M%S"))
 
 
-def measured_dir(model, subset, thinking="off", ended=None):
+def measured_dir(model, subset, thinking="off", ended=None, engine="llama.cpp"):
     """The measured run that produced this benchmark run.
 
-    Matched on model, subset AND thinking — never just the newest, since both
-    boards work through a queue, and a thinking run must never borrow the
-    baseline's telemetry. `ended` (epoch) picks the latest measured run that
+    Matched on engine, model, subset AND thinking — never just the newest,
+    since both boards work through a queue, and a thinking run must never
+    borrow the baseline's telemetry, nor little-gemma llama.cpp's. `ended` (epoch) picks the latest measured run that
     started before the benchmark finished, so an archived or failed run gets
     its own telemetry rather than its rerun's. Failed measured runs are moved
     to measured/failed/, so that is searched too."""
@@ -76,11 +83,11 @@ def measured_dir(model, subset, thinking="off", ended=None):
         m = MEASURED_NAME.match(os.path.basename(d))
         if not m or not os.path.isdir(d):
             continue
-        if (m[1].lower(), (m[2] or "s1").lower(), "on" if m[3] else "off") \
-                != (model, subset, thinking):
+        if (_engine(m[1]), m[2].lower(), (m[3] or "s1").lower(),
+                "on" if m[4] else "off") != (engine, model, subset, thinking):
             continue
         try:
-            t = _stamp(m[4])
+            t = _stamp(m[5])
         except ValueError:
             continue
         if ended is not None and t > ended:
@@ -176,10 +183,11 @@ def timeline(run_dir, run, model, subset, mdir=None):
     return []
 
 
-def telemetry_for(run, model, subset, thinking="off", ended=None):
+def telemetry_for(run, model, subset, thinking="off", ended=None, engine="llama.cpp"):
     """The 1Hz device samples belonging to this run, matched the same way the
-    request timings are: by model, subset and thinking, never just the newest."""
-    d = measured_dir(model, subset, thinking, ended)
+    request timings are: by engine, model, subset and thinking, never just the
+    newest."""
+    d = measured_dir(model, subset, thinking, ended, engine)
     if d:
         path = os.path.join(d, "telemetry.csv")
         if not os.path.exists(path):
@@ -449,7 +457,8 @@ def baseline():
     measured run that produced it. Runs without a results file (killed, still
     going) are reported with score None rather than dropped — a failure is a
     result too. Thinking-on runs are a different condition and are left to
-    history().
+    history(); so are little-gemma runs, because this is the Pi-vs-Orin
+    comparison and the Pi has no little-gemma counterpart.
     """
     runs = []
     for d in sorted(glob.glob(f"{ROOT}/stdbench/mmlupro100-*")):
@@ -457,7 +466,7 @@ def baseline():
             continue
         run = os.path.basename(d)
         p = parse_run(run)
-        if not p or p["tag"] or p["thinking"] != "off":
+        if not p or p["tag"] or p["thinking"] != "off" or p["engine"] != "llama.cpp":
             continue                      # smoke tests, .bak dirs, anything else
         row = {"run": run, "model": p["model"], "subset": p["subset"],
                "done": os.path.exists(os.path.join(d, ".done"))}
@@ -506,8 +515,8 @@ def paired():
                 if not ANS.search(r["resps"][0][0]):
                     no_answer += 1
         done = os.path.exists(os.path.join(d, ".done"))
-        runs.append({"run": run, "model": p["model"], "subset": p["subset"],
-                     "thinking": p["thinking"], "done": done,
+        runs.append({"run": run, "engine": p["engine"], "model": p["model"],
+                     "subset": p["subset"], "thinking": p["thinking"], "done": done,
                      "correct": correct or None,
                      "no_answer": no_answer if correct else None})
     return {"root": ROOT, "runs": runs,
@@ -558,6 +567,7 @@ def history():
             if p.get("tag") and place == "current":
                 status = "extra"          # a smoke test or .bak copy, kept aside
             row = {"run": prefix + name, "place": place, "status": status,
+                   "engine": p.get("engine"),
                    "model": p.get("model"), "subset": p.get("subset"),
                    "thinking": p.get("thinking"), "tag": p.get("tag"),
                    "done": done, "task": r.get("task"),
@@ -568,7 +578,8 @@ def history():
                                          time.localtime(end)) if end else None)}
             if p:
                 row["device"] = _device(
-                    measured_dir(p["model"], p["subset"], p["thinking"], end))
+                    measured_dir(p["model"], p["subset"], p["thinking"], end,
+                                 p["engine"]))
             job = queue.get(name) if place == "current" else None
             if job:
                 row["job"] = job
@@ -612,6 +623,7 @@ def main():
     sub = parsed.get("subset", "s1")
     model = parsed.get("model") or ("e4b" if "e4b" in args.run.lower() else "e2b")
     thinking = parsed.get("thinking", "off")
+    engine = parsed.get("engine", "llama.cpp")
     ended = ended_at(run_dir)
 
     res_files = glob.glob(f"{run_dir}/*/results_*.json")
@@ -642,9 +654,9 @@ def main():
             summary = {"score": round(100 * sum(q["ok"] for q in graded) / len(graded), 1),
                        "graded": len(graded), "provisional": True}
 
-    mdir = measured_dir(model, sub, thinking, ended)
+    mdir = measured_dir(model, sub, thinking, ended, engine)
     tl = timeline(run_dir, args.run, model, sub, mdir)
-    tele, tsummary, tdir = telemetry_for(args.run, model, sub, thinking, ended)
+    tele, tsummary, tdir = telemetry_for(args.run, model, sub, thinking, ended, engine)
     tl = attach_device(tl, tele)
     t0 = tl[0]["start_epoch"] if tl else (tele[0]["t"] if tele else 0)
     device = None
@@ -667,7 +679,8 @@ def main():
         # from the telemetry so far and mark them provisional.
         device = live_device(tele, tl, tdir)
     print(json.dumps({
-        "run": args.run, "subset": sub, "status": status, "note": note,
+        "run": args.run, "engine": engine, "subset": sub, "status": status,
+        "note": note,
         "summary": summary, "n": len(qs),
         "questions": qs[:args.max_questions],
         "timeline": tl,

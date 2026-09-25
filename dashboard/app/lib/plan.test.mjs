@@ -92,3 +92,27 @@ test("once the requeued job completes, the old blocked attempt does not come bac
   assert.equal(c.status, "done");
   assert.equal(c.score, 66);
 });
+
+// S3: little-gemma runs are mmlupro100-lg-<model>-<subset>[-think], Jetson only.
+test("a little-gemma run fills its own cell and never a llama.cpp one", () => {
+  const box = doneBox("mmlupro100-lg-e2b-s1");
+  assert.equal(cell(box, "e2b", "s1", "off", null, "little-gemma").status, "done");
+  assert.equal(cell(box, "e2b", "s1", "off").status, "pending");
+});
+
+test("a llama.cpp run never fills a little-gemma cell", () => {
+  const box = doneBox("mmlupro100-e2b-s1");
+  assert.equal(cell(box, "e2b", "s1", "off", null, "little-gemma").status, "pending");
+});
+
+test("a queued little-gemma thinking job shows in its own cell only", () => {
+  const box = { data: { procs: {}, completed: [] } };
+  const queue = { jobs: [{ state: "queued", output_dir: "mmlupro100-lg-e4b-s3-think", id: "j9" }] };
+  assert.equal(cell(box, "e4b", "s3", "on", queue, "little-gemma").status, "queued");
+  assert.equal(cell(box, "e4b", "s3", "on", queue).status, "pending");
+});
+
+test("little-gemma is planned for the Jetson only", () => {
+  assert.deepEqual(PLAN.engines.map((e) => e.id), ["llama.cpp", "little-gemma"]);
+  assert.deepEqual(PLAN.engines.find((e) => e.id === "little-gemma").boards, ["jetson"]);
+});

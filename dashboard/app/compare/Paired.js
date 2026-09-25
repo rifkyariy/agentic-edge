@@ -108,8 +108,15 @@ export default function Paired({ data, err }) {
                    a={c.a} b={c.b} groups={c.groups} />
           ))}
           {data.thinking.map((c) => (
-            <Block key={c.board} title={`Thinking vs baseline — ${c.a.replace(" baseline", "")}`}
+            <Block key={`${c.board}-${c.engine}`}
+                   title={`Thinking vs baseline — ${c.a.replace(" baseline", "")}${c.engine && c.engine !== "llama.cpp" ? `, ${c.engine}` : ""}`}
                    a="baseline" b="thinking" groups={c.groups} />
+          ))}
+          {(data.engine || []).map((c) => (
+            <Block key={`engine-${c.condition}`}
+                   title={c.condition === "off" ? "llama.cpp vs little-gemma on the Orin Nano — baseline (thinking off)"
+                                                : "llama.cpp vs little-gemma on the Orin Nano — thinking on (budget 320)"}
+                   a={c.a} b={c.b} groups={c.groups} />
           ))}
           <p className="sub paired-foot">
             Read at {new Date(data.ts).toLocaleString()}

@@ -60,14 +60,15 @@ function finish(t) {
            winner: !sig ? null : t.bOnly > t.aOnly ? "b" : "a" };
 }
 
-// Every finished run, indexed box:model:subset:thinking. `boxes` is the
-// /api/compare answer: [{id, ok, runs: [{model, subset, thinking, done,
-// correct, no_answer}]}].
+// Every finished run, indexed box:engine:model:subset:thinking. `boxes` is the
+// /api/compare answer: [{id, ok, runs: [{engine, model, subset, thinking,
+// done, correct, no_answer}]}]. A run without an engine comes from a board
+// whose run_detail.py predates S3, and was served by llama.cpp.
 export function index(boxes) {
   const ready = {}, waiting = {};
   for (const box of boxes) {
     for (const r of box.runs || []) {
-      const key = `${box.id}:${r.model}:${r.subset}:${r.thinking}`;
+      const key = `${box.id}:${r.engine || "llama.cpp"}:${r.model}:${r.subset}:${r.thinking}`;
       if (r.done && r.correct) ready[key] = r;
       else waiting[key] = r;
     }
@@ -102,14 +103,17 @@ function compare(ready, label, keyA, keyB, models) {
 }
 
 const DEVICE = [["pi", "Pi 5"], ["jetson", "Orin Nano"]];
+const LLAMA = "llama.cpp", LG = "little-gemma";
 
-// The two questions the paper asks of MMLU-Pro:
-//   board:    Pi against Orin, same model and condition.
-//   thinking: baseline against thinking-on, same board and model.
+// The questions the paper asks of MMLU-Pro:
+//   board:    Pi against Orin, same model and condition, both on llama.cpp.
+//   thinking: baseline against thinking-on, same board, engine and model.
+//   engine:   llama.cpp against little-gemma (S3), on the Orin, same model
+//             and condition — the Pi has no little-gemma runs.
 // Each is given per model and pooled over both models.
 export function comparisons(boxes) {
   const { ready, waiting } = index(boxes);
-  const k = (box, t) => (m, s) => `${box}:${m}:${s}:${t}`;
+  const k = (box, t, e = LLAMA) => (m, s) => `${box}:${e}:${m}:${s}:${t}`;
   const scopes = [...MODELS.map((m) => [m.toUpperCase(), [m]]), ["both models", MODELS]];
 
   const board = ["off", "on"].map((t) => ({
@@ -117,10 +121,17 @@ export function comparisons(boxes) {
     a: "Pi 5", b: "Orin Nano",
     groups: scopes.map(([label, ms]) => compare(ready, label, k("pi", t), k("jetson", t), ms)),
   }));
-  const thinking = DEVICE.map(([id, name]) => ({
-    board: id,
+  const thinking = [...DEVICE.map(([id, name]) => [id, name, LLAMA]),
+                    ["jetson", "Orin Nano", LG]].map(([id, name, e]) => ({
+    board: id, engine: e,
     a: `${name} baseline`, b: `${name} thinking`,
-    groups: scopes.map(([label, ms]) => compare(ready, label, k(id, "off"), k(id, "on"), ms)),
+    groups: scopes.map(([label, ms]) => compare(ready, label, k(id, "off", e), k(id, "on", e), ms)),
   }));
-  return { board, thinking, running: Object.keys(waiting) };
+  const engine = ["off", "on"].map((t) => ({
+    condition: t,
+    a: LLAMA, b: LG,
+    groups: scopes.map(([label, ms]) =>
+      compare(ready, label, k("jetson", t, LLAMA), k("jetson", t, LG), ms)),
+  }));
+  return { board, thinking, engine, running: Object.keys(waiting) };
 }

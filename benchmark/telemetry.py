@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Per-second device telemetry for a Raspberry Pi 5 during a benchmark run.
 
-    python3 telemetry.py --out run/telemetry.csv [--interval 1.0] [--proc llama-server]
+    python3 telemetry.py --out run/telemetry.csv [--interval 1.0] [--proc llama-server,run-cuda-i8]
 
 One CSV row per sample: wall clock, CPU utilisation (total and per core), core
 frequencies, temperature, throttle flags, memory, disk I/O, the inference
@@ -159,12 +159,21 @@ def gpu():
     return load, freq
 
 
-def pid_of(name):
-    try:
-        r = subprocess.run(["pgrep", "-n", "-x", name], capture_output=True, text=True)
-        return int(r.stdout.strip()) if r.returncode == 0 else None
-    except (OSError, ValueError):
-        return None
+# Either engine a run can be served by: llama-server, or little-gemma's CUDA
+# runner (S3). Only one is ever up (AGENTS rule 9), so the first found is it.
+DEFAULT_PROC = "llama-server,run-cuda-i8"
+
+
+def pid_of(names):
+    """Newest pid of the first of these comma-separated process names running."""
+    for name in names.split(","):
+        try:
+            r = subprocess.run(["pgrep", "-n", "-x", name], capture_output=True, text=True)
+            if r.returncode == 0:
+                return int(r.stdout.strip())
+        except (OSError, ValueError):
+            continue
+    return None
 
 
 def main():
@@ -172,9 +181,10 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", required=True)
     ap.add_argument("--interval", type=float, default=1.0)
-    ap.add_argument("--proc", default="llama-server",
-                    help="process to track; re-resolved every sample, so a "
-                         "server restart mid-run is followed rather than lost")
+    ap.add_argument("--proc", default=DEFAULT_PROC,
+                    help="process to track, or several comma-separated (the "
+                         "first running one wins); re-resolved every sample, so "
+                         "a server restart mid-run is followed rather than lost")
     args = ap.parse_args()
 
     rail_names = sorted(rails()[0])

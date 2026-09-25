@@ -342,6 +342,7 @@ export default function RunDetail({ boxId, boxLabel, run, onClose }) {
             <h2>{run}</h2>
             <p className="sub">
               {boxLabel}
+              {data?.engine && <> · {data.engine}</>}
               {data && <> · {data.status === "done" ? "complete" : data.status === "incomplete" ? "did not finish" : "in progress"}
                 {data.summary?.score !== undefined &&
                   <> · <b>{fmt(data.summary.score, 1)}%</b>

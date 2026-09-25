@@ -454,6 +454,9 @@ export default function Compare() {
               this project&apos;s own pipeline; LiteRT-LM was dropped. Which engine
               carries the standard-benchmark rows has not been decided, so treat
               these as llama.cpp figures rather than device figures.
+              little-gemma (S3) runs the same task on the Orin only, since its
+              fast path is CUDA. Its rows are compared with llama.cpp in the
+              paired tests below and never enter the Pi-vs-Orin figures.
             </div>
           </li>
           <li>

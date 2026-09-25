@@ -54,3 +54,44 @@ test("thinking is compared on the same board, never across boards", () => {
   assert.equal(jet.pooled, null);            // no Jetson baseline in this data
   assert.deepEqual(jet.pending, ["E4B s1"]);
 });
+
+// S3: the Jetson also holds little-gemma runs of the same subsets.
+const lg = (model, subset, thinking, correct, done = true) =>
+  ({ ...run(model, subset, thinking, correct, done), engine: "little-gemma" });
+
+test("a little-gemma run never stands in for the Jetson's llama.cpp run", () => {
+  // Only little-gemma has finished on the Jetson: the board comparison must
+  // still be waiting, not pair the Pi with little-gemma.
+  const boxes = [
+    { id: "pi", runs: [run("e2b", "s1", "off", q("1100"))] },
+    { id: "jetson", runs: [lg("e2b", "s1", "off", q("1111"))] },
+  ];
+  const e2b = comparisons(boxes).board[0].groups[0];
+  assert.equal(e2b.pooled, null);
+  assert.deepEqual(e2b.pending, ["E2B s1"]);
+});
+
+test("engines are compared on the Jetson, same model, subset and condition", () => {
+  const boxes = [
+    { id: "pi", runs: [run("e4b", "s1", "off", q("0000"))] },
+    { id: "jetson", runs: [run("e4b", "s1", "off", q("1100")), lg("e4b", "s1", "off", q("1111")),
+                           run("e4b", "s2", "on", q("0000")), lg("e4b", "s2", "on", q("0011"))] },
+  ];
+  const { engine } = comparisons(boxes);
+  const off = engine.find((c) => c.condition === "off").groups[1];
+  assert.equal(off.pooled.aAcc, 50);         // a = llama.cpp
+  assert.equal(off.pooled.bAcc, 100);        // b = little-gemma
+  const on = engine.find((c) => c.condition === "on").groups[1];
+  assert.equal(on.pooled.n, 4);
+  assert.equal(on.pooled.bAcc, 50);
+});
+
+test("little-gemma's own thinking comparison stays inside little-gemma", () => {
+  const boxes = [{ id: "jetson", runs: [run("e2b", "s1", "off", q("0000")),
+                                        lg("e2b", "s1", "on", q("1111"))] }];
+  const { thinking } = comparisons(boxes);
+  const lgThink = thinking.find((t) => t.board === "jetson" && t.engine === "little-gemma");
+  assert.equal(lgThink.groups[0].pooled, null);
+  const llama = thinking.find((t) => t.board === "jetson" && t.engine === "llama.cpp");
+  assert.equal(llama.groups[0].pooled, null);
+});
