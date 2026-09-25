@@ -284,13 +284,94 @@ manuscript.
 Defective runs are archived under `stdbench/failed/` and
 `measured/failed/` with a `-reasoningfmt-` suffix.
 
+## 7.2 MMLU-Pro with thinking on (2026-09-23 – 24)
+
+The thinking-on condition: the baseline task unchanged (same s1/s2/s3, 5-shot
+CoT, greedy, `max_gen_toks` 2048, `-c 8192`, `--cache-ram 0`), served with
+**`-rea on --reasoning-budget 320 --reasoning-format none`** so the thoughts
+come back inline in `content`, where lm-eval reads them. All 12 runs (2 boards
+× 2 models × 3 subsets) have telemetry. Every run's live `llama-server` command
+line was captured once it was serving and matched `baselines.json`
+(`mmlupro-thinking-on`) on every key, on both boards. Only the model path and
+the Jetson's `-ngl 99` differ.
+
+Every run is listed here. On the Jetson, E4B s2 and s3 were first queued on
+2026-09-23 and **blocked** by the memory precheck: it wanted ~5,400 MB free and
+the board had ~5,255 MB. That was a false positive. E4B s1 thinking-on had
+already completed from 5,238 MB, with a minimum of 354 MB left. Both were
+resubmitted on 2026-09-24 with the precheck overridden, and those runs are the
+ones reported. Jetson E4B s1 was launched by hand, outside the queue. Its
+`server_args_after` shows the same flags as the queued runs.
+
+| | Pi 5 base | Pi 5 think | Δ | Jetson base | Jetson think | Δ |
+|---|---|---|---|---|---|---|
+| E2B, n=300 | 51.7% | **50.0%** (48/50/52) | −1.7 | 52.7% | **49.7%** (49/51/49) | −3.0 |
+| E4B, n=300 | 65.7% | **66.3%** (64/69/66) | +0.6 | 66.0% | **66.7%** (65/67/68) | +0.7 |
+
+Paired over the same 300 questions:
+
+| | both right | both wrong | first only | second only | McNemar |
+|---|---|---|---|---|---|
+| E2B Pi, base vs think | 121 | 116 | 34 | 29 | p = 0.61 |
+| E2B Jetson, base vs think | 126 | 119 | 32 | 23 | p = 0.28 |
+| E4B Pi, base vs think | 179 | 83 | 18 | 20 | p = 0.87 |
+| E4B Jetson, base vs think | 182 | 84 | 16 | 18 | p = 0.86 |
+| E2B think, Pi vs Jetson | 120 | 121 | 30 | 29 | p = 1.00 |
+| E4B think, Pi vs Jetson | 188 | 89 | 11 | 12 | p = 1.00 |
+
+**A 320-token thinking budget does not detectably change MMLU-Pro accuracy**
+for either model on either board. E2B leans slightly worse and E4B slightly
+better, but no difference comes close to significance. The two boards remain
+tied with thinking on, as they are without it. They agree on the answer letter
+for 69% (E2B) and 86% (E4B) of questions, the same pattern as the baseline in
+§7.1: E4B is again markedly more stable across backends.
+
+Why the budget likely adds so little: it binds on most questions. Thoughts run
+a median ~1,250 characters, p90 ~1,520, max ~1,720. That is about what 320
+tokens holds, on every board and model. The model then writes its usual 5-shot
+chain of thought after the thought block. So thinking-on here means a capped
+preamble in front of the same CoT, not a longer reasoning process. A larger
+budget would be a different experiment, and this data does not predict it.
+
+Format losses (n=300 each):
+
+| | E2B base | E2B think | E4B base | E4B think |
+|---|---|---|---|---|
+| No `answer is (X)` → 0, Pi | 25 | **41** | 25 | 27 |
+| No `answer is (X)` → 0, Jetson | 22 | **39** | 20 | 24 |
+| Hit the 2048-token cap, Pi | 25 | 25 | 27 | 20 |
+| Hit the 2048-token cap, Jetson | 20 | 30 | 21 | 19 |
+| Thought never closed, both boards | — | 1 | — | 6 |
+| No thought block at all, both boards | — | 2 | — | 0 |
+
+E2B's extra unextractable answers (+16 / +17) roughly equal its accuracy loss.
+Thinking costs E2B mostly by breaking the answer format, not by making it
+reason worse. No response was left empty after its thought block.
+
+Device cost, pooled over the three subsets:
+
+| | generated tokens | energy | wall time | J / generated token |
+|---|---|---|---|---|
+| E2B Pi | 201.6k → 251.0k (+25%) | 64.2 → 79.8 Wh (+24%) | 552 → 685 min | 1.15 → 1.14 |
+| E2B Jetson | 198.7k → 252.0k (+27%) | 25.6 → 32.6 Wh (+27%) | 155 → 196 min | 0.46 → 0.46 |
+| E4B Pi | 205.0k → 249.4k (+22%) | 125.5 → 151.2 Wh (+20%) | 1111 → 1332 min | 2.20 → 2.18 |
+| E4B Jetson | 203.2k → 254.0k (+25%) | 54.5 → 67.5 Wh (+24%) | 313 → 386 min | 0.96 → 0.96 |
+
+Thinking is a pure volume cost: **+20-27% tokens, energy and time for no
+measurable accuracy**. The rates do not move. Decode speed (Pi 6.6-6.9 / 3.3-3.4
+tok/s, Jetson 22.8-22.9 / 11.6 tok/s), mean power (Pi ~7 W, Jetson ~10.1-10.6 W)
+and J/token all match the baseline, so the per-token comparison between boards
+in §7.1 carries over unchanged. Peak power rose ~1-1.5 W on the Jetson (to
+12.6 W). No throttling was recorded on either board. Maximum SoC temperature
+was 76.5 °C on the Pi (E4B s1) and 60.2 °C on the Jetson.
+
 ## 8. Capability coverage
 
 Paper 1 claims three capability areas. Only one is covered so far.
 
 | Capability | Benchmark | Pi 5 | Jetson |
 |---|---|---|---|
-| a. General knowledge / reasoning | MMLU-Pro, GSM8K | done, both models | not started |
+| a. General knowledge / reasoning | MMLU-Pro (thinking off and on), GSM8K | done, both models | MMLU-Pro done, both models, thinking off and on |
 | b. Instruction following + tool calling | own 10-case suite + classifier audit; **no standard benchmark run** | partial | not started |
 | c. Safety / security | none chosen | — | — |
 
@@ -314,19 +395,19 @@ Deleted, 21GB: `~/.litert-lm` and `~/litert-venv` (condition C dropped),
 `~/.cache/pip`, an unrelated Qwen3-4B GGUF. The raw Sep-14 engine comparison
 scratch files were archived to `findings/early-engine-benchmarks/` first.
 
-## 10. Status
+## 10. Status (2026-09-26)
 
 Done: MMLU-Pro both models · tinyGSM8k E2B (256/1024) and E4B (256) · Tier 1–3
-own suite · MTP × thinking · quant sweep · live-answer audit · classifier audit.
+own suite · MTP × thinking · quant sweep · live-answer audit · classifier audit ·
+**MMLU-Pro s1/s2/s3 × E2B/E4B on both boards with telemetry, thinking off
+(§7.1) and thinking on (§7.2)**, all 24 runs on matched serving flags.
 
-In progress: MMLU-Pro s1 with telemetry (E2B, E4B), then s2 and s3 for both
-models — six measured runs, roughly a day of Pi time.
+In progress: little-gemma (S3) on the Jetson, thinking off, E2B s1 done and
+s2/s3 queued. E4B and the thinking-on rows follow. Not reported here yet.
 
-Not done, in rough priority order: **Jetson Orin Nano, all of it** (the CUDA
-axis is core to the design, not optional) · capability (b) standard benchmark,
-IFEval and BFCL installed but unrun · capability (c) safety and security, no
-benchmark chosen · MMLU-Pro thinking-on rows (E2B ~6–8h, E4B ~12–15h) ·
-quantization control, Q8_0 through the same harness (~7h).
+Not done, in rough priority order: capability (b) standard benchmark, IFEval
+and BFCL installed but unrun · capability (c) safety and security, no benchmark
+chosen · quantization control, Q8_0 through the same harness (~7h).
 
 **No further GSM8K runs.** Its results stay as the methodological appendix on
 generation caps (§1).
