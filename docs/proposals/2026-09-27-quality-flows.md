@@ -1,4 +1,9 @@
-# Two flows for accuracy, with measured ceilings
+# Two accuracy uses of the answer-scoring primitive
+
+> These are **Use 2** and **Use 3** of the primitive described in
+> [`2026-09-27-prefill-cascade.md`](2026-09-27-prefill-cascade.md) — not
+> alternatives to it, and not alternatives to each other. See
+> [`README.md`](README.md) for the whole structure.
 
 The prefill-cascade proposal targets *accuracy per joule*. These two target
 **accuracy**, and both are inference-only — no training, no new model, same
@@ -9,7 +14,7 @@ Context: we sit at **E2B 51.7% / E4B 65.7%** against Google's published
 **60.0 / 69.4**. The interesting part is that the gap is not obviously
 quantization. Most of it is reachable without changing the model at all.
 
-## Flow 1 — permutation ensemble: harvest the variance
+## Use 2 — permutation ensemble: harvest the variance
 
 ### The observation
 
@@ -76,7 +81,7 @@ aggregation and the paper's actual proposal; voting is the trap. This is the
 one place the flow can silently do nothing while appearing to work, so the
 evaluation must include a permutation-invariance check, not just a score.
 
-## Flow 2 — bounded generation with guaranteed extraction: cut the tail
+## Use 3 — bounded generation with guaranteed extraction: cut the tail
 
 ### The observation
 
@@ -136,13 +141,13 @@ They attack different failures and should compose:
 
 | | attacks | ceiling E2B | ceiling E4B | costs |
 |---|---|---|---|---|
-| Flow 1 | near-indifferent answers | +6.3 | +4.0 | K× prefill |
-| Flow 2 | runaway / no-commit tail | +4.5 | +5.8 | *saves* 25% energy |
+| Use 2 | near-indifferent answers | +6.3 | +4.0 | K× prefill |
+| Use 3 | runaway / no-commit tail | +4.5 | +5.8 | *saves* 25% energy |
 
 They are not additive — some tail questions are also in the disagreement set —
-so the combined ceiling has to be measured rather than summed. Flow 2 is the
+so the combined ceiling has to be measured rather than summed. Use 3 is the
 cheaper and more certain of the two, and it is the one that also pays for
-itself in energy. **Run Flow 2 first.**
+itself in energy. **Run Use 3 first.**
 
 ## Evaluating both
 
@@ -152,9 +157,9 @@ against the S1 baseline already on disk, accuracy and joules from the same run.
 Both can be *estimated offline before any device time*, from the 1,200 answers
 already exported:
 
-- **Flow 1**: re-score the existing answers under permuted option orders to
+- **Use 2**: re-score the existing answers under permuted option orders to
   measure how much of the letter disagreement is positional. If the model turns
   out to be permutation-stable, the flow's premise is wrong and it dies free.
-- **Flow 2**: the tail is already identified in `findings/export/`. The only
+- **Use 3**: the tail is already identified in `findings/export/`. The only
   open question is what a forced choice on those 26–27 questions actually
   scores, which needs one cheap pass over them — not a full run.

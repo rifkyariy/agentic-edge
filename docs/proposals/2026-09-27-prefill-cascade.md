@@ -113,12 +113,16 @@ the arXiv ID is wrong, or the GitHub project and the paper are different work.
 Resolve before citing, because the interpretability angle and the
 non-autoregressive angle are separate claims.
 
-## 3a. Jev-like or [MASK]-like — the two flows
+## 3a. The primitive: Jev-like (a) or [MASK]-like (b)
+
+These are two ways to *build the same thing* — a distribution over the ten
+options without generating. They are not alternative methods. See
+[`README.md`](README.md) for how this relates to the quality flows.
 
 Both remove the decode loop. They differ in *whose weights answer the question*,
 and that difference decides whether this is still a Gemma-on-edge paper.
 
-### Flow A — Jev-like: read the answer off Gemma itself
+### (a) Jev-like: read the answer off Gemma itself
 
 ```
 prompt (question + 10 options + "The answer is (")
@@ -140,7 +144,7 @@ Same weights we have already benchmarked. No second model, no training, no
 change to what the paper is about. The cost is that Gemma is a decoder that was
 never trained to be read this way — §5's central risk.
 
-### Flow B — [MASK]-like: a separate encoder answers
+### (b) [MASK]-like: a separate encoder answers
 
 ```
 prompt --> ModernBERT-Large-Instruct (~0.4 GB), MLM head
@@ -154,13 +158,13 @@ paper 1's scope — "Gemma 4 E2B and E4B on a Pi 5 and an Orin Nano" becomes a
 study of something else. It also needs instruction-tuning we have not done, and
 a second model resident on a board where E4B already leaves 165 MB of headroom.
 
-### Recommendation: Flow A, with B held in reserve as the *router*
+### Recommendation: (a), with (b) held in reserve as the *router*
 
-Flow A for the answering path, on four grounds: it keeps the paper's scope, it
+(a) for the answering path, on four grounds: it keeps the paper's scope, it
 needs no training, it adds nothing to the memory ceiling that already killed two
 runs, and a crude version of it is measurable today (below).
 
-Flow B is the better *gate* if the top-2 margin turns out to be poorly
+(b) is the better *gate* if the top-2 margin turns out to be poorly
 calibrated — a small encoder deciding "does this question need CoT?" is exactly
 a classification task, it never answers anything, and it keeps Gemma as the only
 thing producing answers. That is a fallback for a specific failure, not the
@@ -175,7 +179,7 @@ Checked on the boards, 2026-09-27, rather than assumed.
 - **llama.cpp** (Jetson build `a894dae`): `/v1/chat/completions` accepts
   `logprobs: true, top_logprobs: 10` and returns the field **absent**;
   `/completion` and `/v1/completions` are **not routed** in this build. So the
-  full Flow A needs engine work regardless of which engine we pick.
+  full version of (a) needs engine work regardless of which engine we pick.
 - **little-gemma**: the socket returns decoded text only (`lg_openai_shim.ask`
   reads until `<turn|>` or a stop string). No probability channel either.
 
@@ -212,7 +216,7 @@ rests on.
 So S5 costs a fork of llama.cpp. That is the real price, and it is worth paying
 because it is the only engine viable on both boards for this method.
 
-**And a crude Flow A needs no engine work at all.** Constraining the model to
+**And a crude version of (a) needs no engine work at all.** Constraining the model to
 emit only the letter is decode-free in every way that matters — 3 tokens instead
 of ~500. Measured on the Jetson, E2B, one chemistry question from the suite:
 
