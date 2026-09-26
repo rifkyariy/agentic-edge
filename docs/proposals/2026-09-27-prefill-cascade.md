@@ -113,6 +113,97 @@ the arXiv ID is wrong, or the GitHub project and the paper are different work.
 Resolve before citing, because the interpretability angle and the
 non-autoregressive angle are separate claims.
 
+## 3a. Jev-like or [MASK]-like — the two flows
+
+Both remove the decode loop. They differ in *whose weights answer the question*,
+and that difference decides whether this is still a Gemma-on-edge paper.
+
+### Flow A — Jev-like: read the answer off Gemma itself
+
+```
+prompt (question + 10 options + "The answer is (")
+  |
+  +-- ONE prefill over Gemma 4 E2B/E4B                    ~0.4-8.7 s measured
+  |
+  +-- read the distribution over the ten letter tokens at the next position
+  |     -> argmax = answer,  top-2 margin = confidence
+  |
+  +-- margin > tau ? ---- yes --> done. no decode loop ran.
+         |
+         no
+         |
+  +-- Tier 1: bounded CoT (<= 512 tok), then re-read the distribution
+  +-- Tier 2: full CoT
+```
+
+Same weights we have already benchmarked. No second model, no training, no
+change to what the paper is about. The cost is that Gemma is a decoder that was
+never trained to be read this way — §5's central risk.
+
+### Flow B — [MASK]-like: a separate encoder answers
+
+```
+prompt --> ModernBERT-Large-Instruct (~0.4 GB), MLM head
+             -> distribution over the ten options, one forward pass
+             -> escalate to Gemma + CoT when unsure
+```
+
+Cheaper still, and 2502.03793 reports this class beating similarly sized LLMs
+on MMLU. But it is a **different model answering the question**, which breaks
+paper 1's scope — "Gemma 4 E2B and E4B on a Pi 5 and an Orin Nano" becomes a
+study of something else. It also needs instruction-tuning we have not done, and
+a second model resident on a board where E4B already leaves 165 MB of headroom.
+
+### Recommendation: Flow A, with B held in reserve as the *router*
+
+Flow A for the answering path, on four grounds: it keeps the paper's scope, it
+needs no training, it adds nothing to the memory ceiling that already killed two
+runs, and a crude version of it is measurable today (below).
+
+Flow B is the better *gate* if the top-2 margin turns out to be poorly
+calibrated — a small encoder deciding "does this question need CoT?" is exactly
+a classification task, it never answers anything, and it keeps Gemma as the only
+thing producing answers. That is a fallback for a specific failure, not the
+opening move.
+
+## 3b. What the engines can actually do
+
+Checked on the boards, 2026-09-27, rather than assumed.
+
+**Neither engine exposes token probabilities today.**
+
+- **llama.cpp** (Jetson build `a894dae`): `/v1/chat/completions` accepts
+  `logprobs: true, top_logprobs: 10` and returns the field **absent**;
+  `/completion` and `/v1/completions` are **not routed** in this build. So the
+  full Flow A needs engine work regardless of which engine we pick.
+- **little-gemma**: the socket returns decoded text only (`lg_openai_shim.ask`
+  reads until `<turn|>` or a stop string). No probability channel either.
+
+**little-gemma is nonetheless the better host for it.** We already carry
+`little_gemma/agentic-edge.patch` against its `src/run.c` — we have changed
+`SERVE_GEN`, added a `-raw` prompt path, and moved it to whole-prompt
+tokenisation. Adding a frame that emits the top-k logits at the final position
+is the same kind of change, in a small C codebase we already own, with a patch
+pipeline and a byte-for-byte template test (`tests/test_lg_shim.py`) already
+guarding it. Patching llama.cpp means carrying a fork of a much larger upstream.
+
+**And a crude Flow A needs no engine work at all.** Constraining the model to
+emit only the letter is decode-free in every way that matters — 3 tokens instead
+of ~500. Measured on the Jetson, E2B, one chemistry question from the suite:
+
+| | wall time | output | answer |
+|---|---|---|---|
+| letter-only | **11.0 s** | 3 chars | `(C)` — correct |
+| full CoT | **148.7 s** | 5,372 chars | `The answer is (C).` — correct |
+
+**13.5× faster, same answer, on the faster board.** This is not the method — it
+has no confidence signal, so there is nothing to gate on, and one question is an
+anecdote rather than a result. But it means the expensive half of the hypothesis
+is testable on the existing harness this week, with no patch: run the full grid
+letter-only, and compare accuracy and joules against the baseline we already
+have. If letter-only holds accuracy within a few points, the logit work is
+justified. If it collapses, we learn that cheaply.
+
 ## 4. How to evaluate it here
 
 The harness needs no new measurement apparatus — accuracy and device cost
