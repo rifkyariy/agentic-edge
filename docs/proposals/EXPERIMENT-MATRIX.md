@@ -14,11 +14,15 @@ subsets, n=300 per model).
 | **S2** | thinking-on | llama.cpp | on | ✅ 6/6 | ✅ 6/6 | — |
 | **S3** | engine swap | little-gemma | off | ⬜ 0/6 | 🟡 5/6 | 1 + 6 |
 | **S4** | letter-only | either | off | ⬜ 0/6 | ⬜ 0/6 | 12 |
-| **S5** | cascade | little-gemma¹ | gated | ⬜ 0/6 | ⬜ 0/6 | 12 |
+| **S5** | cascade | llama.cpp¹ | gated | ⬜ 0/6 | ⬜ 0/6 | 12 |
 | **S6** | encoder router | + ModernBERT | gated | ⬜ conditional | ⬜ conditional | 12 |
 
-¹ S5 needs logits at the final position, which neither engine exposes today.
-little-gemma is the cheaper patch — see the proposal §3b.
+¹ S5 needs logits at the final position, which neither engine exposes today, so
+it costs an engine patch either way. It has to be **llama.cpp**: S5 is
+prefill-bound, and little-gemma's CPU prefill is 41–43× slower (0.84 tok/s on
+E4B), which on the Pi makes a prefill-only tier cost as much as the full-CoT
+baseline it replaces. little-gemma stays as S3 on the Jetson, where it is CUDA
+and competitive. See the proposal §3b.
 
 ## Results so far
 
@@ -64,11 +68,11 @@ once generation stops being the cost.
 ² depends entirely on the escalation rate: at τ routing 70% to Tier 0 it is
 ≈0.7×S4 + 0.3×S1; the τ sweep is the experiment, not a fixed number.
 
-⚠️ **S3 on the Pi is the expensive one and probably should not run.**
-little-gemma is ~6× slower than llama.cpp at decode on Pi CPU
+⚠️ **S3 on the Pi is the expensive one and should not run.** little-gemma on Pi
+CPU is ~6× slower at decode *and* 41–43× slower at prefill
 (`gemma4-pi5-benchmarks.md`), so E4B would be ~37 h *per subset*. The engine
 comparison is already answered on the Jetson; repeating it on the Pi costs
-~110 h to confirm what the early engine benchmarks already showed.
+~110 h to confirm what the early engine benchmarks showed in September.
 
 ## Order I would run them
 

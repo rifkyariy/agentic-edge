@@ -179,13 +179,38 @@ Checked on the boards, 2026-09-27, rather than assumed.
 - **little-gemma**: the socket returns decoded text only (`lg_openai_shim.ask`
   reads until `<turn|>` or a stop string). No probability channel either.
 
-**little-gemma is nonetheless the better host for it.** We already carry
-`little_gemma/agentic-edge.patch` against its `src/run.c` — we have changed
-`SERVE_GEN`, added a `-raw` prompt path, and moved it to whole-prompt
-tokenisation. Adding a frame that emits the top-k logits at the final position
-is the same kind of change, in a small C codebase we already own, with a patch
-pipeline and a byte-for-byte template test (`tests/test_lg_shim.py`) already
-guarding it. Patching llama.cpp means carrying a fork of a much larger upstream.
+**Patch llama.cpp, not little-gemma.** An earlier draft of this section said
+the opposite, on the grounds that we already own `agentic-edge.patch` against
+little-gemma's `src/run.c`. That reasoning was wrong, and `gemma4-pi5-benchmarks.md`
+had the disproof in the repo the whole time: little-gemma's CPU prefill is
+**0.84 tok/s (E4B) and 1.77 tok/s (E2B)** against llama.cpp's 36.3 and 73.3 —
+41–43× slower, because it walks the prompt token-by-token where llama.cpp
+batches it into a NEON GEMM.
+
+Tier 0 is prefill-only, so prefill *is* its entire cost. On the Pi, at the
+measured median prompt:
+
+| model | engine | prefill/question | per 100-question subset |
+|---|---|---|---|
+| E2B | little-gemma | 104 s | **2.9 h** |
+| E2B | llama.cpp | 3 s | **0.1 h** |
+| E4B | little-gemma | 218 s | **6.1 h** |
+| E4B | llama.cpp | 5 s | **0.1 h** |
+
+The E2B full-CoT baseline is 3.0 h per subset. A "cheap" tier costing 2.9 h
+saves nothing. Building a prefill-bound method on the engine whose one
+weakness is prefill is exactly backwards, and it would have shown up only
+after the patch was written.
+
+little-gemma is fine on the Jetson — CUDA int8, `run-cuda-i8`, where it matches
+llama.cpp within 0.5 points and runs slightly faster — so it stays as S3, the
+engine-comparison condition. It is not the host for S5. Using it on the Jetson
+and llama.cpp on the Pi is also not an option: that makes the engine differ
+per board and breaks the one-variable-at-a-time invariant the whole comparison
+rests on.
+
+So S5 costs a fork of llama.cpp. That is the real price, and it is worth paying
+because it is the only engine viable on both boards for this method.
 
 **And a crude Flow A needs no engine work at all.** Constraining the model to
 emit only the letter is decode-free in every way that matters — 3 tokens instead
