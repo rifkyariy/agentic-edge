@@ -16,6 +16,7 @@ subsets, n=300 per model).
 | **S4** | letter-only | either | off | ⬜ 0/6 | ⬜ 0/6 | 12 |
 | **S5** | cascade | llama.cpp¹ | gated | ⬜ 0/6 | ⬜ 0/6 | 12 |
 | **S6** | encoder router | + ModernBERT | gated | ⬜ conditional | ⬜ conditional | 12 |
+| **S7** | precision control | llama.cpp Q5_K_M | off | ⬜ 0/3 | ⬜ 0/3 | 6 (E4B only) |
 
 ¹ S5 needs logits at the final position, which neither engine exposes today, so
 it costs an engine patch either way. It has to be **llama.cpp**: S5 is
@@ -87,6 +88,27 @@ comparison is already answered on the Jetson; repeating it on the Pi costs
 S3-on-Pi sits outside this order deliberately: it is 110 h to answer a question
 the Jetson has already answered.
 
+## S7 — the precision control, and why it is Q5_K_M not Q8_0
+
+`findings/RESULTS.md` plans this as **Q8_0**, and that will not work as a
+two-board control:
+
+| model | size | Pi 5 (8,062 MB, mmapped) | Jetson (7,485 MB, CUDA-pinned) |
+|---|---|---|---|
+| E4B Q4_K_XL (current) | 3.93 GiB | ok — measured peak 4,162 MB | ok — measured peak 6,874 MB |
+| **E4B Q5_K_M** | **5.11 GiB** | **ok** | **ok** |
+| E4B Q8_0 | 7.63 GiB | thrashes — 7,813 MB of weights alone | **will not fit** |
+
+`-ngl 99` pins the Jetson's allocation, so 7,813 MB into 7,485 MB is not a
+tight fit, it is impossible. On the Pi the weights are evictable page cache, so
+Q8_0 would *run* but page-fault-bound, which makes its device-cost numbers
+meaningless — and device cost is half of what we measure.
+
+**Q5_K_M is the highest precision runnable on both boards**, so it is the
+control. It is already on the Pi; the Jetson needs a copy. E4B only — no
+higher-precision E2B GGUF exists on either board, which matters because E2B is
+the model with the larger gap to close.
+
 ## What each row would add to the paper
 
 | condition | the claim it supports |
@@ -97,3 +119,4 @@ the Jetson has already answered.
 | S4 | how much of the decode budget is actually load-bearing for accuracy |
 | S5 | accuracy per joule under a gate — the contribution |
 | S6 | whether a small encoder routes better than the model's own margin |
+| S7 | whether the gap to Google's published figures is quantization or protocol — without it, every accuracy claim is chasing an unknown residual |
