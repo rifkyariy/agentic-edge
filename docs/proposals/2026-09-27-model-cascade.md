@@ -40,9 +40,61 @@ And it is cheaper, because escalation is conditional:
 *(Wh per 100 questions, measured. The cascade pays E2B on every question plus
 E4B on the 34% a perfect gate escalates.)*
 
-**+4.3 points and 13% less energy, simultaneously.** Most efficiency work
-trades one for the other; this does not, because it spends the large model only
-where the small one fails.
+**+4.3 points and 13% less energy, simultaneously — for a perfect gate.** That
+is the ceiling, not a result. The section below tests the first realisable gate
+and it does not get there; read that before believing this table.
+
+## Tested: the first realisable gate fails
+
+The oracle above is not a method. The obvious first gate — escalate where E2B
+is *numerically unstable*, i.e. where the two boards disagree on its answer —
+is realisable and turns out to discriminate genuinely:
+
+| E2B on a question | share | E2B accuracy | E4B accuracy | E4B uplift |
+|---|---|---|---|---|
+| stable (both boards agree) | 71% | 63.6% | 72.9% | +9.3 |
+| unstable (boards disagree) | 29% | **22.1%** | 47.7% | **+25.6** |
+
+A 41.5-point accuracy separation, and the uplift from escalating is nearly
+three times larger on the flagged set. The signal is real.
+
+**And the cascade built on it still loses.**
+
+| | accuracy | Pi energy |
+|---|---|---|
+| E2B alone | 51.7% | 26.6 Wh |
+| **instability cascade** | **59.0%** | **41.0 Wh** |
+| E4B alone | **65.7%** | 50.4 Wh |
+| oracle | 70.0% | 43.9 Wh |
+
+−6.7 points against E4B for 19% less energy — and worse than that, it sits
+*below* the straight line between E2B and E4B, so it is beaten by simply
+running E4B on a random 60% of questions.
+
+### Why, precisely
+
+**E4B beats E2B on both splits.** Keeping 214 questions on E2B forfeits the
++9.3 uplift E4B would have delivered there, which costs 6.7 points overall —
+almost exactly the deficit. Meanwhile the escalated set is one where E4B itself
+only manages 47.7%.
+
+**Instability finds questions that are hard, not questions E4B can rescue.** Of
+the 55 questions the oracle escalates — E2B wrong *and* E4B right — instability
+flags 29, or 53%, against a 29% base rate. Better than chance by 1.8×, nowhere
+near enough.
+
+### What this does to the proposal
+
+The +4.3-point oracle win rests entirely on the **4.3% of questions where E2B
+beats E4B**. Capturing it needs a gate that separates "E2B wrong, E4B right"
+from "both wrong" — a much harder discrimination than "E2B is uncertain",
+because uncertainty correlates with difficulty, and difficulty defeats both
+models.
+
+So this should be pitched as **an energy-reduction method with an accuracy
+cost**, not a both-axes win, unless a gate is found that clears a high bar. The
+bar is now quantified: beat the E2B–E4B interpolation, which the instability
+gate does not.
 
 ## The contribution is the gate, not the cascade
 
@@ -102,8 +154,24 @@ On a server this is a scheduling detail. Here it is a memory problem:
 
 ## Next step
 
-The ceiling is established. What is missing is a gate, and the cheapest probe of
-whether one can exist is to check whether E2B's answer confidence separates its
-own correct answers from its errors at all — computable offline from the
-exported answers, no device time, no engine patch. If it does not separate,
-this proposal reduces to "run E4B" and dies cheaply.
+That probe has now run, and its answer was "yes, but not the right way": E2B's
+stability separates its own correct answers from its errors by 41.5 points, yet
+the cascade built on it still loses to E4B alone.
+
+So the open question is narrower and harder than it was. Not *is there a
+confidence signal* — there is — but **is there a signal for "E4B will rescue
+this", as distinct from "this is hard"?** Those are different targets and only
+the first is worth escalating on.
+
+Two things worth trying before abandoning it, both offline:
+
+1. **A margin from E2B's own logits**, once S5 exposes them, rather than the
+   two-board proxy used here. Genuine calibrated uncertainty may separate
+   differently from perturbation instability.
+2. **Disagreement between the models rather than within one.** If E2B and E4B
+   pick different letters, that identifies exactly the contested questions — but
+   it costs both models on every question, which defeats the purpose. Worth
+   measuring only to bound how much signal exists.
+
+If neither separates "rescuable" from "hard", the model cascade is an energy
+knob and should be presented as one.
