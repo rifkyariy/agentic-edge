@@ -4,7 +4,7 @@ The goal: hold the MMLU-Pro score and cut time and power. Everything below is
 measured on runs already on disk, including the things that turned out not to
 work.
 
-## 1. Already achieved, and not yet written down anywhere
+## 1. The baseline your method has to beat
 
 The accuracy–energy frontier across all 30 completed runs, per 100 questions:
 
@@ -19,13 +19,23 @@ The accuracy–energy frontier across all 30 completed runs, per 100 questions:
 | Orin | llama.cpp +think | E4B | 300 | 66.7% | 22.5 | 125 |
 | Pi 5 | llama.cpp | E4B | 300 | 65.7% | 50.4 | 368 |
 
-**S3 already met the goal on the Jetson.** little-gemma holds accuracy within
-0.3–0.7 points of llama.cpp and costs **25% less energy on E2B and 30% less on
-E4B**. That is a measured, n=300, iso-accuracy win from an engine swap, and it
-is currently reported nowhere.
+Two things to be careful about here.
 
-Board choice is the larger lever and is also already measured: the Orin does
-the same work for **55–69% less energy** than the Pi.
+**These are comparison results, not contributions.** S3 measures two existing
+engines against each other; nobody designed anything. little-gemma holding
+accuracy within 0.3–0.7 points of llama.cpp for **25% less energy on E2B and
+30% on E4B** is a fact about software someone else wrote. The same goes for
+board choice: the Orin does the same work for **55–69% less energy** than the
+Pi, which is a fact about hardware someone else built. Both belong in the
+paper as measurements. Neither is a method.
+
+**They set the bar, and they raise it.** A proposed method does not get to
+claim "30% less energy than llama.cpp on the Pi" when an engine swap and a
+board swap already deliver that for free. The honest comparison for anything
+new is against **the best measured configuration**, which is currently
+little-gemma on the Orin at 8.2 Wh (E2B) and 15.9 Wh (E4B) per 100 questions.
+That is the number to beat, and it is a much harder number than the Pi
+baseline it would be tempting to quote against.
 
 ## 2. Ruled out by measurement
 
