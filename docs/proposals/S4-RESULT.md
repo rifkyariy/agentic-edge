@@ -6,11 +6,14 @@ the option without reasoning its way there?
 
 ## Headline
 
-| | accuracy | energy | generated tokens |
-|---|---|---|---|
-| CoT baseline | **51.7%** ±5.7 | 64.16 Wh | 201,573 |
-| **letter-only** | **36.3%** ±5.4 | **3.53 Wh** | **2,131** |
-| | **−15.3 pts** | **18× less** | **95× fewer** |
+| | accuracy | wall clock | energy | generated tokens |
+|---|---|---|---|---|
+| CoT baseline | **51.7%** ±5.7 | **9.1 h** (547.7 min) | 64.16 Wh | 201,573 |
+| **letter-only** | **36.3%** ±5.4 | **0.5 h** (27.3 min) | **3.53 Wh** | **2,131** |
+| | **−15.3 pts** | **20× faster** | **18× less** | **95× fewer** |
+
+Per-subset wall clock: 181.1 / 176.7 / 189.8 min for CoT against
+9.3 / 8.7 / 9.3 min for letter-only.
 
 Per subset: 39.0 / 30.0 / 40.0 against 56.0 / 51.0 / 48.0.
 
@@ -45,11 +48,14 @@ survived pooling is the load-bearing fact: at n=100 it could have been noise.
 
 That makes the cascade ceiling higher than either path alone:
 
-| | accuracy | energy | is it achievable? |
-|---|---|---|---|
-| letter-only | 36.3% | 3.53 Wh | yes — measured |
-| CoT | 51.7% | 64.16 Wh | yes — measured |
-| **oracle cascade** | **61.3%** | **44.4 Wh** | **NO — see below** |
+| | accuracy | wall clock | energy | achievable? |
+|---|---|---|---|---|
+| letter-only | 36.3% | 0.5 h | 3.53 Wh | yes — measured |
+| CoT | 51.7% | 9.1 h | 64.16 Wh | yes — measured |
+| **oracle cascade** | **61.3%** | **~6.3 h** | **44.4 Wh** | **NO — see below** |
+
+*(Cascade wall clock assumes letter-only on all 300 then CoT on the 64% it
+misses: 0.5 + 0.64 × 9.1 h.)*
 
 **The oracle routes using ground truth.** It asks, per question, whether
 *either* path was right — which requires knowing the answer. It is an upper
