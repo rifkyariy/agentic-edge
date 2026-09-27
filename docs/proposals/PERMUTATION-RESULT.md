@@ -54,6 +54,39 @@ pairs at n=100 says nothing. What the run does support is **matching the
 baseline's accuracy for a fifth less energy and a quarter less time**, with a
 gate that needs no ground truth.
 
+## 4. K and the threshold: a frontier, not a single point
+
+All five rotations exist, so K and the agreement threshold can be swept
+offline. Cheapest rotation set shown per configuration:
+
+| K | threshold | kept | kept accuracy | cascade | energy | saving | McNemar vs CoT |
+|---|---|---|---|---|---|---|---|
+| 4 | unanimous | 44 | 68.2% | 58.0% | 17.01 Wh | 20% | p = 0.688 |
+| 4 | ≥3 of 4 | 61 | 57.4% | 56.0% | 14.87 Wh | 30% | p = 1.000 |
+| 5 | ≥4 of 5 | 50 | 64.0% | 55.0% | 16.98 Wh | 21% | p = 1.000 |
+| 5 | ≥3 of 5 | 71 | 53.5% | 54.0% | **12.50 Wh** | **42%** | p = 0.804 |
+| 5 | unanimous | 40 | 70.0% | 58.0% | 19.12 Wh | 11% | p = 0.688 |
+
+Two things fall out.
+
+**More rotations is not better.** K=5 unanimous is strictly worse than K=4
+unanimous — same accuracy, more energy — because a fifth vote makes unanimity
+rarer (40% kept against 44%) and every question that drops out gets escalated
+at full CoT cost. The extra pass is paid twice.
+
+**Every row above reads as "tied with CoT", and that is a warning, not a
+finding.** At n=100 the test cannot separate 54% from 58%; all it says is that
+nothing here is *detectably* worse. Choosing K=5/≥3 for its 42% saving
+*because* it happens to be both cheapest and non-significant would be
+selecting an operating point on noise — the cherry-pick the methodology
+invariants exist to prevent.
+
+So the defensible statement from this run is the range, not a point:
+**the cascade matches CoT within the resolution of n=100, somewhere between 11%
+and 42% cheaper depending on a configuration this data cannot choose.**
+Picking K and the threshold needs s2 and s3, and should be done once on the
+pooled set rather than per subset.
+
 ## What this changes
 
 Three gates have now been tried. This is the first that survives contact:
@@ -73,8 +106,9 @@ the *answer*, not the question.
 
 - **n=100, one subset.** The accuracy claim is a tie, not a win, and the energy
   claim rests on a single 44/56 split that could move. s2 and s3 are needed.
-- **K=4, not 5.** r8 was still running; adding it can only help the gate (more
-  votes to agree) but will cost another 1.26 Wh per 100 questions.
+- **K and the threshold are unchosen.** r8 has since finished and the sweep is
+  in §4: K=5 unanimous is worse than K=4, and the cheapest tied configuration
+  cannot be selected from this data without cherry-picking.
 - **E2B only, Pi only.** The Orin's prefill is 13× cheaper relative to decode,
   so the same cascade should look considerably better there — untested.
 - **The 44% kept fraction is what drives the saving.** If a harder subset
