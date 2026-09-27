@@ -44,8 +44,30 @@ def find_installed():
     sys.exit("could not find the installed mmlu_pro task directory")
 
 
-def build(src, out, gen_toks):
-    dst = os.path.join(out, "mmlu_pro_letter")
+ROT_CODE = """
+
+# agentic-edge: rotate the option order so one question can be asked K ways.
+# The gold rotates with it, so each run stays a valid self-contained eval.
+# Downstream analysis pairs on the chosen option TEXT rather than its letter,
+# which makes un-rotating unnecessary.
+_ROTATE = {rot}
+
+
+def _rotate_doc(x):
+    o = list(x["options"])
+    n = len(o)
+    r = _ROTATE % n if n else 0
+    x["options"] = o[r:] + o[:r]
+    x["answer_index"] = (x["answer_index"] - r) % n
+    x["answer"] = "ABCDEFGHIJ"[x["answer_index"]]
+    return x
+
+"""
+
+
+def build(src, out, gen_toks, rot=0):
+    name = "mmlu_pro_letter" if not rot else "mmlu_pro_letter_r%d" % rot
+    dst = os.path.join(out, name)
     if os.path.isdir(dst):
         shutil.rmtree(dst)
     shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__"))
@@ -59,17 +81,17 @@ def build(src, out, gen_toks):
         s = re.sub(r'^description:.*$',
                    'description: ' + json.dumps(DESC.format(subject=subj.replace("_", " "))),
                    s, flags=re.M)
-        s = s.replace(f'task: "mmlu_pro_{subj}"', f'task: "mmlu_pro_letter_{subj}"')
+        s = s.replace(f'task: "mmlu_pro_{subj}"', f'task: "{name}_{subj}"')
         s = s.replace(f'task_alias: "', 'task_alias: "letter ')
         open(f, "w").write(s)
-        os.rename(f, f"{dst}/mmlu_pro_letter_{subj}.yaml")
+        os.rename(f, f"{dst}/{name}_{subj}.yaml")
 
     g = f"{dst}/_mmlu_pro.yaml"
     s = open(g).read()
-    s = s.replace("group: mmlu_pro", "group: mmlu_pro_letter")
-    s = re.sub(r"- mmlu_pro_(\w+)", r"- mmlu_pro_letter_\1", s)
+    s = s.replace("group: mmlu_pro", "group: " + name)
+    s = re.sub(r"- mmlu_pro_(\w+)", "- " + name + r"_\1", s)
     open(g, "w").write(s)
-    os.rename(g, f"{dst}/_mmlu_pro_letter.yaml")
+    os.rename(g, f"{dst}/_{name}.yaml")
 
     # utils.py appends the CoT trigger to every prompt; without this the
     # condition argues with itself and the measurement is of the argument.
@@ -79,6 +101,15 @@ def build(src, out, gen_toks):
                             'prompt += "Answer:"')
     if patched == src_u:
         sys.exit("utils.py: could not find the CoT trigger to remove — check upstream")
+    if rot:
+        old = ('def process_docs(dataset, subject):\n'
+               '    return dataset.filter(lambda x: x["category"] == subject)')
+        new = (ROT_CODE.format(rot=rot) +
+               'def process_docs(dataset, subject):\n'
+               '    return dataset.filter(lambda x: x["category"] == subject).map(_rotate_doc)')
+        if old not in patched:
+            sys.exit("utils.py: process_docs is not the shape the rotation patch expects")
+        patched = patched.replace(old, new)
     open(u, "w").write(patched)
 
     t = f"{dst}/_default_template_yaml"
@@ -89,7 +120,7 @@ def build(src, out, gen_toks):
     return dst
 
 
-def build_letter_samples(stdbench, subset):
+def build_letter_samples(stdbench, subset, name="mmlu_pro_letter"):
     """A baseline samples file, rekeyed onto the letter task names.
 
     Every task in the group must appear or lm-eval silently runs the omitted
@@ -97,8 +128,9 @@ def build_letter_samples(stdbench, subset):
     """
     src = f"{stdbench}/mmlupro_subset100_{subset}_samples.json"
     d = json.load(open(src))
-    out = {k.replace("mmlu_pro_", "mmlu_pro_letter_"): v for k, v in d.items()}
-    dst = f"{stdbench}/mmlupro_subset100_{subset}_letter_samples.json"
+    out = {k.replace("mmlu_pro_", name + "_"): v for k, v in d.items()}
+    tag = "letter" if name == "mmlu_pro_letter" else name[len("mmlu_pro_"):]
+    dst = f"{stdbench}/mmlupro_subset100_{subset}_{tag}_samples.json"
     json.dump(out, open(dst, "w"))
     return dst, len(out), sum(len(v) for v in out.values())
 
@@ -112,15 +144,18 @@ def main():
     ap.add_argument("--stdbench", default=f"{root}/stdbench")
     ap.add_argument("--gen-toks", type=int, default=16)
     ap.add_argument("--subsets", default="s1,s2,s3,letsmoke")
+    ap.add_argument("--rotate", type=int, default=0,
+                    help="rotate the option order by N places; 0 is the plain task")
     args = ap.parse_args()
 
     os.makedirs(args.out, exist_ok=True)
-    dst = build(find_installed(), args.out, args.gen_toks)
-    print(f"task dir: {dst}  ({len(glob.glob(dst + '/mmlu_pro_letter_*.yaml'))} subjects, "
-          f"num_fewshot 0, max_gen_toks {args.gen_toks})")
+    name = "mmlu_pro_letter" if not args.rotate else "mmlu_pro_letter_r%d" % args.rotate
+    dst = build(find_installed(), args.out, args.gen_toks, args.rotate)
+    print(f"task dir: {dst}  ({len(glob.glob(dst + '/' + name + '_*.yaml'))} subjects, "
+          f"num_fewshot 0, max_gen_toks {args.gen_toks}, rotate {args.rotate})")
     for sub in args.subsets.split(","):
         if os.path.exists(f"{args.stdbench}/mmlupro_subset100_{sub}_samples.json"):
-            p, t, q = build_letter_samples(args.stdbench, sub)
+            p, t, q = build_letter_samples(args.stdbench, sub, name)
             print(f"  samples {sub}: {t} tasks, {q} questions -> {os.path.basename(p)}")
 
 
