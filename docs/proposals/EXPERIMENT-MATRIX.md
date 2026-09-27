@@ -12,7 +12,8 @@ subsets, n=300 per model).
 |---|---|---|---|---|---|---|
 | **S1** | baseline | llama.cpp | off | ✅ 6/6 | ✅ 6/6 | — |
 | **S2** | thinking-on | llama.cpp | on | ✅ 6/6 | ✅ 6/6 | — |
-| **S3** | engine swap | little-gemma | off | ⬜ 0/6 | 🟡 5/6 | 1 + 6 |
+| **S3** | engine swap | little-gemma | off | ⬜ 0/6 | ✅ 6/6 | 6 (Pi, not worth it) |
+| **S3t** | little-gemma + thinking | little-gemma | on | ⬜ 0/6 | ✅ 6/6 | — |
 | **S4** | letter-only | either | off | ⬜ 0/6 | ⬜ 0/6 | 12 |
 | **S5** | cascade | llama.cpp¹ | gated | ⬜ 0/6 | ⬜ 0/6 | 12 |
 | **S6** | encoder router | + ModernBERT | gated | ⬜ conditional | ⬜ conditional | 12 |
@@ -38,14 +39,19 @@ and competitive. See the proposal §3b.
 | Jetson | S3 little-gemma | E2B | 300 | 53.0% | 45 | +0.3 pts, −10% time |
 | Jetson | S1 baseline | E4B | 300 | **66.0%** | 100 | — |
 | Jetson | S2 thinking-on | E4B | 300 | 66.7% | 125 | +0.7 pts, +25% time |
-| Jetson | S3 little-gemma | E4B | 200 | 65.5% | 81 | −0.5 pts, −19% time |
+| Jetson | S3 little-gemma | E4B | 300 | 65.3% | 83 | −0.7 pts, −17% time |
+| Jetson | S3t lg + thinking | E2B | 300 | 49.3% | 56 | **−3.7 pts, +25% time** |
+| Jetson | S3t lg + thinking | E4B | 300 | 63.7% | 102 | **−1.6 pts, +23% time** |
 
 **Two results already in hand, and both point the same way as the proposal.**
 
-*Thinking-on does not pay.* It costs 20–26% more time on every board and model
-and buys nothing: E2B gets **worse** on both boards (−1.7 and −3.0 points),
-E4B moves +0.6 and +0.7, well inside noise. Extra reasoning tokens are not
-where the headroom is on this benchmark — which is the premise S4/S5 rest on.
+*Thinking-on does not pay, and it now fails on two engines independently.*
+llama.cpp: E2B −1.7 (Pi) and −3.0 (Orin), E4B +0.6 and +0.7, all for 20–26%
+more time. little-gemma, same board and subsets: **E2B −3.7, E4B −1.6**, for
+23–25% more time. Six model-engine-board combinations, not one of them
+positive beyond noise. Extra reasoning tokens are not where the headroom is on
+this benchmark — the premise S4/S5 rest on, now replicated rather than
+assumed.
 
 *The engine is not the variable either.* little-gemma lands within 0.5 points
 of llama.cpp on both models while running slightly faster. That validates it as
