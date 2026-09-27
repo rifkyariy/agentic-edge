@@ -9,10 +9,16 @@ the option without reasoning its way there?
 | | accuracy | energy | generated tokens |
 |---|---|---|---|
 | CoT baseline | **51.7%** ±5.7 | 64.16 Wh | 201,573 |
-| **letter-only** | **35.7%** ±5.4 | **3.64 Wh** | **2,232** |
-| | **−16.0 pts** | **18× less** | **90× fewer** |
+| **letter-only** | **36.3%** ±5.4 | **3.53 Wh** | **2,131** |
+| | **−15.3 pts** | **18× less** | **95× fewer** |
 
-Per subset: 40.0 / 29.0 / 38.0 against 56.0 / 51.0 / 48.0.
+Per subset: 39.0 / 30.0 / 40.0 against 56.0 / 51.0 / 48.0.
+
+*(This is v2. v1 left MMLU-Pro's `"Answer: Let's think step by step."` trigger
+in the prompt, so the condition contradicted itself — system saying "do not
+explain", the user turn saying to think. Removing it moved the pooled score by
+0.6 points, well inside noise, so the flaw was real but not load-bearing. v1 is
+kept under `stdbench/failed/…-cottrigger`.)*
 
 Alone, letter-only is not competitive. Paired over the same 300 questions the
 gap is **McNemar exact p = 3.5 × 10⁻⁶** — real, not sampling. The pure form of
@@ -25,28 +31,34 @@ Paired over the same 100 questions:
 
 | | n=300 | per subset |
 |---|---|---|
-| both right | 78 | 30 / 24 / 24 |
-| **letter-only right, CoT wrong** | **29** | **10 / 5 / 14** |
-| CoT right, letter-only wrong | 77 | 26 / 27 / 24 |
-| neither | 116 | 34 / 44 / 38 |
+| both right | 80 | 30 / 24 / 26 |
+| **letter-only right, CoT wrong** | **29** | **9 / 6 / 14** |
+| CoT right, letter-only wrong | 75 | 26 / 27 / 22 |
+| neither | 116 | 35 / 43 / 38 |
 
 **Letter-only answers 29 of 300 questions that full chain-of-thought gets
-wrong — 9.7%, and it held in all three subsets.** CoT is not strictly better;
+wrong — 9.7%, in all three subsets, and at exactly the same count across two
+independent runs of the condition.** CoT is not strictly better;
 it actively costs accuracy on roughly a tenth of the set, the behaviour arXiv
 2409.12183 reports outside mathematical and symbolic problems. That this
 survived pooling is the load-bearing fact: at n=100 it could have been noise.
 
 That makes the cascade ceiling higher than either path alone:
 
-| | accuracy | energy |
-|---|---|---|
-| letter-only | 35.7% | 3.64 Wh |
-| CoT | 51.7% | 64.16 Wh |
-| **oracle cascade** | **61.3%** | **44.9 Wh** |
+| | accuracy | energy | is it achievable? |
+|---|---|---|---|
+| letter-only | 36.3% | 3.53 Wh | yes — measured |
+| CoT | 51.7% | 64.16 Wh | yes — measured |
+| **oracle cascade** | **61.3%** | **44.4 Wh** | **NO — see below** |
 
-**+9.7 points over CoT and 30% less energy**, if a gate can tell when
-letter-only is right. (Cost assumes letter-only on all 300, then CoT on the 64%
-it gets wrong.)
+**The oracle routes using ground truth.** It asks, per question, whether
+*either* path was right — which requires knowing the answer. It is an upper
+bound on what any gate could achieve, **not a result and not reachable**. The
+only gate actually tested, escalating on model instability, *lost* (59.0%
+against E4B's 65.7%).
+
+Read as a bound it says: +9.7 points over CoT and 31% less energy are on the
+table *if* a gate can be built. Nothing here shows one can.
 
 ## What this changes
 

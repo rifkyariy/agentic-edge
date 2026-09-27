@@ -9,8 +9,13 @@ then finish your answer with ...". The two then contradict each other and the
 task's wins — measured 2026-09-27, the model opened with "Step 1: Analyze the
 question." and was truncated by the token cap, scoring 0/14.
 
-So this copies the installed task and changes exactly three things:
+So this copies the installed task and changes exactly four things:
   * the description, to ask for the letter and nothing else
+  * utils.py's format_cot_example, which appends "Answer: Let's think step by
+    step." to EVERY prompt. Leaving it in made the condition contradict itself
+    — system saying "do not explain", the user turn ending "think step by
+    step" — and the first run measured that contradiction rather than the
+    condition. Replaced with a plain "Answer:".
   * num_fewshot 5 -> 0, because the exemplars are chain-of-thought ones and
     would instruct the model twice, in opposite directions
   * max_gen_toks 2048 -> a handful, which is the point of the experiment
@@ -65,6 +70,16 @@ def build(src, out, gen_toks):
     s = re.sub(r"- mmlu_pro_(\w+)", r"- mmlu_pro_letter_\1", s)
     open(g, "w").write(s)
     os.rename(g, f"{dst}/_mmlu_pro_letter.yaml")
+
+    # utils.py appends the CoT trigger to every prompt; without this the
+    # condition argues with itself and the measurement is of the argument.
+    u = f"{dst}/utils.py"
+    src_u = open(u).read()
+    patched = src_u.replace('prompt += "Answer: Let\'s think step by step."',
+                            'prompt += "Answer:"')
+    if patched == src_u:
+        sys.exit("utils.py: could not find the CoT trigger to remove — check upstream")
+    open(u, "w").write(patched)
 
     t = f"{dst}/_default_template_yaml"
     s = open(t).read()
