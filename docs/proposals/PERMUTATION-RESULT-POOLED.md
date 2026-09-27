@@ -97,3 +97,67 @@ untested here:
    McNemar numbers (already in the table above: p=0.832, 0.263, 0.860) move
    toward significance with a cheaper escalation cost, since a smaller Δenergy
    requirement is easier to clear.
+
+## A third construction, tested and rejected: adaptive early-stop
+
+**Hypothesis:** most of the K=4 rotation cost is wasted on questions that
+would have agreed after just 2 rotations. Run rotations sequentially, stop
+and accept as soon as the first 2 agree; only pay for all 4 (and escalate to
+CoT) on the harder 40% that don't resolve early.
+
+**Checked first, before committing device time:** whether "majority ∈
+{top-2 candidates}" holds for 3-1 splits, since a cheaper binary adjudication
+between just the top-2 votes was the natural next idea. It doesn't — **45.8%
+of 3-1 splits have the true answer outside both the majority and minority
+pick** (n=48). Binary adjudication would miss nearly half its targets, so
+this variant was dropped before testing.
+
+**Adaptive early-stop, tested (n=300, pooled):**
+
+| | n | share | accuracy |
+|---|---|---|---|
+| stopped after 2 (agree) | 179 | 59.7% | 46.9% |
+| escalated to CoT (didn't agree) | 121 | 40.3% | 46.3% (CoT's own accuracy on this subset) |
+| **cascade overall** | 300 | | **46.7%** |
+| CoT baseline (same 300) | 300 | | **51.7%** |
+
+Cost: 36.47 Wh / 297.4 min vs CoT's 64.11 Wh / 543.3 min — **43% less energy,
+45% less time**. But:
+
+**Paired McNemar: p = 0.036 — significantly worse than CoT**, not tied. 15
+questions the cascade gets right that CoT doesn't; 30 where CoT is right and
+the cascade isn't.
+
+**Why it fails:** 2-rotation agreement is a weak signal. The "stopped at 2"
+bucket's accuracy (46.9%) is *lower* than CoT's own baseline (51.7%) — so
+accepting those answers as final, rather than escalating, actively throws
+away accuracy on the majority of questions. The vote-count/accuracy table
+above (59.6% / 30.6% / 25.3% / 14.3% for 4/3/2/1-way agreement) already
+implied this: only the *unanimous* (4/4) bucket clears baseline accuracy.
+Anything short of unanimity is not a reliable accept signal on its own.
+
+## Where this leaves the permutation-gate line of work
+
+Three constructions tried on top of the same real gate signal
+(agreement-predicts-correctness, 35.5 points at n=300):
+
+| construction | result |
+|---|---|
+| unanimous-only cascade, escalate the rest to full CoT | tied with CoT, no config significant either way |
+| binary top-2 adjudication on near-unanimous splits | rejected before testing — 45.8% miss rate |
+| adaptive early-stop at 2, escalate the rest | **significantly worse than CoT (p=0.036)** |
+
+**None of the three achieves iso-accuracy.** The gate signal is real, but
+every cheap decision rule built to exploit it either ties or loses. The
+common failure mode: any threshold below full unanimity accepts answers at
+an accuracy below the CoT baseline, so "cheap acceptance" is only safe at the
+one operating point (K=4 unanimous) that also has the smallest kept-fraction
+and the largest escalated cost — which is what erased its savings in the
+first construction.
+
+**This is a coherent negative result, not a dead end from lack of trying.**
+The paper-worthy conclusion from this line of work: for MMLU-Pro on Gemma 4
+E2B, letter-level agreement across permuted option orders is diagnostic but
+not actionable as a cheap accept/reject gate at any threshold weaker than
+unanimity, and unanimity alone is too rare (38% of questions) to make the
+escalation-cost economics work with full CoT as the fallback.
