@@ -2,11 +2,13 @@
 // Subsets are disjoint 100-question MMLU-Pro samples (seeds 20260918/19/20).
 // Engines are the S3 axis: little-gemma runs the same task as llama.cpp with
 // only the engine swapped (job kind mmlupro-lg), and only on the Jetson —
-// its fast path is CUDA, so the Pi has no little-gemma rows at all.
+// its fast path is CUDA, so the Pi has no little-gemma rows at all. TurboQuant
+// (S8, job kind mmlupro-tq) is llama.cpp with a turbo3 KV cache, on both boards.
 export const PLAN = { models: ["e2b", "e4b"], subsets: ["s1", "s2", "s3"],
                       thinking: ["off", "on"],
                       engines: [{ id: "llama.cpp", boards: ["pi", "jetson"] },
-                                { id: "little-gemma", short: "LG", boards: ["jetson"] }] };
+                                { id: "little-gemma", short: "LG", boards: ["jetson"] },
+                                { id: "turboquant", short: "TQ", boards: ["pi", "jetson"] }] };
 
 // The telemetry rerun started here. Results older than this are real, but they
 // belong to the first batch (no power/thermal data), so the matrix shows them
@@ -15,14 +17,15 @@ export const BATCH_START = "2026-09-20 23:00";
 
 // Run directories are mmlupro100-<model> (an early run, implicitly s1) or
 // mmlupro100-<model>-<subset>, with -think appended for the reasoning row
-// (std_mmlupro.sh sets OUT=$OUT-think) and lg- before the model for a
-// little-gemma run. Anything else — a smoke test, a .bak — must not be matched
+// (std_mmlupro.sh sets OUT=$OUT-think) and lg- (little-gemma) or tq- (TurboQuant)
+// before the model. Anything else — a smoke test, a .bak — must not be matched
 // into a cell, so the pattern stays anchored.
-const RUN_RE = /^mmlupro100-(lg-)?(e2b|e4b)(?:-(s\d))?(-think)?$/i;
+const RUN_RE = /^mmlupro100-(lg-|tq-)?(e2b|e4b)(?:-(s\d))?(-think)?$/i;
 const matches = (name, model, subset, thinking = "off", engine = "llama.cpp") => {
   const m = RUN_RE.exec((name || "").trim());
   if (!m) return false;
-  return (m[1] ? "little-gemma" : "llama.cpp") === engine
+  const eng = { "lg-": "little-gemma", "tq-": "turboquant" }[(m[1] || "").toLowerCase()] || "llama.cpp";
+  return eng === engine
       && m[2].toLowerCase() === model
       && (m[3] || "s1").toLowerCase() === subset
       && (m[4] ? "on" : "off") === thinking;

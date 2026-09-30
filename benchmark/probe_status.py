@@ -219,12 +219,12 @@ def completed():
     """Scores of finished lm-eval runs, newest first.
 
     The matrix fills its cells from this list, so it must reach back over the
-    whole grid: 12 llama.cpp runs per board plus the Jetson's 12 little-gemma
-    ones. At the old limit of 12, each new S3 result pushed a llama.cpp score
+    whole grid: 12 llama.cpp and 12 TurboQuant runs per board plus the Jetson's
+    12 little-gemma ones. At the old limit of 12, each new S3 result pushed a llama.cpp score
     out and its cell fell back to "not run"."""
     out = []
     for p in sorted(glob.glob(f"{ROOT}/stdbench/*/*/results_*.json"),
-                    key=os.path.getmtime, reverse=True)[:48]:
+                    key=os.path.getmtime, reverse=True)[:96]:
         try:
             j = json.load(open(p))
             # prefer the aggregate task over its per-subject children

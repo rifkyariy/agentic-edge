@@ -33,6 +33,8 @@ function Matrix({ boxes, queues, onOpen }) {
           <b>Thinking</b> rows: <code>-rea on --reasoning-budget 320 --reasoning-format none</code>.{" "}
           <b>LG</b> rows (Jetson only): the same task through little-gemma,
           thinking off (<code>-think -1</code>) or on (<code>-think 320</code>).{" "}
+          <b>TQ</b> rows: the llama.cpp task with a TurboQuant KV cache
+          (<code>-ctk turbo3 -ctv turbo3</code>, pinned fork).{" "}
           <Link href="/compare">scope and caveats →</Link>{" "}
           <Link href="/queue">queue a run →</Link>
         </p>

@@ -46,6 +46,32 @@
     }
   },
 
+  "mmlupro-tq": {
+    "description": "S8: MMLU-Pro with a TurboQuant turbo3 KV cache (pinned llama.cpp fork), one 100-question subset, one model. Both boards.",
+    "params": {
+      "model":    {"enum": ["e2b", "e4b"]},
+      "subset":   {"enum": ["s1", "s2", "s3"]},
+      "thinking": {"enum": ["off", "on"], "default": "off"}
+    },
+    "label": "mmlupro-tq-{model}-{subset}",
+    "output_dir": "mmlupro100-tq-{model}-{subset}",
+    "suffix_when": {"thinking": {"on": "-think"}},
+    "baseline": {"thinking": {"off": "tq-baseline", "on": "tq-thinking-on"}},
+    "memory_mb": {"e2b": 3900, "e4b": 5400},
+    "_memory_mb": "The mmlupro numbers: turbo3 only shrinks the KV cache, a few hundred MB at -c 8192, so the f16 peaks bound it. Tighten after the first runs.",
+    "boards": {
+      "pi": {
+        "command": "env SUBSET={subset} THINKING={thinking} ./std_mmlupro_tq.sh {model}",
+        "env": {"SRVLOG": "{stdbench}/{output_dir}/server.log", "SUBSET": "{subset}"}
+      },
+      "jetson": {
+        "command": "env SUBSET={subset} THINKING={thinking} ./std_mmlupro_tq.sh {model}",
+        "env": {"SRVLOG": "{stdbench}/{output_dir}/server.log", "SUBSET": "{subset}"},
+        "memory_mb": {"e4b": 5200}
+      }
+    }
+  },
+
   "raw": {
     "description": "Any command, wrapped in run_measured.sh. The escape hatch.",
     "params": {

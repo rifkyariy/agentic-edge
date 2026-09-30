@@ -35,5 +35,28 @@
       "thinking": "on",
       "think": "320"
     }
+  },
+  "tq-baseline": {
+    "description": "S8, TurboQuant KV cache, thinking off: mmlupro-baseline's flags plus -ctk/-ctv turbo3, served by the pinned TurboQuant fork (engines/build_turboquant.sh, engine_build.txt in the run directory). Only the engine build and the KV type differ from S1. EFFECTIVE KV TYPES ARE K=q8_0, V=turbo3: the fork's auto-asymmetric rule upgrades K for Gemma 4's GQA 8:1 (n_head_kv=1), logged in server.log as 'upgrading K from turbo3 to q8_0'; TURBO_AUTO_ASYMMETRIC=0 would force turbo3 K. The command line still reads -ctk turbo3, which is what this fingerprint checks.",
+    "flags": {
+      "ctx": "8192",
+      "cache_ram": "0",
+      "reasoning": "off",
+      "reasoning_budget": "-1",
+      "cache_type_k": "turbo3",
+      "cache_type_v": "turbo3"
+    }
+  },
+  "tq-thinking-on": {
+    "description": "S8t, TurboQuant KV cache, thinking on: mmlupro-thinking-on's flags (budget 320, --reasoning-format none) plus -ctk/-ctv turbo3. EFFECTIVE KV TYPES ARE K=q8_0, V=turbo3: the fork's auto-asymmetric rule upgrades K for Gemma 4's GQA 8:1 (n_head_kv=1), logged in server.log as 'upgrading K from turbo3 to q8_0'; TURBO_AUTO_ASYMMETRIC=0 would force turbo3 K. The command line still reads -ctk turbo3, which is what this fingerprint checks.",
+    "flags": {
+      "ctx": "8192",
+      "cache_ram": "0",
+      "reasoning": "on",
+      "reasoning_budget": "320",
+      "reasoning_format": "none",
+      "cache_type_k": "turbo3",
+      "cache_type_v": "turbo3"
+    }
   }
 }

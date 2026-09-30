@@ -39,20 +39,20 @@ def _rows(csv_path):
             for i, r in enumerate(sorted(rows, key=lambda r: float(r["start_epoch"])))]
 
 
-# A benchmark run directory: mmlupro100-[lg-]<model>[-<subset>][-think][-<tag>],
-# where lg- marks the S3 little-gemma engine (job kind mmlupro-lg; no prefix is
-# llama.cpp), the tag is what failed/ and archive/ append (oom-<stamp>,
+# A benchmark run directory: mmlupro100-[lg-|tq-]<model>[-<subset>][-think][-<tag>],
+# where lg- marks the S3 little-gemma engine (job kind mmlupro-lg), tq- the S8
+# TurboQuant llama.cpp fork (mmlupro-tq); no prefix is llama.cpp, the tag is what failed/ and archive/ append (oom-<stamp>,
 # reasoningfmt-<stamp>, before-rerun-<stamp>) and .bak is an old copy.
 RUN_NAME = re.compile(
-    r"^mmlupro100-(lg-)?(e2b|e4b)(?:-(s\d))?(-think)?(?:[.-](.+))?$", re.I)
+    r"^mmlupro100-(lg-|tq-)?(e2b|e4b)(?:-(s\d))?(-think)?(?:[.-](.+))?$", re.I)
 # A measured directory: <label>-<YYYYMMDD-HHMMSS>[-tag], label as the queue
-# builds it (mmlupro-[lg-]<model>[-<subset>][-think]).
+# builds it (mmlupro-[lg-|tq-]<model>[-<subset>][-think]).
 MEASURED_NAME = re.compile(
-    r"^mmlupro-(lg-)?(e2b|e4b)(?:-(s\d))?(-think)?-(\d{8}-\d{6})(?:-.+)?$", re.I)
+    r"^mmlupro-(lg-|tq-)?(e2b|e4b)(?:-(s\d))?(-think)?-(\d{8}-\d{6})(?:-.+)?$", re.I)
 
 
 def _engine(prefix):
-    return "little-gemma" if prefix else "llama.cpp"
+    return {"lg-": "little-gemma", "tq-": "turboquant"}.get((prefix or "").lower(), "llama.cpp")
 
 
 def parse_run(name):

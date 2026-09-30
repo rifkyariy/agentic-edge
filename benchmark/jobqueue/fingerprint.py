@@ -21,6 +21,8 @@ _FLAGS = {
     "reasoning_budget": ("--reasoning-budget",),
     "reasoning_format": ("--reasoning-format",),
     "ngl": ("-ngl", "--n-gpu-layers"),
+    "cache_type_k": ("-ctk", "--cache-type-k"),
+    "cache_type_v": ("-ctv", "--cache-type-v"),
     "model": ("-m", "--model"),
 }
 _LOOKUP = {flag: key for key, flags in _FLAGS.items() for flag in flags}

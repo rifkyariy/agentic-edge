@@ -79,7 +79,7 @@ export default function HistoryPage() {
           <Chips label="thinking" value={thinking} onChange={setThinking}
                  options={[["all", "any"], ["off", "off"], ["on", "on"]]} />
           <Chips label="engine" value={engine} onChange={setEngine}
-                 options={[["all", "any"], ["llama.cpp", "llama.cpp"], ["little-gemma", "little-gemma"]]} />
+                 options={[["all", "any"], ["llama.cpp", "llama.cpp"], ["little-gemma", "little-gemma"], ["turboquant", "turboquant"]]} />
           <Chips label="status" value={status} onChange={setStatus} options={statusOptions} />
           <input className="search" value={q} placeholder="search run name…"
                  onChange={(e) => setQ(e.target.value)} aria-label="search run name" />
