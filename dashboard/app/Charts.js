@@ -26,6 +26,14 @@ export function MetricChart({ data, dataKey, color, unit, label, domainMax, deci
   const last = vals.length ? vals[vals.length - 1] : null;
   const hot = warnAt && last !== null && last >= warnAt;
   const id = `g-${dataKey}-${label.replace(/\W/g, "")}`;
+  // ["dataMin","dataMax"] collapses to one instant with 0-1 points (page just
+  // loaded), which makes the time scale generate several ticks at the same
+  // pixel — Recharts then hands them duplicate keys and warns. Pad the domain
+  // so it never has zero width.
+  const ts = data.map((r) => r.t).filter((t) => t !== null && t !== undefined);
+  const tMax = ts.length ? Math.max(...ts) : Date.now();
+  const tMin = ts.length ? Math.min(...ts) : tMax - 60000;
+  const tDomain = tMax > tMin ? [tMin, tMax] : [tMax - 60000, tMax + 1];
 
   return (
     <div className="panel">
@@ -47,7 +55,7 @@ export function MetricChart({ data, dataKey, color, unit, label, domainMax, deci
             </linearGradient>
           </defs>
           <CartesianGrid stroke="var(--line)" vertical={false} />
-          <XAxis dataKey="t" type="number" domain={["dataMin", "dataMax"]} scale="time"
+          <XAxis dataKey="t" type="number" domain={tDomain} scale="time"
                  tickFormatter={clock} minTickGap={44} {...axis} />
           <YAxis width={40} tickCount={4}
                  domain={[0, domainMax ?? (warnAt ? (m) => Math.max(m * 1.1, warnAt * 1.05) : "auto")]}
@@ -71,6 +79,10 @@ export function TrackChart({ points, dataKey, color, unit, label, domainMax, dec
   if (!vals.length) return null;
   const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
   const throttles = points.filter((p) => p.thr);
+  // Same zero-width trap as MetricChart: a run with one telemetry point (or
+  // span 0) collapses the domain and Recharts double-books tick keys.
+  const ts = points.map((p) => p.t).filter((t) => t !== null && t !== undefined);
+  const tMax = Math.max(span || 0, ...ts, 1);
   return (
     <div className="track-row">
       <div className="track-head">
@@ -82,7 +94,7 @@ export function TrackChart({ points, dataKey, color, unit, label, domainMax, dec
       <ResponsiveContainer width="100%" height={80}>
         <ComposedChart data={points} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
           <CartesianGrid stroke="var(--line)" vertical={false} />
-          <XAxis dataKey="t" type="number" domain={[0, span || "dataMax"]}
+          <XAxis dataKey="t" type="number" domain={[0, tMax]}
                  tickFormatter={secs} minTickGap={40} {...axis} />
           <YAxis width={44} domain={[0, domainMax ?? "auto"]} tickCount={3}
                  tickFormatter={(v) => fmt(v, decimals)} {...axis} />
