@@ -1,0 +1,434 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1DAE6C9F220200FAB7FBFF39 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = FA3709A5DC0507686EFCFBDC /* Tokenizers */; };
+		277B79F65CECDCCED3657DAF /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7131406C5729E892440BCB84 /* App.swift */; };
+		280C42832FB66732C907FF95 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 56569CBF32BCD9632BDD9BE5 /* MLXLLM */; };
+		41CC17147DB501531239E682 /* RunDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D2F42FF94C83E0B6B29616 /* RunDetail.swift */; };
+		538A09766D9433C99633B0F4 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = C035186113BC435ACB0E55AC /* Telemetry.swift */; };
+		5F23BDCDAEC9A30A46364EB8 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = C88F4F1491B0EB305CEBC4F8 /* HuggingFace */; };
+		7D48C08F7382451A0ACE3AB7 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = B3BB9A40C5297C4264C71F5B /* MLX */; };
+		8E0959398D2F76A4971889D5 /* Bench.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07DFD861F340635C84B0C796 /* Bench.swift */; };
+		9EF2C00726D81772CC96DC32 /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = 5DFB4A4D6DEFDC5A01F7E0CD /* MLXHuggingFace */; };
+		B686E701CD59AF84AF307508 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 4F803B4623854E6A83913F58 /* MLXLMCommon */; };
+		FDF0D6C3E18C3E0F0B0780E9 /* mmlupro.json in Resources */ = {isa = PBXBuildFile; fileRef = 7654A532EF48B33C0EEB197B /* mmlupro.json */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		07DFD861F340635C84B0C796 /* Bench.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bench.swift; sourceTree = "<group>"; };
+		48D1767CDD326FB6711E0A43 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		7131406C5729E892440BCB84 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		7654A532EF48B33C0EEB197B /* mmlupro.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = mmlupro.json; sourceTree = "<group>"; };
+		A7CB51EA81631B3F5143244E /* GemmaBench.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GemmaBench.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C035186113BC435ACB0E55AC /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
+		D3D2F42FF94C83E0B6B29616 /* RunDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunDetail.swift; sourceTree = "<group>"; };
+		D6ED7FA75F08F8EA9D543A0A /* GemmaBench.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GemmaBench.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		6164198426E8EB4E5DD34C8A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				280C42832FB66732C907FF95 /* MLXLLM in Frameworks */,
+				B686E701CD59AF84AF307508 /* MLXLMCommon in Frameworks */,
+				9EF2C00726D81772CC96DC32 /* MLXHuggingFace in Frameworks */,
+				7D48C08F7382451A0ACE3AB7 /* MLX in Frameworks */,
+				5F23BDCDAEC9A30A46364EB8 /* HuggingFace in Frameworks */,
+				1DAE6C9F220200FAB7FBFF39 /* Tokenizers in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0137393479A1C43D625B1166 = {
+			isa = PBXGroup;
+			children = (
+				E27B7E811DB292063D4A546D /* GemmaBench */,
+				2799717FBD4754D12248DB98 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		2799717FBD4754D12248DB98 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A7CB51EA81631B3F5143244E /* GemmaBench.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6804C5975FF3270F3EC620FD /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				7654A532EF48B33C0EEB197B /* mmlupro.json */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		E27B7E811DB292063D4A546D /* GemmaBench */ = {
+			isa = PBXGroup;
+			children = (
+				7131406C5729E892440BCB84 /* App.swift */,
+				07DFD861F340635C84B0C796 /* Bench.swift */,
+				D6ED7FA75F08F8EA9D543A0A /* GemmaBench.entitlements */,
+				48D1767CDD326FB6711E0A43 /* Info.plist */,
+				D3D2F42FF94C83E0B6B29616 /* RunDetail.swift */,
+				C035186113BC435ACB0E55AC /* Telemetry.swift */,
+				6804C5975FF3270F3EC620FD /* Resources */,
+			);
+			path = GemmaBench;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A6906DBA5F3090DF6193F047 /* GemmaBench */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CB468BE8A4B0B4CAA084456F /* Build configuration list for PBXNativeTarget "GemmaBench" */;
+			buildPhases = (
+				B021B01E376BA5D8DA57C3F4 /* Sources */,
+				5D5CEB8BD3FAE185D85F2882 /* Resources */,
+				6164198426E8EB4E5DD34C8A /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GemmaBench;
+			packageProductDependencies = (
+				56569CBF32BCD9632BDD9BE5 /* MLXLLM */,
+				4F803B4623854E6A83913F58 /* MLXLMCommon */,
+				5DFB4A4D6DEFDC5A01F7E0CD /* MLXHuggingFace */,
+				B3BB9A40C5297C4264C71F5B /* MLX */,
+				C88F4F1491B0EB305CEBC4F8 /* HuggingFace */,
+				FA3709A5DC0507686EFCFBDC /* Tokenizers */,
+			);
+			productName = GemmaBench;
+			productReference = A7CB51EA81631B3F5143244E /* GemmaBench.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		2A58BCAA7FBB296C356B6B97 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					A6906DBA5F3090DF6193F047 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 150951AEC5061FDBBC74043C /* Build configuration list for PBXProject "GemmaBench" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 0137393479A1C43D625B1166;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				9711A31D01497C8A32924487 /* XCRemoteSwiftPackageReference "mlx-swift" */,
+				E73CF0A5C90E4816FA895FDA /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
+				14B98D9DEB1C68D806E7F25C /* XCRemoteSwiftPackageReference "swift-huggingface" */,
+				9677DEDC5B133226A3040698 /* XCRemoteSwiftPackageReference "swift-transformers" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 2799717FBD4754D12248DB98 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A6906DBA5F3090DF6193F047 /* GemmaBench */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5D5CEB8BD3FAE185D85F2882 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FDF0D6C3E18C3E0F0B0780E9 /* mmlupro.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B021B01E376BA5D8DA57C3F4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				277B79F65CECDCCED3657DAF /* App.swift in Sources */,
+				8E0959398D2F76A4971889D5 /* Bench.swift in Sources */,
+				41CC17147DB501531239E682 /* RunDetail.swift in Sources */,
+				538A09766D9433C99633B0F4 /* Telemetry.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1D92A3C89E836B6B38DEF7DA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		592110A907B2A8ED81C237E2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = GemmaBench/GemmaBench.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = GemmaBench/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mitlab.GemmaBench;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		763A65B6AA2E35931D4040F7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = GemmaBench/GemmaBench.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = GemmaBench/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mitlab.GemmaBench;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		9789E97553791E7653DFD717 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		150951AEC5061FDBBC74043C /* Build configuration list for PBXProject "GemmaBench" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D92A3C89E836B6B38DEF7DA /* Debug */,
+				9789E97553791E7653DFD717 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CB468BE8A4B0B4CAA084456F /* Build configuration list for PBXNativeTarget "GemmaBench" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				763A65B6AA2E35931D4040F7 /* Debug */,
+				592110A907B2A8ED81C237E2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		14B98D9DEB1C68D806E7F25C /* XCRemoteSwiftPackageReference "swift-huggingface" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-huggingface";
+			requirement = {
+				kind = exactVersion;
+				version = 0.11.0;
+			};
+		};
+		9677DEDC5B133226A3040698 /* XCRemoteSwiftPackageReference "swift-transformers" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-transformers";
+			requirement = {
+				kind = exactVersion;
+				version = 1.3.4;
+			};
+		};
+		9711A31D01497C8A32924487 /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift";
+			requirement = {
+				kind = exactVersion;
+				version = 0.31.4;
+			};
+		};
+		E73CF0A5C90E4816FA895FDA /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
+			requirement = {
+				kind = exactVersion;
+				version = 3.31.4;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4F803B4623854E6A83913F58 /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E73CF0A5C90E4816FA895FDA /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLMCommon;
+		};
+		56569CBF32BCD9632BDD9BE5 /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E73CF0A5C90E4816FA895FDA /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLLM;
+		};
+		5DFB4A4D6DEFDC5A01F7E0CD /* MLXHuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E73CF0A5C90E4816FA895FDA /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXHuggingFace;
+		};
+		B3BB9A40C5297C4264C71F5B /* MLX */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9711A31D01497C8A32924487 /* XCRemoteSwiftPackageReference "mlx-swift" */;
+			productName = MLX;
+		};
+		C88F4F1491B0EB305CEBC4F8 /* HuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 14B98D9DEB1C68D806E7F25C /* XCRemoteSwiftPackageReference "swift-huggingface" */;
+			productName = HuggingFace;
+		};
+		FA3709A5DC0507686EFCFBDC /* Tokenizers */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9677DEDC5B133226A3040698 /* XCRemoteSwiftPackageReference "swift-transformers" */;
+			productName = Tokenizers;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 2A58BCAA7FBB296C356B6B97 /* Project object */;
+}

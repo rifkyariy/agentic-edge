@@ -1,5 +1,6 @@
 import { onEveryBoard } from "../../lib/ssh";
 import { shared } from "../../lib/shared";
+import { phoneBox } from "../../lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,6 @@ export async function GET() {
           hint: "commit, then run benchmark/deploy.sh from the Mac" });
       }
     }
-    return { ts: Date.now(), boxes };
+    return { ts: Date.now(), boxes: [...boxes, await phoneBox("paired")] };
   }));
 }

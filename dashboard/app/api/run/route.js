@@ -1,12 +1,18 @@
 import { byId } from "../../lib/hosts";
 import { onBoard } from "../../lib/ssh";
+import { loadRun } from "../../lib/phone";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const box = byId(searchParams.get("box"));
   const runName = searchParams.get("run");
+  // The iPhone's runs are uploaded files on the Mac, already in run_detail.py's shape.
+  if (searchParams.get("box") === "iphone") {
+    const r = runName && await loadRun(runName);
+    return r ? Response.json(r) : Response.json({ error: "no such iPhone run" }, { status: 404 });
+  }
+  const box = byId(searchParams.get("box"));
   // failed/ and archive/ hold past runs the history page opens; nothing else
   // may carry a slash, and a leading \w rules out "." and "..".
   if (!box || !runName || !/^(?:(?:failed|archive)\/)?\w[\w.-]*$/.test(runName)) {

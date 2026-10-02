@@ -3,7 +3,7 @@
   --ink:#15171a; --ink-2:#55595f; --ink-3:#8b8f96;
   --line:#e5e5df; --line-2:#d2d2ca;
   --power:#eb6834; --cpu:#2a78d6; --temp:#e34948;
-  --pi:#2a78d6; --jetson:#c2517f;
+  --pi:#2a78d6; --jetson:#c2517f; --iphone:#1d9e75;
   --better:#127d5a; --worse:#b3261e; --neutral:#8b8f96;
   --ok:#1baf7a; --danger:#e34948; --warn:#eda100;
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -15,7 +15,7 @@
   --ink:#f1f2f0; --ink-2:#aab0b8; --ink-3:#767c85;
   --line:#25292e; --line-2:#333941;
   --power:#f07a4a; --cpu:#4c94e8; --temp:#ec6d6d;
-  --pi:#4c94e8; --jetson:#dd7aa2;
+  --pi:#4c94e8; --jetson:#dd7aa2; --iphone:#5dcaa5;
   --better:#35c98f; --worse:#f2665c; --neutral:#767c85;
   --ok:#25c78a; --danger:#ec6d6d; --warn:#d99a10;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -18px rgba(0,0,0,.8);
@@ -603,6 +603,7 @@ button.primary:disabled{background:var(--panel-2);color:var(--ink-3);border-colo
 .board-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;background:var(--ink-3);vertical-align:0}
 .board-dot.b-pi{background:var(--pi)}
 .board-dot.b-jetson{background:var(--jetson)}
+.board-dot.b-iphone{background:var(--iphone)}
 .think-on{font:600 11.5px var(--mono);color:var(--power)}
 .joblink{margin-left:8px;font:500 10.5px var(--mono);color:var(--cpu);text-decoration:none;
   padding:1px 7px;border-radius:999px;background:color-mix(in srgb,var(--cpu) 10%,transparent)}

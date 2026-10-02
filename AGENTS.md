@@ -6,7 +6,8 @@ expensive to discover afterwards.
 
 **The project:** agentic AI on edge devices. Gemma 4 **E2B** and **E4B** on a
 **Raspberry Pi 5** (CPU and RAM only) and an **Nvidia Jetson Orin Nano**
-(CUDA), measured against the standard runtimes **llama.cpp** and
+(CUDA) — plus an **iPhone** running the same MMLU-Pro task on-device with MLX
+(`benchmark/apps/ios`) — measured against the standard runtimes **llama.cpp** and
 **little-gemma**, plus an orchestration layer this project proposes. Accuracy
 and device cost (power, thermals, utilisation) are measured in the same run.
 
@@ -56,6 +57,8 @@ benchmark/          the harness (stdlib only on the devices, no pip needed)
   baselines.json      expected serving flags per condition, for the fingerprint
   install_queue.sh    installs and starts the unit (run it on the board)
   tests/              stdlib unittest; `python3 -m unittest discover -s tests`
+  apps/ios/           GemmaBench: the iPhone arm (SwiftUI + mlx-swift). Its own guide:
+                      benchmark/apps/ios/AGENTS.md. Uploads runs to /api/phone
 
 dashboard/          Next.js live monitor (runs on the Mac, not the devices)
   app/layout.js       the shell: sidebar + one queue feed for every page
@@ -73,7 +76,9 @@ dashboard/          Next.js live monitor (runs on the Mac, not the devices)
   app/lib/plan.js     which runs exist, and run-name matching rules
   app/lib/hosts.js    the two boxes, overridable from .env.local
   app/lib/shared.js   server-side cache so N tabs cost each board one probe
-  app/api/*           thin routes: status, queue, logs, run, history, baseline, compare
+  app/lib/phone.js    iPhone uploads on the Mac (data/phone/), served as box "iphone"
+  app/api/*           thin routes: status, queue, logs, run, history, baseline, compare,
+                      phone (the iPhone app's upload; the only route that writes)
   scripts/check-ssh.mjs  `npm run check` — preflight before a fresh clone runs
 
 findings/           results and analysis (committed)

@@ -13,6 +13,7 @@ const MODELS = [["e2b", "Gemma 4 E2B"], ["e4b", "Gemma 4 E4B"]];
 const DEV = {
   pi: { label: "Raspberry Pi 5", short: "Pi 5", color: "var(--pi)" },
   jetson: { label: "Jetson Orin Nano", short: "Orin Nano", color: "var(--jetson)" },
+  iphone: { label: "iPhone", short: "iPhone", color: "var(--iphone)" },
 };
 
 const TIP = {
