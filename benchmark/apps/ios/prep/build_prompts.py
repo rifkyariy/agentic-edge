@@ -111,6 +111,10 @@ def references(ref):
                 "mean_w": (r.get("summary_json") or {}).get("mean_w"),
                 "j_per_token": (r.get("summary_json") or {}).get("j_per_token"),
                 "prompt_tokens_total": sum(t["pt"] for t in r.get("timeline", [])),
+                # llama.cpp counts only uncached tokens, and lm-eval sends a subject's questions
+                # back to back, so later prompts reuse the 5-shot prefix: only the first request
+                # is a full prompt, and only it can be compared token for token.
+                "first_prompt_tokens": (r.get("timeline") or [{}])[0].get("pt"),
             }
     return out
 

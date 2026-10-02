@@ -25,7 +25,8 @@ struct Ref: Codable, Sendable {
     let run: String
     let score: Double
     let decode_tok_s: Double?
-    let prompt_tokens_total: Int
+    let prompt_tokens_total: Int  // after llama.cpp's prefix cache: not comparable to full prompts
+    let first_prompt_tokens: Int?  // the one uncached request: the template/tokenizer parity check
     let minutes: Double?
     let energy_wh: Double?  // board DC draw (PMIC / INA3221)
     let mean_w: Double?
@@ -97,6 +98,48 @@ final class Bench {
     var lastTokS = 0.0
     var lastAnswer = ""
     var lastOK = false
+
+    // Model downloads (Models.swift). Disk status is read from the files; modelTick re-reads it.
+    var modelProgress: [GemmaModel: Double] = [:]
+    var modelError: [GemmaModel: String] = [:]
+    var modelTick = 0
+    private var downloadJobs: [GemmaModel: Task<Void, Never>] = [:]
+
+    @discardableResult
+    func download(_ m: GemmaModel) -> Task<Void, Never> {
+        if let job = downloadJobs[m] { return job }
+        modelError[m] = nil
+        modelProgress[m] = 0
+        UIApplication.shared.isIdleTimerDisabled = true
+        let job = Task {
+            do {
+                try await ModelStore.download(m) { done, total in
+                    Task { @MainActor in self.modelProgress[m] = Double(done) / Double(max(total, 1)) }
+                }
+            } catch {
+                let cancelled = error is CancellationError || (error as? URLError)?.code == .cancelled
+                if !cancelled { modelError[m] = error.localizedDescription }
+            }
+            modelProgress[m] = nil
+            downloadJobs[m] = nil
+            modelTick += 1
+            if downloadJobs.isEmpty && !running { UIApplication.shared.isIdleTimerDisabled = false }
+        }
+        downloadJobs[m] = job
+        return job
+    }
+
+    /// One after the other, so each gets the full bandwidth and E2B is usable first.
+    func downloadAll() {
+        Task { for m in GemmaModel.allCases where !ModelStore.status(m).complete { await download(m).value } }
+    }
+
+    func cancelDownload(_ m: GemmaModel) { downloadJobs[m]?.cancel() }
+
+    func deleteModel(_ m: GemmaModel) {
+        try? ModelStore.delete(m)
+        modelTick += 1
+    }
     var running = false
     var log: [String] = []
     var current: RunRecord?  // the live run, for the detail sheet
@@ -146,7 +189,7 @@ final class Bench {
 
     /// POST the run to /api/phone; the dashboard then serves it as box "iphone". The result is
     /// kept on the run either way, so a failed upload shows and can be retried.
-    func upload(_ rec: RunRecord) async -> String {
+    func upload(_ rec: RunRecord, record: Bool = true) async -> String {
         guard let base = URL(string: apiURL.trimmingCharacters(in: .whitespaces)), base.host != nil else {
             return "upload failed: set the dashboard URL"
         }
@@ -164,11 +207,29 @@ final class Bench {
         } catch {
             msg = "upload failed: \(error.localizedDescription)"
         }
+        // A live upload never writes run.json: it holds a snapshot, and a slow upload finishing
+        // after the next question would overwrite newer answers with older ones.
+        guard record else { return msg }
         var r = rec
         r.uploaded = msg
         r.save(in: RunRecord.root.appending(path: rec.dir))
         runs = RunRecord.loadAll()
         return msg
+    }
+
+    static let liveEvery = 10
+    private var liveUploading = false
+
+    /// Mid-run snapshot (status "running") so the dashboard's Monitor shows the phone live.
+    /// Fire and forget: inference doesn't wait on the network.
+    private func liveUpload(_ rec: RunRecord) {
+        guard !liveUploading else { return }  // ponytail: skip a tick rather than queue uploads behind a slow network
+        liveUploading = true
+        Task {
+            let msg = await upload(rec, record: false)
+            if !msg.hasPrefix("uploaded") { log.append("live upload: \(msg)") }
+            liveUploading = false
+        }
     }
 
     func start(_ plan: [(GemmaModel, String)]) {
@@ -193,6 +254,15 @@ final class Bench {
 
     private func runOne(_ model: GemmaModel, _ subset: String) async {
         let docs = prompts.subsets[subset] ?? []
+        // Download before anything is measured: the idle baseline and timings must not include it.
+        if !ModelStore.status(model).complete {
+            say("mmlupro-\(model.rawValue)-\(subset): downloading \(model.repo) first")
+            await download(model).value
+            guard ModelStore.status(model).complete else {
+                say("mmlupro-\(model.rawValue)-\(subset): not run — download failed: \(modelError[model] ?? "cancelled")")
+                return
+            }
+        }
         let stamp = Self.stampFmt.string(from: Date())
         let root = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let label = "mmlupro-\(model.rawValue)-\(subset)"
@@ -217,6 +287,9 @@ final class Bench {
             "thermal_at_start": ProcessInfo.processInfo.thermalState.rawValue,
             "start_epoch": Date().timeIntervalSince1970,
             "idle_baseline_s": Self.idleBaselineS,
+            "model_revision": model.revision,
+            // inside the measured window: ~1 s of radio every N questions (dashboard live view)
+            "live_upload_every": autoUpload && !apiURL.isEmpty ? Self.liveEvery : 0,
         ]
         writeJSON(meta, mdir.appending(path: "meta.json"))
 
@@ -232,15 +305,13 @@ final class Bench {
             say("\(label): idle baseline \(Int(Self.idleBaselineS))s")
             try await Task.sleep(for: .seconds(Self.idleBaselineS))
 
-            say("\(label): loading \(model.repo) (downloads on first use)")
+            say("\(label): loading \(model.repo) from the phone")
             Memory.cacheLimit = 256 << 20  // ponytail: fixed cap so buffer cache doesn't eat the jetsam headroom
             let t0 = Date()
+            // A .directory configuration never touches the downloader; the files are already local.
             let container = try await LLMModelFactory.shared.loadContainer(
                 from: #hubDownloader(), using: #huggingFaceTokenizerLoader(),
-                configuration: ModelConfiguration(id: model.repo, extraEOSTokens: ["<turn|>"])
-            ) { p in
-                Task { @MainActor in self.status = "\(label): download \(Int(p.fractionCompleted * 100))%" }
-            }
+                configuration: ModelConfiguration(directory: model.dir, extraEOSTokens: ["<turn|>"]))
             loadS = Date().timeIntervalSince(t0)
             rec.loadS = loadS
             say("\(label): loaded in \(Int(loadS))s, running \(docs.count) questions")
@@ -262,6 +333,7 @@ final class Bench {
                 rec.telemetry = tel.samples
                 rec.save(in: mdir)
                 current = rec
+                if autoUpload && !apiURL.isEmpty && (i + 1) % Self.liveEvery == 0 && i + 1 < docs.count { liveUpload(rec) }
             }
         } catch is CancellationError {
             runStatus = "stopped"
@@ -399,8 +471,10 @@ final class Bench {
         ]
         out["reference"] = ref.mapValues { ["run": $0.run, "score": $0.score, "decode_tok_s": $0.decode_tok_s ?? 0,
                                              "prompt_tokens_total": $0.prompt_tokens_total] }
-        if let pi = ref["pi"], pi.prompt_tokens_total > 0, rs.count == 100 {
-            out["prompt_tokens_vs_pi"] = Double(promptTok) / Double(pi.prompt_tokens_total)  // 1.0 = same template/tokenizer
+        // Parity check on request 0, the only one llama.cpp's prefix cache can't shorten:
+        // 1.0 = same chat template and tokenizer as the boards.
+        if let pi = ref["pi"]?.first_prompt_tokens, pi > 0, let first = rs.first {
+            out["first_prompt_tokens_vs_pi"] = Double(first.1.promptTokens) / Double(pi)
         }
         return out
     }

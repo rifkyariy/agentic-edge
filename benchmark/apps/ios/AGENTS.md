@@ -38,6 +38,7 @@ prep/build_prompts.py       builds GemmaBench/Resources/mmlupro.json (stdlib onl
 prep/power_trace.py         sysdiagnose PowerLog or Power Profiler trace -> power.json the app imports (Mac, stdlib)
 GemmaBench/App.swift        SwiftUI: pick model + subset, run one or the full grid
 GemmaBench/Bench.swift      runner, scoring, every output file
+GemmaBench/Models.swift     model store: pinned HF commits -> Application Support/models/, list/download/delete
 GemmaBench/Telemetry.swift  1 Hz sampler (cpu, thermalState, battery, memory, MLX memory)
 GemmaBench/RunDetail.swift  run drill-down, as agentic-edge dashboard RunDetail.js: Device tab
                             (cost tiles, request timeline, telemetry tracks, per-request table)
@@ -56,7 +57,19 @@ open GemmaBench.xcodeproj    # set your Team, run on a real iPhone
 ```
 
 In the app: pick E2B/E4B and s1/s2/s3 → **Run**, or **Run full grid** (6 runs, as in
-agentic-edge §6). The first run of each model downloads it from Hugging Face.
+agentic-edge §6).
+
+**Models** ("Models on this iPhone" card): each model is a plain folder,
+`Library/Application Support/models/<repo name>/`, holding one **pinned** Hugging Face commit
+(`GemmaModel.revision`, recorded as `model_revision` in `meta.json`). "Downloaded" = every file
+present at the size the Hub reports — a fact about the disk. Download resumes per file,
+checks free space first, and is excluded from iCloud backup; a run that finds its model missing
+downloads it **before** the idle baseline, so nothing measured includes the download. Bumping a
+revision = a different model for the paper: say so. From the Mac:
+`xcrun devicectl device process launch --device <id> com.mitlab.GemmaBench -- -downloadModels`
+starts both downloads, and `xcrun devicectl device info files --device <id> --domain-type
+appDataContainer --domain-identifier com.mitlab.GemmaBench --subdirectory "Library/Application Support/models"`
+lists what's on the phone.
 
 Results land in the app's Documents (Files → On My iPhone → GemmaBench, or Finder →
 iPhone → Files), in the agentic-edge layout:
@@ -75,7 +88,13 @@ lm-eval's `samples_*.jsonl` shape, so the repo's compare/export tooling can read
 ## 3a. Upload to the dashboard API
 
 Each run is POSTed to the dashboard's `/api/phone` when it ends (and again from a run's
-detail › "Re-upload", e.g. after attaching power data). The dashboard stores it on the Mac
+detail › "Re-upload", e.g. after attaching power data). **While it runs**, a `status: running`
+snapshot goes up every 10 questions (`Bench.liveEvery`), so the dashboard's Monitor shows the
+iPhone live: progress, ETA, CPU, memory, and an `MLX` row in the matrix. That is ~1 s of radio
+inside the measured window per 10 questions; `meta.json` records it as `live_upload_every`
+(0 = off: turn off auto-upload in Settings for a run with no network in the window). A live
+upload never writes `run.json` (a late one would overwrite newer answers), and a slow one
+makes the next tick skip rather than queue. The dashboard stores it on the Mac
 (`dashboard/data/phone/`) and serves it as a third box, `iphone`, in `/api/history`,
 `/api/baseline`, `/api/compare` and `/api/run` — see `dashboard/public/openapi.yaml`.
 The body is `RunRecord.apiPayload()` (RunDetail.swift), deliberately in `run_detail.py --run`'s
@@ -145,8 +164,10 @@ Energy precedence everywhere: PowerLog measured Wh > battery-% estimate (`*` in
    identical to, llama.cpp's `timings`; say so when comparing.
 8. **Report every run**, stopped and failed included — the app never deletes a run
    directory, and it appends each request as it finishes.
-9. **Template parity check.** `summary.json → prompt_tokens_vs_pi` should be ~1.0. If it
-   isn't, the MLX chat template or tokenizer differs from llama.cpp's and the comparison
-   is suspect.
+9. **Template parity check.** `summary.json → first_prompt_tokens_vs_pi` must be 1.0
+   (E2B s1: 1,438 = 1,438). Only request 0 is comparable: llama.cpp counts tokens after its
+   prefix cache, and lm-eval sends each subject's questions back to back, so later Pi
+   prompts reuse the 5-shot prefix and look ~4x shorter. Never compare prompt-token totals
+   (`prompt_tokens_vs_pi` in the first E2B s1 run's summary, 3.79, is that mistake).
 10. **A prompt change means rebuilding with `--ref`.** `build_prompts.py` refuses to write
     unless all 100 s1 prompts match lm-eval byte for byte.

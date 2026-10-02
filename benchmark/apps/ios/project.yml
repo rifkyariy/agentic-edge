@@ -55,7 +55,7 @@ targets:
         NSAppTransportSecurity:                  # dashboard on the Mac over LAN/Tailscale is plain http :3939
           NSAllowsLocalNetworking: true
         NSLocalNetworkUsageDescription: Upload benchmark runs to the agentic-edge dashboard on your Mac.
-        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
     settings:
       base:
         SWIFT_VERSION: "5.0"

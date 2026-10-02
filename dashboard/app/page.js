@@ -183,16 +183,22 @@ function Device({ box, hist, onOpen }) {
       </div>
 
       <div className="panels">
-        <MetricChart data={hist} dataKey="power" color="var(--power)" unit="W"
-          label="board power" decimals={2} windowMin={WINDOW_MIN} />
+        {/* Like gpu below: a series a box never reports (the iPhone has no power or
+            temperature sensor) gets no empty chart. */}
+        {hist.some((r) => r.power !== null && r.power !== undefined) && (
+          <MetricChart data={hist} dataKey="power" color="var(--power)" unit="W"
+            label="board power" decimals={2} windowMin={WINDOW_MIN} />
+        )}
         <MetricChart data={hist} dataKey="cpu" color="var(--cpu)" unit="%"
           label="cpu utilisation" domainMax={100} windowMin={WINDOW_MIN} />
         {hist.some((r) => r.gpu !== null && r.gpu !== undefined) && (
           <MetricChart data={hist} dataKey="gpu" color="var(--gpu)" unit="%"
             label="gpu utilisation" domainMax={100} windowMin={WINDOW_MIN} />
         )}
-        <MetricChart data={hist} dataKey="temp" color="var(--temp)" unit="°C"
-          label="soc temperature" decimals={1} warnAt={80} windowMin={WINDOW_MIN} />
+        {hist.some((r) => r.temp !== null && r.temp !== undefined) && (
+          <MetricChart data={hist} dataKey="temp" color="var(--temp)" unit="°C"
+            label="soc temperature" decimals={1} warnAt={80} windowMin={WINDOW_MIN} />
+        )}
       </div>
 
       {d.rails && Object.keys(d.rails).length > 1 && (
