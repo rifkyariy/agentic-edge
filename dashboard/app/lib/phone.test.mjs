@@ -73,3 +73,9 @@ test("a run in progress shows on the Monitor; a silent one does not", async () =
   assert.equal(d.progress, null);
   assert.deepEqual(d.procs, {});
 });
+
+test("a late live snapshot never puts a finished run back to running", async () => {
+  await saveRun(run("mmlupro-e2b-s3-race", "done", 1, []));
+  assert.equal(await saveRun(run("mmlupro-e2b-s3-race", "running", 1, [])), false);
+  assert.equal((await loadRun("mmlupro-e2b-s3-race")).status, "done");
+});

@@ -14,8 +14,8 @@ export async function POST(request) {
   try { run = JSON.parse(text); } catch { run = null; }
   const why = invalid(run);
   if (why) return Response.json({ error: why }, { status: 400 });
-  await saveRun(run);
+  const saved = await saveRun(run);
   invalidate("compare");
   invalidate("status"); // a live upload should show on the next Monitor poll, not 4 s later
-  return Response.json({ ok: true, run: run.run });
+  return Response.json({ ok: true, run: run.run, ...(saved ? {} : { ignored: "run already finished" }) });
 }

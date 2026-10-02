@@ -258,6 +258,7 @@ export default function Page() {
     try {
       const r = await fetch("/api/status", { cache: "no-store" });
       const j = await r.json();
+      if (!r.ok) throw new Error(r.status === 401 ? "no API token — open this page once with ?token=<API_TOKEN>" : j.error);
       const now = j.ts ? new Date(j.ts).getTime() : Date.now();
       for (const b of j.boxes) {
         // a fresh array each tick: Recharts holds on to the one it was

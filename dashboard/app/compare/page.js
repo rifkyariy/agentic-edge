@@ -130,7 +130,7 @@ export default function Compare() {
   const [pairedErr, setPairedErr] = useState(null);
   useEffect(() => {
     fetch("/api/compare", { cache: "no-store" })
-      .then((r) => r.json())
+      .then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error); return j; })
       .then((j) => setPaired({
         ...comparisons(j.boxes.filter((b) => b.ok)),
         ts: j.ts,

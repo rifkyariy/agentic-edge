@@ -28,9 +28,14 @@ export function invalid(r) {
 export async function saveRun(r) {
   await mkdir(DIR(), { recursive: true });
   const file = path.join(DIR(), `${r.run}.json`);
+  // Live snapshots are fire-and-forget, so one sent before the final upload can
+  // land after it. A finished run is never put back to "running".
+  const prev = r.status === "running" ? await loadRun(r.run) : null;
+  if (prev && prev.status !== "running") return false;
   // write-then-rename, so a reader never sees half a file
   await writeFile(`${file}.tmp`, JSON.stringify({ ...r, received_at: new Date().toISOString() }));
   await rename(`${file}.tmp`, file);
+  return true;
 }
 
 // The matrix and the Monitor card name runs the way the boards do,
