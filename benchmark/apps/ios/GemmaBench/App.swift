@@ -18,6 +18,7 @@ struct ContentView: View {
     @State private var model = GemmaModel.e2b
     @State private var subset = "s1"
     @State private var detail: RunRecord?
+    @State private var settings = false
 
     private var ref: [String: Ref] { bench.prompts.reference["\(model.rawValue)-\(subset)"] ?? [:] }
     private var pct: Double { bench.done > 0 ? 100 * Double(bench.correct) / Double(bench.done) : 0 }
@@ -31,13 +32,17 @@ struct ContentView: View {
                     actions
                     if bench.total > 0 { progress }
                     if !bench.runs.isEmpty { history }
-                    dashboardCard
                     if !bench.log.isEmpty { logCard }
                 }
                 .padding()
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("GemmaBench")
+            .toolbar {
+                Button { settings = true } label: { Image(systemName: "gearshape") }
+                    .accessibilityLabel("Settings")
+            }
+            .sheet(isPresented: $settings) { SettingsView(bench: bench) }
             .sheet(item: $detail, onDismiss: { bench.runs = RunRecord.loadAll(); bench.writeComparison() }) {
                 RunDetailView(rec: $0, ref: bench.prompts.reference["\($0.model)-\($0.subset)"] ?? [:],
                               upload: { await bench.upload($0) })
@@ -69,17 +74,6 @@ struct ContentView: View {
             }
             .disabled(bench.running)
             Text(model.repo).font(.caption.monospaced()).foregroundStyle(.secondary)
-            HStack {
-                Label("Battery capacity", systemImage: "battery.100").font(.caption)
-                Spacer()
-                TextField("Wh", value: $bench.batteryWh, format: .number.precision(.fractionLength(2)))
-                    .keyboardType(.decimalPad).multilineTextAlignment(.trailing).frame(width: 70)
-                    .font(.caption.monospacedDigit())
-                Text("Wh").font(.caption).foregroundStyle(.secondary)
-            }
-            Text(bench.batteryWh > 0 ? "Nominal × Settings › Battery › Health %. Used for the energy estimate."
-                 : "Enter your battery's Wh to get an energy estimate.")
-                .font(.caption2).foregroundStyle(bench.batteryWh > 0 ? Color.secondary : .orange)
         }
     }
 
@@ -175,19 +169,6 @@ struct ContentView: View {
         }
     }
 
-    private var dashboardCard: some View {
-        Card {
-            Label("Dashboard API", systemImage: "icloud.and.arrow.up").font(.subheadline.weight(.semibold))
-            TextField("https://… (empty = don't upload)", text: $bench.apiURL)
-                .textContentType(.URL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                .font(.caption.monospaced())
-            SecureField("API_TOKEN from dashboard/.env.local", text: $bench.apiToken)
-                .textInputAutocapitalization(.never).autocorrectionDisabled().font(.caption.monospaced())
-            Text("Each finished run is POSTed to /api/phone and shows up as the iPhone box next to the Pi 5 and Jetson. Re-upload from a run's detail after attaching power data.")
-                .font(.caption2).foregroundStyle(.secondary)
-        }
-    }
-
     private var logCard: some View {
         Card {
             DisclosureGroup {
@@ -258,5 +239,90 @@ struct Stat: View {
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+// MARK: - Settings: everything the app keeps between launches
+
+struct SettingsView: View {
+    @Bindable var bench: Bench
+    @State private var showToken = false
+    @State private var test: String?
+    @State private var testing = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("https://…", text: $bench.apiURL)
+                        .textContentType(.URL).keyboardType(.URL)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    HStack {
+                        Group {
+                            if showToken { TextField("API_TOKEN", text: $bench.apiToken) }
+                            else { SecureField("API_TOKEN", text: $bench.apiToken) }
+                        }
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .font(.body.monospaced())
+                        Button { showToken.toggle() } label: { Image(systemName: showToken ? "eye.slash" : "eye") }
+                            .buttonStyle(.borderless).accessibilityLabel(showToken ? "Hide token" : "Show token")
+                    }
+                    Toggle("Upload each run when it ends", isOn: $bench.autoUpload)
+                    Button {
+                        testing = true
+                        Task { test = await bench.testConnection(); testing = false }
+                    } label: {
+                        HStack {
+                            Label(testing ? "Testing…" : "Test connection", systemImage: "network")
+                            Spacer()
+                            if let test {
+                                Image(systemName: test.hasPrefix("OK") ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                    .foregroundStyle(test.hasPrefix("OK") ? .green : .red)
+                            }
+                        }
+                    }
+                    .disabled(testing)
+                    if let test { Text(test).font(.caption).foregroundStyle(test.hasPrefix("OK") ? .green : .red) }
+                } header: {
+                    Label("Dashboard API", systemImage: "icloud.and.arrow.up")
+                } footer: {
+                    Text("Runs are POSTed to /api/phone and show up as the iPhone next to the Pi 5 and Jetson. The token is kept in the Keychain. Empty URL = never upload.")
+                }
+
+                Section {
+                    HStack {
+                        Text("Battery capacity")
+                        Spacer()
+                        TextField("Wh", value: $bench.batteryWh, format: .number.precision(.fractionLength(2)))
+                            .keyboardType(.decimalPad).multilineTextAlignment(.trailing).frame(width: 80)
+                        Text("Wh").foregroundStyle(.secondary)
+                    }
+                    if Telemetry.nominalBatteryWh > 0 {
+                        Button("Reset to nominal (\(fmt(Telemetry.nominalBatteryWh, 2)) Wh)") {
+                            bench.batteryWh = Telemetry.nominalBatteryWh
+                        }
+                    }
+                } header: {
+                    Label("Energy estimate", systemImage: "battery.100")
+                } footer: {
+                    Text("Nominal Wh × Settings › Battery › Battery Health %. Used only when no PowerLog data is attached. Saved with each run, so changing it doesn't rewrite past runs.")
+                }
+
+                Section {
+                    LabeledContent("Device", value: "\(Telemetry.deviceName) (\(Telemetry.machine))")
+                    LabeledContent("Memory", value: "\(ProcessInfo.processInfo.physicalMemory >> 30) GB")
+                    LabeledContent("iOS", value: UIDevice.current.systemVersion)
+                    LabeledContent("Engine", value: "mlx-swift-lm 3.31.4")
+                    LabeledContent("Runs on this phone", value: "\(bench.runs.count)")
+                } header: {
+                    Label("About", systemImage: "info.circle")
+                }
+            }
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { Button("Done") { dismiss() } }
+            .disabled(bench.running)  // settings are captured per run; don't change them mid-run
+        }
     }
 }

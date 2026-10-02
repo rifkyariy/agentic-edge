@@ -17,6 +17,9 @@ packages:
   swift-transformers:
     url: https://github.com/huggingface/swift-transformers
     exactVersion: 1.3.4
+configFiles:
+  Debug: Config.xcconfig
+  Release: Config.xcconfig
 targets:
   GemmaBench:
     type: application
@@ -45,6 +48,7 @@ targets:
       path: GemmaBench/Info.plist
       properties:
         CFBundleDisplayName: GemmaBench
+        APIToken: $(API_TOKEN)                   # from git-ignored Secrets.xcconfig; empty if absent
         UILaunchScreen: {}
         UIFileSharingEnabled: true               # Finder / Files app can pull Documents/{stdbench,measured}
         LSSupportsOpeningDocumentsInPlace: true

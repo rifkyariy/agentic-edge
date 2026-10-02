@@ -23,6 +23,7 @@
 /* Begin PBXFileReference section */
 		07DFD861F340635C84B0C796 /* Bench.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bench.swift; sourceTree = "<group>"; };
 		48D1767CDD326FB6711E0A43 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		6897E793FD457FC39D70A34D /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		7131406C5729E892440BCB84 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		7654A532EF48B33C0EEB197B /* mmlupro.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = mmlupro.json; sourceTree = "<group>"; };
 		A7CB51EA81631B3F5143244E /* GemmaBench.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GemmaBench.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -52,6 +53,7 @@
 			isa = PBXGroup;
 			children = (
 				E27B7E811DB292063D4A546D /* GemmaBench */,
+				936B0390C2BA2BA18CBB0F1E /* ios */,
 				2799717FBD4754D12248DB98 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -70,6 +72,15 @@
 				7654A532EF48B33C0EEB197B /* mmlupro.json */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		936B0390C2BA2BA18CBB0F1E /* ios */ = {
+			isa = PBXGroup;
+			children = (
+				6897E793FD457FC39D70A34D /* Config.xcconfig */,
+			);
+			name = ios;
+			path = .;
 			sourceTree = "<group>";
 		};
 		E27B7E811DB292063D4A546D /* GemmaBench */ = {
@@ -182,6 +193,7 @@
 /* Begin XCBuildConfiguration section */
 		1D92A3C89E836B6B38DEF7DA /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6897E793FD457FC39D70A34D /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -285,6 +297,7 @@
 		};
 		9789E97553791E7653DFD717 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6897E793FD457FC39D70A34D /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;

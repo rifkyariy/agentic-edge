@@ -112,8 +112,36 @@ final class Bench {
     var apiURL = UserDefaults.standard.string(forKey: "apiURL") ?? "https://edge-monitor.chaoticraccon.cloud" {
         didSet { UserDefaults.standard.set(apiURL, forKey: "apiURL") }
     }
-    var apiToken = Keychain.get("apiToken") ?? "" {  // the dashboard's API_TOKEN; Keychain, never UserDefaults
+    /// The dashboard's API_TOKEN; Keychain, never UserDefaults. First launch seeds it from the build's
+    /// git-ignored Secrets.xcconfig (via Info.plist), so the token never lands in the repo.
+    var apiToken = Keychain.get("apiToken") ?? (Bundle.main.object(forInfoDictionaryKey: "APIToken") as? String ?? "") {
         didSet { Keychain.set("apiToken", apiToken) }
+    }
+
+    var autoUpload = UserDefaults.standard.object(forKey: "autoUpload") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(autoUpload, forKey: "autoUpload") }
+    }
+
+    /// Checks URL + token without touching the boards: a missing iPhone run is a 404 when the
+    /// token is accepted and a 401 when it isn't.
+    func testConnection() async -> String {
+        guard let base = URL(string: apiURL.trimmingCharacters(in: .whitespaces)), base.host != nil else {
+            return "Set the dashboard URL first."
+        }
+        var req = URLRequest(url: base.appending(path: "api/run").appending(queryItems: [
+            .init(name: "box", value: "iphone"), .init(name: "run", value: "connection-test")]), timeoutInterval: 20)
+        if !apiToken.isEmpty { req.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization") }
+        do {
+            let (_, resp) = try await URLSession.shared.data(for: req)
+            switch (resp as? HTTPURLResponse)?.statusCode ?? 0 {
+            case 404, 200: return "OK — dashboard reachable, token accepted."
+            case 401: return "Token rejected (401). Check API_TOKEN in dashboard/.env.local."
+            case 400: return "Reachable, but this dashboard has no iPhone support yet — deploy the ios-app branch."
+            case let c: return "Dashboard answered HTTP \(c) — is it running behind the tunnel?"
+            }
+        } catch {
+            return "Can't reach it: \(error.localizedDescription)"
+        }
     }
 
     /// POST the run to /api/phone; the dashboard then serves it as box "iphone". The result is
@@ -262,7 +290,7 @@ final class Bench {
         current = rec
         runs = RunRecord.loadAll()
         writeComparison()
-        if !apiURL.isEmpty { say("\(label): \(await upload(rec))") }
+        if autoUpload && !apiURL.isEmpty { say("\(label): \(await upload(rec))") }
         say("\(label): \(runStatus) — \(correct)/\(done) correct")
     }
 
