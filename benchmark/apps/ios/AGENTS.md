@@ -88,7 +88,13 @@ lm-eval's `samples_*.jsonl` shape, so the repo's compare/export tooling can read
 ## 3a. Upload to the dashboard API
 
 Each run is POSTed to the dashboard's `/api/phone` when it ends (and again from a run's
-detail › "Re-upload", e.g. after attaching power data). The dashboard stores it on the Mac
+detail › "Re-upload", e.g. after attaching power data). **While it runs**, a `status: running`
+snapshot goes up every 10 questions (`Bench.liveEvery`), so the dashboard's Monitor shows the
+iPhone live: progress, ETA, CPU, memory, and an `MLX` row in the matrix. That is ~1 s of radio
+inside the measured window per 10 questions; `meta.json` records it as `live_upload_every`
+(0 = off: turn off auto-upload in Settings for a run with no network in the window). A live
+upload never writes `run.json` (a late one would overwrite newer answers), and a slow one
+makes the next tick skip rather than queue. The dashboard stores it on the Mac
 (`dashboard/data/phone/`) and serves it as a third box, `iphone`, in `/api/history`,
 `/api/baseline`, `/api/compare` and `/api/run` — see `dashboard/public/openapi.yaml`.
 The body is `RunRecord.apiPayload()` (RunDetail.swift), deliberately in `run_detail.py --run`'s

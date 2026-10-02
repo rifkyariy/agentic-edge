@@ -113,7 +113,8 @@ test("a queued little-gemma thinking job shows in its own cell only", () => {
 });
 
 test("little-gemma is planned for the Jetson only, TurboQuant for both", () => {
-  assert.deepEqual(PLAN.engines.map((e) => e.id), ["llama.cpp", "little-gemma", "turboquant"]);
+  assert.deepEqual(PLAN.engines.map((e) => e.id), ["llama.cpp", "little-gemma", "turboquant", "mlx"]);
+  assert.deepEqual(PLAN.engines.find((e) => e.id === "mlx").boards, ["iphone"]);
   assert.deepEqual(PLAN.engines.find((e) => e.id === "turboquant").boards, ["pi", "jetson"]);
   assert.deepEqual(PLAN.engines.find((e) => e.id === "little-gemma").boards, ["jetson"]);
 });
@@ -122,4 +123,11 @@ test("a tq- run fills only the TurboQuant cell", () => {
   const box = { data: { completed: [{ task: "mmlu_pro", run: "mmlupro100-tq-e2b-s2-think", score: 50, at: "2026-10-01 00:00" }] } };
   assert.equal(cell(box, "e2b", "s2", "on", null, "turboquant").status, "done");
   assert.equal(cell(box, "e2b", "s2", "on").status, "pending");
+});
+
+test("an iPhone (mlx) result fills only its own cell", () => {
+  const box = doneBox("mmlupro100-mlx-e2b-s1");
+  assert.equal(cell(box, "e2b", "s1", "off", null, "mlx").status, "done");
+  assert.equal(cell(box, "e2b", "s1", "off", null, "llama.cpp").status, "pending");
+  assert.equal(cell(box, "e2b", "s2", "off", null, "mlx").status, "pending");
 });

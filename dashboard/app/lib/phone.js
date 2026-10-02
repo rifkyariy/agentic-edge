@@ -33,7 +33,14 @@ export async function saveRun(r) {
   await rename(`${file}.tmp`, file);
 }
 
+// The matrix and the Monitor card name runs the way the boards do,
+// mmlupro100-mlx-<model>-<subset>; that alias means the newest upload for the cell.
+const CELL_RE = /^mmlupro100-mlx-(e2b|e4b)-(s\d)$/;
+export const cellName = (r) => `mmlupro100-mlx-${r.model}-${r.subset}`;
+
 export async function loadRun(name) {
+  const cellHit = CELL_RE.exec(name || "");
+  if (cellHit) return (await all()).find((r) => r.model === cellHit[1] && r.subset === cellHit[2]) ?? null;
   if (!RUN_RE.test(name)) return null;
   try {
     return JSON.parse(await readFile(path.join(DIR(), `${name}.json`), "utf8"));
@@ -59,6 +66,43 @@ const row = (r) => ({
   at: r.received_at?.slice(0, 16).replace("T", " "), device: r.device ?? null,
 });
 
+// tqdm-style, like the boards' progress: "12:34" or "1:02:03".
+const hms = (s) => {
+  s = Math.max(0, Math.round(s));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`;
+};
+// A run the phone stopped reporting on is not "running": the app uploads every 10 questions
+// (~4 min for E2B), so 15 min of silence means it died, was stopped, or lost the network.
+export const STALE_S = 15 * 60;
+export const TOTAL = 100; // every subset is 100 questions (findings/stdbench)
+
+/** probe_status.py's shape, from the uploads: what the Monitor card and matrix read. */
+function probe(runs, now) {
+  const latest = runs[0];
+  const live = runs.find((r) => r.status === "running" && now - Date.parse(r.received_at) / 1000 < STALE_S);
+  const tl = live?.timeline || [];
+  const elapsed = tl.length ? tl.at(-1).end_epoch - tl[0].start_epoch : 0;
+  const per = tl.length ? elapsed / tl.length : 0;
+  const t = ((live ?? latest)?.telemetry || []).at(-1) || {}; // the run in progress, if any, is "now"
+  const seen = new Set();
+  const completed = runs.filter(done).filter((r) => !seen.has(cellName(r)) && seen.add(cellName(r)))
+    .map((r) => ({ run: cellName(r), task: "mmlu_pro", score: r.summary?.score ?? null, stderr: r.summary?.stderr ?? null,
+                   minutes: r.summary?.minutes ?? null, at: r.received_at?.slice(0, 16).replace("T", " ") }));
+  return {
+    host: latest?.host || "iphone", ts: now,
+    cpu_pct: t.cpu ?? null, power_w: null, temp_c: null, gpu_pct: null, throttled: null,
+    mem_used_mb: t.rss ?? null, mem_total_mb: latest?.ram_gb ? latest.ram_gb * 1024 : null,
+    procs: live ? { lm_eval: { model: live.model } } : {},
+    progress: live ? { run: cellName(live), pct: Math.round((100 * tl.length) / TOTAL), done: tl.length, total: TOTAL,
+                       elapsed: hms(elapsed), eta: hms((TOTAL - tl.length) * per), s_per_item: per,
+                       age_s: Math.round(now - Date.parse(live.received_at) / 1000) } : null,
+    measured: live ? { dir: live.run, samples: live.telemetry?.length ?? 0 }
+      : latest && done(latest) ? { dir: latest.run, summary: latest.device } : null,
+    completed, disks: {},
+  };
+}
+
 /** The iPhone as a box, in the shape each board route returns for `view`. */
 export async function phoneBox(view) {
   const runs = await all();
@@ -66,6 +110,7 @@ export async function phoneBox(view) {
   const box = { ...PHONE, ok: true,
                 label: latest?.host_name || PHONE.label,
                 sub: latest ? `MLX · ${latest.os ?? "iOS"} · ${latest.ram_gb ?? "?"} GB` : PHONE.sub };
+  if (view === "status") return { ...box, data: probe(runs, Date.now() / 1000) };
   if (view === "baseline") return { ...box, runs: runs.filter(done).map(row), failed: [] };
   if (view === "history") {
     return { ...box, runs: runs.map((r) => ({

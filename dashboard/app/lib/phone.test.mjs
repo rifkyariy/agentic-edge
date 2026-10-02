@@ -7,7 +7,7 @@ import path from "node:path";
 import { test } from "node:test";
 
 process.env.PHONE_DIR = await mkdtemp(path.join(tmpdir(), "phone-"));
-const { invalid, loadRun, phoneBox, saveRun } = await import("./phone.js");
+const { invalid, loadRun, phoneBox, saveRun, STALE_S } = await import("./phone.js");
 
 const run = (name, status, end, qs) => ({
   run: name, model: "e2b", subset: "s1", status, host_name: "iPhone 15 Pro", os: "iOS 18.6", ram_gb: 8,
@@ -46,4 +46,30 @@ test("uploaded runs come back as the iphone box, newest first, in each view", as
 
   assert.equal((await loadRun("mmlupro-e2b-s1-new")).summary.score, 50);
   assert.equal(await loadRun("../../etc/passwd"), null);
+});
+
+test("a run in progress shows on the Monitor; a silent one does not", async () => {
+  const live = run("mmlupro-e4b-s2-live", "running", 900, [[21, true, "A"], [22, false, "B"]]);
+  live.model = "e4b"; live.subset = "s2";
+  live.timeline = [{ start_epoch: 0, end_epoch: 30 }, { start_epoch: 30, end_epoch: 60 }];
+  live.telemetry = [{ cpu: 88, rss: 4100 }];
+  await saveRun(live); // received_at = now
+
+  let d = (await phoneBox("status")).data;
+  assert.equal(d.progress.run, "mmlupro100-mlx-e4b-s2"); // the matrix's cell name
+  assert.deepEqual([d.progress.done, d.progress.total, d.progress.pct], [2, 100, 2]);
+  assert.equal(d.progress.eta, "49:00"); // 98 questions x 30 s
+  assert.ok(d.procs.lm_eval); // -> "benchmark" pill and a running cell
+  assert.equal(d.cpu_pct, 88);
+  assert.ok(d.completed.some((c) => c.run === "mmlupro100-mlx-e2b-s1" && c.score === 50));
+
+  // the cell name opens the newest upload for that cell
+  assert.equal((await loadRun("mmlupro100-mlx-e4b-s2")).run, "mmlupro-e4b-s2-live");
+
+  const { writeFile } = await import("node:fs/promises");
+  const stale = { ...live, received_at: new Date(Date.now() - (STALE_S + 60) * 1000).toISOString() };
+  await writeFile(path.join(process.env.PHONE_DIR, "mmlupro-e4b-s2-live.json"), JSON.stringify(stale));
+  d = (await phoneBox("status")).data;
+  assert.equal(d.progress, null);
+  assert.deepEqual(d.procs, {});
 });

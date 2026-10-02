@@ -8,7 +8,9 @@ export const PLAN = { models: ["e2b", "e4b"], subsets: ["s1", "s2", "s3"],
                       thinking: ["off", "on"],
                       engines: [{ id: "llama.cpp", boards: ["pi", "jetson"] },
                                 { id: "little-gemma", short: "LG", boards: ["jetson"] },
-                                { id: "turboquant", short: "TQ", boards: ["pi", "jetson"] }] };
+                                { id: "turboquant", short: "TQ", boards: ["pi", "jetson"] },
+                                // The iPhone (benchmark/apps/ios): same task on MLX; cells come from its uploads.
+                                { id: "mlx", short: "MLX", boards: ["iphone"] }] };
 
 // The telemetry rerun started here. Results older than this are real, but they
 // belong to the first batch (no power/thermal data), so the matrix shows them
@@ -20,11 +22,11 @@ export const BATCH_START = "2026-09-20 23:00";
 // (std_mmlupro.sh sets OUT=$OUT-think) and lg- (little-gemma) or tq- (TurboQuant)
 // before the model. Anything else — a smoke test, a .bak — must not be matched
 // into a cell, so the pattern stays anchored.
-const RUN_RE = /^mmlupro100-(lg-|tq-)?(e2b|e4b)(?:-(s\d))?(-think)?$/i;
+const RUN_RE = /^mmlupro100-(lg-|tq-|mlx-)?(e2b|e4b)(?:-(s\d))?(-think)?$/i;
 const matches = (name, model, subset, thinking = "off", engine = "llama.cpp") => {
   const m = RUN_RE.exec((name || "").trim());
   if (!m) return false;
-  const eng = { "lg-": "little-gemma", "tq-": "turboquant" }[(m[1] || "").toLowerCase()] || "llama.cpp";
+  const eng = { "lg-": "little-gemma", "tq-": "turboquant", "mlx-": "mlx" }[(m[1] || "").toLowerCase()] || "llama.cpp";
   return eng === engine
       && m[2].toLowerCase() === model
       && (m[3] || "s1").toLowerCase() === subset

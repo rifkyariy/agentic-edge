@@ -16,5 +16,6 @@ export async function POST(request) {
   if (why) return Response.json({ error: why }, { status: 400 });
   await saveRun(run);
   invalidate("compare");
+  invalidate("status"); // a live upload should show on the next Monitor poll, not 4 s later
   return Response.json({ ok: true, run: run.run });
 }

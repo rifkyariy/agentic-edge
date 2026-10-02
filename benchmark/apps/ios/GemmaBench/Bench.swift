@@ -188,7 +188,7 @@ final class Bench {
 
     /// POST the run to /api/phone; the dashboard then serves it as box "iphone". The result is
     /// kept on the run either way, so a failed upload shows and can be retried.
-    func upload(_ rec: RunRecord) async -> String {
+    func upload(_ rec: RunRecord, record: Bool = true) async -> String {
         guard let base = URL(string: apiURL.trimmingCharacters(in: .whitespaces)), base.host != nil else {
             return "upload failed: set the dashboard URL"
         }
@@ -206,11 +206,29 @@ final class Bench {
         } catch {
             msg = "upload failed: \(error.localizedDescription)"
         }
+        // A live upload never writes run.json: it holds a snapshot, and a slow upload finishing
+        // after the next question would overwrite newer answers with older ones.
+        guard record else { return msg }
         var r = rec
         r.uploaded = msg
         r.save(in: RunRecord.root.appending(path: rec.dir))
         runs = RunRecord.loadAll()
         return msg
+    }
+
+    static let liveEvery = 10
+    private var liveUploading = false
+
+    /// Mid-run snapshot (status "running") so the dashboard's Monitor shows the phone live.
+    /// Fire and forget: inference doesn't wait on the network.
+    private func liveUpload(_ rec: RunRecord) {
+        guard !liveUploading else { return }  // ponytail: skip a tick rather than queue uploads behind a slow network
+        liveUploading = true
+        Task {
+            let msg = await upload(rec, record: false)
+            if !msg.hasPrefix("uploaded") { log.append("live upload: \(msg)") }
+            liveUploading = false
+        }
     }
 
     func start(_ plan: [(GemmaModel, String)]) {
@@ -269,6 +287,8 @@ final class Bench {
             "start_epoch": Date().timeIntervalSince1970,
             "idle_baseline_s": Self.idleBaselineS,
             "model_revision": model.revision,
+            // inside the measured window: ~1 s of radio every N questions (dashboard live view)
+            "live_upload_every": autoUpload && !apiURL.isEmpty ? Self.liveEvery : 0,
         ]
         writeJSON(meta, mdir.appending(path: "meta.json"))
 
@@ -312,6 +332,7 @@ final class Bench {
                 rec.telemetry = tel.samples
                 rec.save(in: mdir)
                 current = rec
+                if autoUpload && !apiURL.isEmpty && (i + 1) % Self.liveEvery == 0 && i + 1 < docs.count { liveUpload(rec) }
             }
         } catch is CancellationError {
             runStatus = "stopped"

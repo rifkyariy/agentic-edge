@@ -32,8 +32,13 @@ info:
     **The iPhone.** The iOS app (`benchmark/apps/ios`) runs the same MMLU-Pro
     task on-device with MLX. It has no ssh, so it POSTs each run to
     `/api/phone`, and `history`, `baseline`, `compare` and `run` serve it as a
-    third box, `iphone` (`engine: "mlx"`). It is not in `status` or `queue`:
-    nothing to probe live and nothing to queue.
+    third box, `iphone` (`engine: "mlx"`). During a run the app also uploads
+    a `status: running` snapshot every 10 questions, so `status` shows the
+    iPhone live too: its `data` is built from the newest upload in
+    `probe_status.py`'s shape (progress, cpu, memory; no power or temperature),
+    and a run silent for 15 min no longer counts as running. Matrix cells use
+    `mmlupro100-mlx-<model>-<subset>`, which `/api/run?box=iphone` resolves to
+    the newest upload for that cell. Not in `queue`: nothing to queue.
 
     **Envelope for board fan-out.** Endpoints that ask the boards return
     `{ts, boxes: [Box, Box, iphone]}`. Each `Box` holds the host fields plus either
