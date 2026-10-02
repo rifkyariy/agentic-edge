@@ -11,6 +11,7 @@
 		277B79F65CECDCCED3657DAF /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7131406C5729E892440BCB84 /* App.swift */; };
 		280C42832FB66732C907FF95 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 56569CBF32BCD9632BDD9BE5 /* MLXLLM */; };
 		41CC17147DB501531239E682 /* RunDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D2F42FF94C83E0B6B29616 /* RunDetail.swift */; };
+		46E657457308A63A8190E4CC /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62DAD56C34B968EA9E3A41A9 /* Models.swift */; };
 		538A09766D9433C99633B0F4 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = C035186113BC435ACB0E55AC /* Telemetry.swift */; };
 		5F23BDCDAEC9A30A46364EB8 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = C88F4F1491B0EB305CEBC4F8 /* HuggingFace */; };
 		7D48C08F7382451A0ACE3AB7 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = B3BB9A40C5297C4264C71F5B /* MLX */; };
@@ -23,6 +24,7 @@
 /* Begin PBXFileReference section */
 		07DFD861F340635C84B0C796 /* Bench.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bench.swift; sourceTree = "<group>"; };
 		48D1767CDD326FB6711E0A43 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		62DAD56C34B968EA9E3A41A9 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		6897E793FD457FC39D70A34D /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		7131406C5729E892440BCB84 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		7654A532EF48B33C0EEB197B /* mmlupro.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = mmlupro.json; sourceTree = "<group>"; };
@@ -90,6 +92,7 @@
 				07DFD861F340635C84B0C796 /* Bench.swift */,
 				D6ED7FA75F08F8EA9D543A0A /* GemmaBench.entitlements */,
 				48D1767CDD326FB6711E0A43 /* Info.plist */,
+				62DAD56C34B968EA9E3A41A9 /* Models.swift */,
 				D3D2F42FF94C83E0B6B29616 /* RunDetail.swift */,
 				C035186113BC435ACB0E55AC /* Telemetry.swift */,
 				6804C5975FF3270F3EC620FD /* Resources */,
@@ -183,6 +186,7 @@
 			files = (
 				277B79F65CECDCCED3657DAF /* App.swift in Sources */,
 				8E0959398D2F76A4971889D5 /* Bench.swift in Sources */,
+				46E657457308A63A8190E4CC /* Models.swift in Sources */,
 				41CC17147DB501531239E682 /* RunDetail.swift in Sources */,
 				538A09766D9433C99633B0F4 /* Telemetry.swift in Sources */,
 			);

@@ -19,6 +19,7 @@ struct ContentView: View {
     @State private var subset = "s1"
     @State private var detail: RunRecord?
     @State private var settings = false
+    @State private var deleting: GemmaModel?
 
     private var ref: [String: Ref] { bench.prompts.reference["\(model.rawValue)-\(subset)"] ?? [:] }
     private var pct: Double { bench.done > 0 ? 100 * Double(bench.correct) / Double(bench.done) : 0 }
@@ -28,6 +29,7 @@ struct ContentView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     setup
+                    models
                     compare
                     actions
                     if bench.total > 0 { progress }
@@ -43,6 +45,14 @@ struct ContentView: View {
                     .accessibilityLabel("Settings")
             }
             .sheet(isPresented: $settings) { SettingsView(bench: bench) }
+            .task { if CommandLine.arguments.contains("-downloadModels") { bench.downloadAll() } }  // devicectl hook
+            .confirmationDialog("Delete \(deleting?.rawValue.uppercased() ?? "") from this iPhone?",
+                                isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+                                titleVisibility: .visible) {
+                Button("Delete", role: .destructive) { if let m = deleting { bench.deleteModel(m) } }
+            } message: {
+                Text("Frees the space. Runs and results are kept; the model downloads again on the next run.")
+            }
             .sheet(item: $detail, onDismiss: { bench.runs = RunRecord.loadAll(); bench.writeComparison() }) {
                 RunDetailView(rec: $0, ref: bench.prompts.reference["\($0.model)-\($0.subset)"] ?? [:],
                               upload: { await bench.upload($0) })
@@ -166,6 +176,49 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
             }
+        }
+    }
+
+    private var models: some View {
+        let _ = bench.modelTick  // re-read the disk after a download or delete
+        let gb = { (b: Int64) in ByteCountFormatter.string(fromByteCount: b, countStyle: .file) }
+        return Card {
+            HStack {
+                Label("Models on this iPhone", systemImage: "externaldrive").font(.subheadline.weight(.semibold))
+                Spacer()
+                Text("\(gb(ModelStore.freeBytes)) free").font(.caption).foregroundStyle(.secondary)
+            }
+            ForEach(GemmaModel.allCases) { m in
+                let st = ModelStore.status(m)
+                let p = bench.modelProgress[m]
+                HStack(spacing: 10) {
+                    Image(systemName: st.complete ? "checkmark.circle.fill" : p != nil ? "arrow.down.circle" : "icloud.and.arrow.down")
+                        .font(.title3).foregroundStyle(st.complete ? .green : p != nil ? .blue : .secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(m.rawValue.uppercased()) · QAT 4-bit").font(.subheadline.weight(.semibold))
+                        Text(p.map { "Downloading \(Int($0 * 100))%" + (st.total > 0 ? " of \(gb(st.total))" : "") }
+                             ?? (st.complete ? "Downloaded · \(gb(st.bytes)) · rev \(m.revision.prefix(7))"
+                                 : st.bytes > 0 ? "\(gb(st.bytes)) of \(gb(st.total)) · tap Download to resume"
+                                 : "Not downloaded"))
+                            .font(.caption2).foregroundStyle(.secondary)
+                        if let p { ProgressView(value: p).tint(.blue) }
+                        if let e = bench.modelError[m] { Text(e).font(.caption2).foregroundStyle(.red) }
+                    }
+                    Spacer()
+                    if p != nil {
+                        Button { bench.cancelDownload(m) } label: { Image(systemName: "xmark.circle.fill") }
+                            .foregroundStyle(.secondary).accessibilityLabel("Cancel download")
+                    } else if st.complete {
+                        Button { deleting = m } label: { Image(systemName: "trash") }
+                            .foregroundStyle(.red).disabled(bench.running).accessibilityLabel("Delete \(m.rawValue)")
+                    } else {
+                        Button("Download") { bench.download(m) }.buttonStyle(.bordered).controlSize(.small)
+                    }
+                }
+                .buttonStyle(.borderless)
+            }
+            Text("Pinned Hugging Face commits, stored on the phone (not backed up). A run downloads its model first if needed, before anything is measured.")
+                .font(.caption2).foregroundStyle(.secondary)
         }
     }
 

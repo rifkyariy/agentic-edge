@@ -38,6 +38,7 @@ prep/build_prompts.py       builds GemmaBench/Resources/mmlupro.json (stdlib onl
 prep/power_trace.py         sysdiagnose PowerLog or Power Profiler trace -> power.json the app imports (Mac, stdlib)
 GemmaBench/App.swift        SwiftUI: pick model + subset, run one or the full grid
 GemmaBench/Bench.swift      runner, scoring, every output file
+GemmaBench/Models.swift     model store: pinned HF commits -> Application Support/models/, list/download/delete
 GemmaBench/Telemetry.swift  1 Hz sampler (cpu, thermalState, battery, memory, MLX memory)
 GemmaBench/RunDetail.swift  run drill-down, as agentic-edge dashboard RunDetail.js: Device tab
                             (cost tiles, request timeline, telemetry tracks, per-request table)
@@ -56,7 +57,19 @@ open GemmaBench.xcodeproj    # set your Team, run on a real iPhone
 ```
 
 In the app: pick E2B/E4B and s1/s2/s3 → **Run**, or **Run full grid** (6 runs, as in
-agentic-edge §6). The first run of each model downloads it from Hugging Face.
+agentic-edge §6).
+
+**Models** ("Models on this iPhone" card): each model is a plain folder,
+`Library/Application Support/models/<repo name>/`, holding one **pinned** Hugging Face commit
+(`GemmaModel.revision`, recorded as `model_revision` in `meta.json`). "Downloaded" = every file
+present at the size the Hub reports — a fact about the disk. Download resumes per file,
+checks free space first, and is excluded from iCloud backup; a run that finds its model missing
+downloads it **before** the idle baseline, so nothing measured includes the download. Bumping a
+revision = a different model for the paper: say so. From the Mac:
+`xcrun devicectl device process launch --device <id> com.mitlab.GemmaBench -- -downloadModels`
+starts both downloads, and `xcrun devicectl device info files --device <id> --domain-type
+appDataContainer --domain-identifier com.mitlab.GemmaBench --subdirectory "Library/Application Support/models"`
+lists what's on the phone.
 
 Results land in the app's Documents (Files → On My iPhone → GemmaBench, or Finder →
 iPhone → Files), in the agentic-edge layout:

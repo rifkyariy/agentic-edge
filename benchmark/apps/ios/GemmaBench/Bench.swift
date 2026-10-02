@@ -97,6 +97,48 @@ final class Bench {
     var lastTokS = 0.0
     var lastAnswer = ""
     var lastOK = false
+
+    // Model downloads (Models.swift). Disk status is read from the files; modelTick re-reads it.
+    var modelProgress: [GemmaModel: Double] = [:]
+    var modelError: [GemmaModel: String] = [:]
+    var modelTick = 0
+    private var downloadJobs: [GemmaModel: Task<Void, Never>] = [:]
+
+    @discardableResult
+    func download(_ m: GemmaModel) -> Task<Void, Never> {
+        if let job = downloadJobs[m] { return job }
+        modelError[m] = nil
+        modelProgress[m] = 0
+        UIApplication.shared.isIdleTimerDisabled = true
+        let job = Task {
+            do {
+                try await ModelStore.download(m) { done, total in
+                    Task { @MainActor in self.modelProgress[m] = Double(done) / Double(max(total, 1)) }
+                }
+            } catch {
+                let cancelled = error is CancellationError || (error as? URLError)?.code == .cancelled
+                if !cancelled { modelError[m] = error.localizedDescription }
+            }
+            modelProgress[m] = nil
+            downloadJobs[m] = nil
+            modelTick += 1
+            if downloadJobs.isEmpty && !running { UIApplication.shared.isIdleTimerDisabled = false }
+        }
+        downloadJobs[m] = job
+        return job
+    }
+
+    /// One after the other, so each gets the full bandwidth and E2B is usable first.
+    func downloadAll() {
+        Task { for m in GemmaModel.allCases where !ModelStore.status(m).complete { await download(m).value } }
+    }
+
+    func cancelDownload(_ m: GemmaModel) { downloadJobs[m]?.cancel() }
+
+    func deleteModel(_ m: GemmaModel) {
+        try? ModelStore.delete(m)
+        modelTick += 1
+    }
     var running = false
     var log: [String] = []
     var current: RunRecord?  // the live run, for the detail sheet
@@ -193,6 +235,15 @@ final class Bench {
 
     private func runOne(_ model: GemmaModel, _ subset: String) async {
         let docs = prompts.subsets[subset] ?? []
+        // Download before anything is measured: the idle baseline and timings must not include it.
+        if !ModelStore.status(model).complete {
+            say("mmlupro-\(model.rawValue)-\(subset): downloading \(model.repo) first")
+            await download(model).value
+            guard ModelStore.status(model).complete else {
+                say("mmlupro-\(model.rawValue)-\(subset): not run — download failed: \(modelError[model] ?? "cancelled")")
+                return
+            }
+        }
         let stamp = Self.stampFmt.string(from: Date())
         let root = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let label = "mmlupro-\(model.rawValue)-\(subset)"
@@ -217,6 +268,7 @@ final class Bench {
             "thermal_at_start": ProcessInfo.processInfo.thermalState.rawValue,
             "start_epoch": Date().timeIntervalSince1970,
             "idle_baseline_s": Self.idleBaselineS,
+            "model_revision": model.revision,
         ]
         writeJSON(meta, mdir.appending(path: "meta.json"))
 
@@ -232,15 +284,13 @@ final class Bench {
             say("\(label): idle baseline \(Int(Self.idleBaselineS))s")
             try await Task.sleep(for: .seconds(Self.idleBaselineS))
 
-            say("\(label): loading \(model.repo) (downloads on first use)")
+            say("\(label): loading \(model.repo) from the phone")
             Memory.cacheLimit = 256 << 20  // ponytail: fixed cap so buffer cache doesn't eat the jetsam headroom
             let t0 = Date()
+            // A .directory configuration never touches the downloader; the files are already local.
             let container = try await LLMModelFactory.shared.loadContainer(
                 from: #hubDownloader(), using: #huggingFaceTokenizerLoader(),
-                configuration: ModelConfiguration(id: model.repo, extraEOSTokens: ["<turn|>"])
-            ) { p in
-                Task { @MainActor in self.status = "\(label): download \(Int(p.fractionCompleted * 100))%" }
-            }
+                configuration: ModelConfiguration(directory: model.dir, extraEOSTokens: ["<turn|>"]))
             loadS = Date().timeIntervalSince(t0)
             rec.loadS = loadS
             say("\(label): loaded in \(Int(loadS))s, running \(docs.count) questions")
