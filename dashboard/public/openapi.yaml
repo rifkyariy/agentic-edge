@@ -1,0 +1,568 @@
+openapi: 3.0.3
+info:
+  title: Agentic Edge benchmark API
+  version: "1.0"
+  description: |
+    The dashboard's own HTTP API, reachable from a phone. It serves the same data
+    as the monitor at http://<mac>:3939 and queues runs on the boards' job queue.
+
+    **How it works.** The API runs on the Mac (`cd dashboard && npm run dev`).
+    Every call goes from the Mac over ssh to the boards (Pi 5 = `pi`,
+    Jetson Orin Nano = `jetson`) via `probe_status.py`, `run_detail.py` or
+    `queue_ctl.py`. The phone never sshes anywhere. Queued jobs live on the
+    board, so once queued they run even if the Mac sleeps. Only the API itself
+    needs the Mac awake.
+
+    **Auth.** Set `API_TOKEN=<long random string>` in `dashboard/.env.local`
+    and restart `npm run dev`. Every `/api/*` call then needs
+    `Authorization: Bearer <token>`, or you get `401`. To use the browser
+    dashboard, open any page once with `?token=<token>`; that sets a
+    one-year cookie. This matters because `kind: "raw"` runs an arbitrary
+    command on a board.
+
+    **Reaching the Mac.** On the same Wi-Fi, use `http://<mac-lan-ip>:3939`.
+    Away from the lab, use Tailscale (or similar) on the Mac and the phone.
+    Don't port-forward this API to the internet.
+
+    **Rules the API enforces for you.** One job per board (the queue
+    serialises jobs). Prechecks (memory, disk, thermals, a run already
+    in flight) run before a job starts. Every attempt is kept, failures
+    included (AGENTS §4, §5).
+
+    **Envelope for board fan-out.** Endpoints that ask both boards return
+    `{ts, boxes: [Box, Box]}`. Each `Box` holds the host fields plus either
+    `ok: true` and the board's data, or `ok: false, error, hint`. One board
+    being down never fails the whole call.
+servers:
+  - url: /
+    description: Wherever these docs were loaded from
+  - url: http://{host}:3939
+    variables:
+      host:
+        default: 192.168.1.10
+        description: The Mac's LAN or Tailscale address.
+security:
+  - bearer: []
+tags:
+  - name: monitor
+    description: Live device state, polled by the dashboard every 5 s.
+  - name: queue
+    description: Queue, schedule, cancel and inspect benchmark jobs.
+  - name: results
+    description: Finished runs, per-question detail, cross-board comparisons.
+
+paths:
+  /api/status:
+    get:
+      tags: [monitor]
+      summary: Live status of both boards
+      description: |
+        A one-shot `probe_status.py` on each board. Cached for 4 s on the Mac,
+        so polling every 5 s from several clients costs each board one probe.
+        Includes power, temperature, CPU/GPU load, memory, disks, llama-server
+        processes, progress of the run in flight, the latest measured-run
+        summary and finished scores.
+      responses:
+        "200":
+          description: Both boards (a board that is down has `ok:false`).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ts: { $ref: "#/components/schemas/Ts" }
+                  boxes:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/BoxHeader"
+                        - type: object
+                          properties:
+                            data: { $ref: "#/components/schemas/Probe" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/queue:
+    get:
+      tags: [queue]
+      summary: Queue state of both boards, or the job-kind registry
+      parameters:
+        - name: describe
+          in: query
+          description: |
+            `1` returns each board's registry of queueable kinds and their
+            params (from `job_kinds.json`) instead of the queue. Cached 60 s.
+          schema: { type: string, enum: ["1"] }
+      responses:
+        "200":
+          description: |
+            Without `describe`: `boxes[i]` has `board`, `jobs` (every job,
+            newest state) and the daemon's liveness. Cached 4 s.
+            With `describe=1`: `boxes[i]` has `board` and `kinds`.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ts: { $ref: "#/components/schemas/Ts" }
+                  boxes:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/BoxHeader"
+                        - type: object
+                          properties:
+                            board: { type: string }
+                            jobs:
+                              type: array
+                              items: { $ref: "#/components/schemas/Job" }
+                            kinds:
+                              type: object
+                              additionalProperties: true
+                              description: Only with `describe=1`.
+                          additionalProperties: true
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+    post:
+      tags: [queue]
+      summary: Queue (or dry-run) one job or a batch on one board
+      description: |
+        Starting a benchmark from the phone uses this endpoint. Run it first
+        with `?preflight=1` to see what the job resolves to (exact command,
+        output dir) and whether the prechecks pass, without queueing
+        anything. Then send it again without `preflight`.
+
+        **Scheduling.** `not_before: "HH:MM"` is in the **board's local
+        time**. The job won't start before the next occurrence of that time
+        (today, or tomorrow if it has already passed). Leave it out to start
+        as soon as the board is free.
+
+        **Batch.** `{box, jobs:[...]}` queues several jobs in order in one
+        call, and checks them against each other as well.
+
+        Jobs queued here are recorded with `by: "dashboard"`.
+      parameters:
+        - name: preflight
+          in: query
+          description: "`1` = validate and resolve only; nothing is queued."
+          schema: { type: string, enum: ["1"] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/JobRequest"
+                - $ref: "#/components/schemas/BatchRequest"
+            examples:
+              e4b_s2_now:
+                summary: MMLU-Pro E4B, subset s2, Jetson, as soon as free
+                value: { box: jetson, kind: mmlupro, params: { model: e4b, subset: s2 } }
+              e2b_s1_at_2am:
+                summary: MMLU-Pro E2B s1 on the Pi, not before 02:00
+                value: { box: pi, kind: mmlupro, params: { model: e2b, subset: s1, thinking: "off" }, not_before: "02:00" }
+              little_gemma:
+                summary: S3 little-gemma (Jetson only)
+                value: { box: jetson, kind: mmlupro-lg, params: { model: e2b, subset: s1 } }
+              batch:
+                summary: Three subsets back to back
+                value:
+                  box: pi
+                  jobs:
+                    - { kind: mmlupro, params: { model: e4b, subset: s1 } }
+                    - { kind: mmlupro, params: { model: e4b, subset: s2 } }
+                    - { kind: mmlupro, params: { model: e4b, subset: s3 } }
+              override:
+                summary: Queue despite a failing memory precheck (reason is logged)
+                value:
+                  box: pi
+                  kind: mmlupro
+                  params: { model: e4b, subset: s3 }
+                  override: { checks: [memory], reason: "swap is from the last run, verified idle" }
+      responses:
+        "200":
+          description: |
+            Queued: `{job}` (single) or `{jobs:[...]}` (batch).
+            Preflight: `{resolved, prechecks, override, ok}` (single) or
+            `{results:[...], ok}` (batch). `ok:false` means a precheck blocks
+            and the job would wait or fail.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties: { job: { $ref: "#/components/schemas/Job" } }
+                  - type: object
+                    properties:
+                      jobs: { type: array, items: { $ref: "#/components/schemas/Job" } }
+                  - $ref: "#/components/schemas/Preflight"
+                  - type: object
+                    properties:
+                      ok: { type: boolean }
+                      results: { type: array, items: { $ref: "#/components/schemas/Preflight" } }
+        "400":
+          description: |
+            Bad `box`/`kind`, params outside the kind's enum, a bad
+            `not_before`, a duplicate of a pending job, or the board is
+            unreachable (`hint` says what to fix).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+    delete:
+      tags: [queue]
+      summary: Cancel a job
+      description: Cancels a queued job, or stops a running one. The attempt stays in the record.
+      parameters:
+        - $ref: "#/components/parameters/Box"
+        - $ref: "#/components/parameters/Job"
+      responses:
+        "200":
+          description: The job after cancelling.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { job: { $ref: "#/components/schemas/Job" } }
+        "400":
+          description: Bad box/job id, or unknown job.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/logs:
+    get:
+      tags: [queue]
+      summary: Tail one log of a job
+      description: |
+        Offset-based. Pass the returned `offset` back as `from` on the next
+        poll so only new bytes come back. A 3-hour `lm_eval` log is never
+        sent twice.
+      parameters:
+        - $ref: "#/components/parameters/Box"
+        - $ref: "#/components/parameters/Job"
+        - name: stream
+          in: query
+          required: true
+          schema: { type: string, enum: [command, lm_eval, server] }
+          description: "`command` = the wrapper's log, `lm_eval` = the harness, `server` = llama-server."
+        - name: from
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+          description: Byte offset to read from.
+      responses:
+        "200":
+          description: New text since `from`.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  text: { type: string }
+                  offset: { type: integer, description: Pass back as `from`. }
+                  eof: { type: boolean }
+                  path: { type: string, description: The log's path on the board. }
+        "400":
+          description: Bad box, job or stream.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "502":
+          description: Board unreachable or the log does not exist yet.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /api/run:
+    get:
+      tags: [results]
+      summary: One run in full (timeline, answers, per-request device stats)
+      description: |
+        `run_detail.py --run` on one board. Heavy (up to 2 min, up to 32 MB),
+        so it is fetched on demand and never polled. Works on a run that is
+        still in progress.
+      parameters:
+        - $ref: "#/components/parameters/Box"
+        - name: run
+          in: query
+          required: true
+          description: |
+            A run directory name, e.g. `mmlupro100-e4b-s2`, optionally
+            prefixed with `failed/` or `archive/` for past attempts.
+          schema: { type: string, pattern: '^(?:(?:failed|archive)/)?\w[\w.-]*$' }
+      responses:
+        "200":
+          description: The run's detail, exactly as `run_detail.py` emits it.
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        "400":
+          description: Bad box or run name.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "502":
+          description: Board unreachable or no such run.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /api/history:
+    get:
+      tags: [results]
+      summary: Every run on disk on both boards
+      description: Current, failed and superseded runs. None is hidden (AGENTS §5). Up to 60 s.
+      responses:
+        "200":
+          description: "`boxes[i].runs` lists that board's runs."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RunsEnvelope" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/baseline:
+    get:
+      tags: [results]
+      summary: Finished runs with the device cost that produced them
+      description: "`run_detail.py --baseline` per board: score plus energy, J/token, tok/s/W, thermals."
+      responses:
+        "200":
+          description: "`boxes[i].runs` lists that board's finished runs."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RunsEnvelope" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/compare:
+    get:
+      tags: [results]
+      summary: Per-question correctness of every current MMLU-Pro run
+      description: |
+        The input for the paired Pi-vs-Jetson tests on `/compare`
+        (McNemar is computed client-side). Cached 60 s. A board whose
+        `run_detail.py` predates `--paired` returns `ok:false, stale:true`.
+      responses:
+        "200":
+          description: "`boxes[i].runs` lists runs with per-question correctness."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RunsEnvelope" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: The `API_TOKEN` from `dashboard/.env.local`.
+
+  parameters:
+    Box:
+      name: box
+      in: query
+      required: true
+      schema: { $ref: "#/components/schemas/BoxId" }
+    Job:
+      name: job
+      in: query
+      required: true
+      description: A job id from `GET /api/queue`.
+      schema: { type: string, pattern: '^[\w.-]+$' }
+
+  responses:
+    Unauthorized:
+      description: "`API_TOKEN` is set and the request did not carry it."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example: { error: missing or bad token }
+
+  schemas:
+    Ts:
+      type: integer
+      description: Mac time the response was built, ms since epoch.
+    BoxId:
+      type: string
+      enum: [pi, jetson]
+      description: "`pi` = Raspberry Pi 5 (CPU), `jetson` = Jetson Orin Nano (CUDA)."
+    BoxHeader:
+      type: object
+      required: [id, ok]
+      properties:
+        id: { $ref: "#/components/schemas/BoxId" }
+        label: { type: string, example: Raspberry Pi 5 }
+        sub: { type: string, example: "CPU only · Cortex-A76 ×4" }
+        host: { type: string, example: MITLAB-EDGE }
+        repo: { type: string }
+        ok: { type: boolean, description: false = board unreachable or the script failed. }
+        error: { type: string, description: Only when `ok:false`. }
+        hint: { type: string, description: What to do about it. Only when `ok:false`. }
+
+    Probe:
+      type: object
+      description: One `probe_status.py` sample.
+      properties:
+        host: { type: string }
+        ts: { type: number, description: Board epoch seconds. }
+        iso: { type: string, example: "2026-10-02T14:03:11" }
+        uptime_s: { type: integer }
+        cpu_pct: { type: number }
+        cpus: { type: integer }
+        power_w: { type: number, nullable: true, description: "Board DC draw (PMIC on the Pi, INA3221 VDD_IN on the Jetson). Not wall power." }
+        power_src: { type: string }
+        rails: { type: object, additionalProperties: true }
+        temp_c: { type: number, nullable: true }
+        gpu_pct: { type: number, nullable: true, description: Jetson only. }
+        gpu_mhz: { type: number, nullable: true }
+        throttled: { type: string, nullable: true, description: "Pi `vcgencmd get_throttled` value." }
+        mem_used_mb: { type: integer }
+        mem_total_mb: { type: integer }
+        swap_used_mb: { type: integer }
+        disks:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              free_gb: { type: number }
+              total_gb: { type: number }
+        procs:
+          type: object
+          description: Serving processes by name (e.g. llama-server).
+          additionalProperties:
+            type: object
+            properties:
+              pid: { type: integer }
+              rss_mb: { type: integer }
+              uptime_s: { type: integer }
+              model: { type: string }
+              flags: { type: string }
+        progress:
+          type: object
+          nullable: true
+          description: The lm-eval run in flight.
+          properties:
+            run: { type: string }
+            pct: { type: integer }
+            done: { type: integer }
+            total: { type: integer }
+            elapsed: { type: string }
+            eta: { type: string }
+            s_per_item: { type: number }
+            age_s: { type: integer, description: Seconds since the progress line last moved. }
+        measured:
+          type: object
+          nullable: true
+          description: Latest measured run dir; `summary` once it is finished.
+          properties:
+            dir: { type: string }
+            summary:
+              type: object
+              properties:
+                energy_wh: { type: number }
+                idle_w: { type: number }
+                mean_w: { type: number }
+                j_per_token: { type: number }
+                tok_s_per_w: { type: number }
+                gen_tokens: { type: integer }
+        completed:
+          type: array
+          items:
+            type: object
+            properties:
+              run: { type: string }
+              task: { type: string }
+              score: { type: number, nullable: true, description: Percent. }
+              stderr: { type: number }
+              minutes: { type: integer }
+              at: { type: string }
+        setup: { type: object, additionalProperties: true }
+      additionalProperties: true
+
+    JobRequest:
+      type: object
+      required: [box, kind]
+      properties:
+        box: { $ref: "#/components/schemas/BoxId" }
+        kind:
+          type: string
+          enum: [mmlupro, mmlupro-lg, mmlupro-tq, raw]
+          description: |
+            `mmlupro` = llama.cpp baseline. `mmlupro-lg` = S3 little-gemma (Jetson
+            only). `mmlupro-tq` = S8 TurboQuant KV cache. `raw` = any command
+            wrapped in `run_measured.sh`. `GET /api/queue?describe=1` lists
+            the authoritative set for each board.
+        params:
+          type: object
+          description: |
+            For the mmlupro kinds, `{model: e2b|e4b, subset: s1|s2|s3,
+            thinking: off|on (default off)}`. For `raw`, `{label, command}`.
+          properties:
+            model: { type: string, enum: [e2b, e4b] }
+            subset: { type: string, enum: [s1, s2, s3] }
+            thinking: { type: string, enum: ["off", "on"], default: "off" }
+            label: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$' }
+            command: { type: string }
+        not_before:
+          type: string
+          pattern: '^\d{1,2}:\d{2}$'
+          example: "02:00"
+          description: Earliest start, HH:MM in the board's local time (next occurrence).
+        override:
+          type: object
+          description: Let named prechecks pass. The reason is logged on the job.
+          required: [checks, reason]
+          properties:
+            checks: { type: array, items: { type: string }, example: [memory] }
+            reason: { type: string }
+    BatchRequest:
+      type: object
+      required: [box, jobs]
+      properties:
+        box: { $ref: "#/components/schemas/BoxId" }
+        jobs:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [kind]
+            properties:
+              kind: { type: string }
+              params: { type: object, additionalProperties: true }
+              not_before: { type: string }
+              override: { type: object, additionalProperties: true }
+
+    Job:
+      type: object
+      description: A job as stored by the board's queue.
+      properties:
+        id: { type: string }
+        kind: { type: string }
+        params: { type: object, additionalProperties: true }
+        state: { type: string, example: queued, description: e.g. queued, waiting, running, done, failed, blocked, cancelled. }
+        by: { type: string, example: dashboard }
+        not_before_epoch: { type: number, nullable: true }
+      additionalProperties: true
+
+    Preflight:
+      type: object
+      properties:
+        ok: { type: boolean, description: true = nothing blocks. }
+        resolved:
+          type: object
+          additionalProperties: true
+          description: Command, env, label and output dir the job would run with.
+        prechecks:
+          type: array
+          items: { type: object, additionalProperties: true }
+        override: { type: object, nullable: true, additionalProperties: true }
+      additionalProperties: true
+
+    RunsEnvelope:
+      type: object
+      properties:
+        ts: { $ref: "#/components/schemas/Ts" }
+        boxes:
+          type: array
+          items:
+            allOf:
+              - $ref: "#/components/schemas/BoxHeader"
+              - type: object
+                properties:
+                  runs: { type: array, items: { type: object, additionalProperties: true } }
+
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        hint: { type: string }
