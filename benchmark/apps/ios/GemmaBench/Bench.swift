@@ -25,7 +25,8 @@ struct Ref: Codable, Sendable {
     let run: String
     let score: Double
     let decode_tok_s: Double?
-    let prompt_tokens_total: Int
+    let prompt_tokens_total: Int  // after llama.cpp's prefix cache: not comparable to full prompts
+    let first_prompt_tokens: Int?  // the one uncached request: the template/tokenizer parity check
     let minutes: Double?
     let energy_wh: Double?  // board DC draw (PMIC / INA3221)
     let mean_w: Double?
@@ -470,8 +471,10 @@ final class Bench {
         ]
         out["reference"] = ref.mapValues { ["run": $0.run, "score": $0.score, "decode_tok_s": $0.decode_tok_s ?? 0,
                                              "prompt_tokens_total": $0.prompt_tokens_total] }
-        if let pi = ref["pi"], pi.prompt_tokens_total > 0, rs.count == 100 {
-            out["prompt_tokens_vs_pi"] = Double(promptTok) / Double(pi.prompt_tokens_total)  // 1.0 = same template/tokenizer
+        // Parity check on request 0, the only one llama.cpp's prefix cache can't shorten:
+        // 1.0 = same chat template and tokenizer as the boards.
+        if let pi = ref["pi"]?.first_prompt_tokens, pi > 0, let first = rs.first {
+            out["first_prompt_tokens_vs_pi"] = Double(first.1.promptTokens) / Double(pi)
         }
         return out
     }

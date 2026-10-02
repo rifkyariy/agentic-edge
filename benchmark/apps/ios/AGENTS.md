@@ -164,8 +164,10 @@ Energy precedence everywhere: PowerLog measured Wh > battery-% estimate (`*` in
    identical to, llama.cpp's `timings`; say so when comparing.
 8. **Report every run**, stopped and failed included — the app never deletes a run
    directory, and it appends each request as it finishes.
-9. **Template parity check.** `summary.json → prompt_tokens_vs_pi` should be ~1.0. If it
-   isn't, the MLX chat template or tokenizer differs from llama.cpp's and the comparison
-   is suspect.
+9. **Template parity check.** `summary.json → first_prompt_tokens_vs_pi` must be 1.0
+   (E2B s1: 1,438 = 1,438). Only request 0 is comparable: llama.cpp counts tokens after its
+   prefix cache, and lm-eval sends each subject's questions back to back, so later Pi
+   prompts reuse the 5-shot prefix and look ~4x shorter. Never compare prompt-token totals
+   (`prompt_tokens_vs_pi` in the first E2B s1 run's summary, 3.79, is that mistake).
 10. **A prompt change means rebuilding with `--ref`.** `build_prompts.py` refuses to write
     unless all 100 s1 prompts match lm-eval byte for byte.
