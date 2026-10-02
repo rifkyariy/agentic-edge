@@ -190,7 +190,13 @@ struct RunDetailView: View {
                             Text("Device").tag("device")
                             Text("Questions (\(rec.n))").tag("questions")
                         }.pickerStyle(.segmented)
-                        if tab == "device" { device } else { questions }
+                        if tab == "device" {
+                            // One column in portrait, two side by side when the phone is turned.
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 16, alignment: .top)],
+                                      alignment: .leading, spacing: 16) { device }
+                        } else {
+                            questions
+                        }
                     }
                     .padding()
                 }

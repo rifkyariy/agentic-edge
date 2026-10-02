@@ -98,15 +98,21 @@ enum ModelStore {
 
     private final class Inflight: @unchecked Sendable {
         var task: URLSessionDownloadTask?
-        var observation: NSKeyValueObservation?
     }
 
     private static func fetch(_ url: URL, to dest: URL, progress: @escaping @Sendable (Int64) -> Void) async throws {
         let inflight = Inflight()
+        // Poll the byte count: KVO on task.progress never fired on device (stuck at 0%).
+        let poll = Task {
+            while !Task.isCancelled {
+                if let t = inflight.task { progress(t.countOfBytesReceived) }
+                try? await Task.sleep(for: .milliseconds(500))
+            }
+        }
+        defer { poll.cancel() }
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in
                 let task = URLSession.shared.downloadTask(with: url) { tmp, resp, err in
-                    inflight.observation?.invalidate()
                     if let err { return c.resume(throwing: err) }
                     guard let tmp, (resp as? HTTPURLResponse)?.statusCode == 200 else {
                         return c.resume(throwing: URLError(.badServerResponse))
@@ -117,7 +123,6 @@ enum ModelStore {
                         c.resume()
                     } catch { c.resume(throwing: error) }
                 }
-                inflight.observation = task.progress.observe(\.completedUnitCount) { p, _ in progress(p.completedUnitCount) }
                 inflight.task = task
                 task.resume()
             }

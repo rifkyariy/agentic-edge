@@ -20,6 +20,7 @@ struct ContentView: View {
     @State private var detail: RunRecord?
     @State private var settings = false
     @State private var deleting: GemmaModel?
+    @Environment(\.verticalSizeClass) private var vSize  // .compact = iPhone in landscape
 
     private var ref: [String: Ref] { bench.prompts.reference["\(model.rawValue)-\(subset)"] ?? [:] }
     private var pct: Double { bench.done > 0 ? 100 * Double(bench.correct) / Double(bench.done) : 0 }
@@ -27,16 +28,34 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
-                    setup
-                    models
-                    compare
-                    actions
-                    if bench.total > 0 { progress }
-                    if !bench.runs.isEmpty { history }
-                    if !bench.log.isEmpty { logCard }
+                if vSize == .compact {
+                    // Landscape: what you set and run on the left, what came out on the right.
+                    HStack(alignment: .top, spacing: 16) {
+                        VStack(spacing: 16) {
+                            setup
+                            models
+                            actions
+                            if bench.total > 0 { progress }
+                        }
+                        VStack(spacing: 16) {
+                            compare
+                            if !bench.runs.isEmpty { history }
+                            if !bench.log.isEmpty { logCard }
+                        }
+                    }
+                    .padding()
+                } else {
+                    VStack(spacing: 16) {
+                        setup
+                        models
+                        compare
+                        actions
+                        if bench.total > 0 { progress }
+                        if !bench.runs.isEmpty { history }
+                        if !bench.log.isEmpty { logCard }
+                    }
+                    .padding()
                 }
-                .padding()
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("GemmaBench")
