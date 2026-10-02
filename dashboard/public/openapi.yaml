@@ -29,8 +29,14 @@ info:
     in flight) run before a job starts. Every attempt is kept, failures
     included (AGENTS §4, §5).
 
-    **Envelope for board fan-out.** Endpoints that ask both boards return
-    `{ts, boxes: [Box, Box]}`. Each `Box` holds the host fields plus either
+    **The iPhone.** The iOS app (`benchmark/apps/ios`) runs the same MMLU-Pro
+    task on-device with MLX. It has no ssh, so it POSTs each run to
+    `/api/phone`, and `history`, `baseline`, `compare` and `run` serve it as a
+    third box, `iphone` (`engine: "mlx"`). It is not in `status` or `queue`:
+    nothing to probe live and nothing to queue.
+
+    **Envelope for board fan-out.** Endpoints that ask the boards return
+    `{ts, boxes: [Box, Box, iphone]}`. Each `Box` holds the host fields plus either
     `ok: true` and the board's data, or `ok: false, error, hint`. One board
     being down never fails the whole call.
 servers:
@@ -50,6 +56,8 @@ tags:
     description: Queue, schedule, cancel and inspect benchmark jobs.
   - name: results
     description: Finished runs, per-question detail, cross-board comparisons.
+  - name: phone
+    description: Runs uploaded by the iPhone app.
 
 paths:
   /api/status:
@@ -340,6 +348,64 @@ paths:
               schema: { $ref: "#/components/schemas/RunsEnvelope" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /api/phone:
+    post:
+      tags: [phone]
+      summary: Upload one iPhone run
+      description: |
+        Sent by the iOS app when a run ends, and again from a run's detail
+        after power data is attached. The body is the run in
+        `run_detail.py --run`'s shape (plus `host`, `host_name`, `os`,
+        `ram_gb`, `load_s`), stored on the Mac as `dashboard/data/phone/<run>.json`
+        (`PHONE_DIR` overrides). The same `run` overwrites its file. Every
+        run is kept, stopped ones included (AGENTS §5); only `status: done`
+        runs reach `baseline`.
+
+        iPhone `device` fields differ from the boards': `energy_wh` is
+        battery-side, whole phone, and `energy_source` says whether it was
+        measured (PowerLog V×I) or estimated (battery % × capacity);
+        `gpu_mean` and `idle_w` are null with `na_reasons`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run, model, subset, questions, timeline]
+              properties:
+                run: { type: string, pattern: '^\w[\w.-]*$', maxLength: 120, example: mmlupro-e2b-s1-20261002-213000 }
+                engine: { type: string, example: mlx }
+                model: { type: string, enum: [e2b, e4b] }
+                subset: { type: string, enum: [s1, s2, s3] }
+                status: { type: string, enum: [done, running, incomplete] }
+                summary:
+                  type: object
+                  properties: { score: { type: number }, stderr: { type: number }, minutes: { type: number } }
+                questions:
+                  type: array
+                  description: "Per question: subject, q, options, gold, got, ok, resp, chars, question_id (pairs with the boards), stop."
+                  items: { type: object, additionalProperties: true }
+                timeline:
+                  type: array
+                  description: "Per request: i, t, start_epoch, end_epoch, pt, pms, gt, gms, pts, gts, dev."
+                  items: { type: object, additionalProperties: true }
+                telemetry: { type: array, items: { type: object, additionalProperties: true } }
+                device: { type: object, additionalProperties: true }
+              additionalProperties: true
+      responses:
+        "200":
+          description: Stored.
+          content:
+            application/json:
+              schema: { type: object, properties: { ok: { type: boolean }, run: { type: string } } }
+        "400":
+          description: Not a JSON object, or a bad run/model/subset/questions/timeline.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "413":
+          description: Over 32 MB.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
 components:
   securitySchemes:
     bearer:
@@ -374,8 +440,10 @@ components:
       description: Mac time the response was built, ms since epoch.
     BoxId:
       type: string
-      enum: [pi, jetson]
-      description: "`pi` = Raspberry Pi 5 (CPU), `jetson` = Jetson Orin Nano (CUDA)."
+      enum: [pi, jetson, iphone]
+      description: |
+        `pi` = Raspberry Pi 5 (CPU), `jetson` = Jetson Orin Nano (CUDA),
+        `iphone` = the iOS app's uploads (MLX; read-only: `run` only, no `logs`/`queue`).
     BoxHeader:
       type: object
       required: [id, ok]

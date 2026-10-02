@@ -1,0 +1,5 @@
+// Committed. Pulls in the git-ignored Secrets.xcconfig if it exists (copy
+// Secrets.example.xcconfig). Without it API_TOKEN is empty and the token is
+// entered in the app's Dashboard API card instead.
+API_TOKEN =
+#include? "Secrets.xcconfig"

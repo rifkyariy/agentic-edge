@@ -1,0 +1,4 @@
+prep/.cache/
+build/
+xcuserdata/
+Secrets.xcconfig
