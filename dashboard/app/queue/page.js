@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQueue, latestPerRun } from "../lib/queue-context";
-import { clock as fmtTime } from "../lib/format";
+import { when as fmtTime } from "../lib/format";
 import PageHeader from "../components/PageHeader";
 import StatePill from "../components/StatePill";
 
@@ -175,16 +175,8 @@ function JobForm({ box, onQueued }) {
         </label>
       </div>
 
-      {Object.values(spec.params).some((r) => r.enum) && (
-        <p className="batch-note">Click picks one value. For a batch, ⌘/Ctrl/Shift-click
-          to add more, or pick <b>all</b>.</p>
-      )}
-
       {n > 1 && (
-        <p className="batch-note">
-          {n} runs, queued one model at a time — every subset of one model
-          before the next — and run one at a time, in that order.
-        </p>
+        <p className="batch-note">{n} runs, one at a time, every subset of a model before the next.</p>
       )}
 
       {current?.error && (
@@ -221,8 +213,7 @@ function JobForm({ box, onQueued }) {
       )}
 
       {results.some((r) => r.prechecks.some((c) => c.deferred)) && (
-        <p className="batch-note">⏳ checked when that job starts: the board is busy
-          now, so its memory and idleness today say nothing about then.</p>
+        <p className="batch-note">⏳ checked when the job starts, since the board is busy now.</p>
       )}
 
       {waivable && (
@@ -236,9 +227,7 @@ function JobForm({ box, onQueued }) {
                    placeholder="why this is safe (recorded with the run)"
                    onChange={(e) => setReason(e.target.value)} />
           )}
-          <p className="sub">Only memory can be waived. The reason is stored on
-            the job and in its timeline, and the run is marked as overridden for
-            good (AGENTS §5).</p>
+          <p className="sub">Only memory can be waived. The reason is kept with the run.</p>
         </div>
       )}
 
@@ -279,19 +268,23 @@ function QueueList({ box, onChange }) {
   const superseded = new Set(jobs.filter((x) => !latest.has(x.id)
     && (x.state === "blocked" || x.state === "failed")).map((x) => x.id));
   if (!jobs.length) return <p className="empty">Nothing queued on this board.</p>;
+  const shown = jobs.slice().reverse();
+  // Every job, newest first, scrolling inside the card so a long history
+  // never pushes the other board's card down.
   return (
-    <div className="table-wrap">
+    <div className="table-wrap scroll-box queue-scroll" tabIndex={0} role="region" aria-label="jobs">
     <table className="queue-table">
+      <colgroup><col /><col className="c-state" /><col className="c-when" /><col className="c-act" /></colgroup>
       <thead><tr><th>job</th><th>state</th><th>when</th><th /></tr></thead>
       <tbody>
-        {jobs.slice().reverse().map((j) => (
+        {shown.map((j) => (
           <tr key={j.id} className={`state-${j.state}`}>
             <td>
               <Link href={`/queue/${box.id}/${j.id}`}>{j.label}</Link>
-              {j.note ? <i className={`note${superseded.has(j.id) ? " old" : ""}`}> {j.note}</i> : null}
+              {j.note ? <i className={`note${superseded.has(j.id) ? " old" : ""}`} title={j.note}>{j.note}</i> : null}
             </td>
             <td>{superseded.has(j.id)
-              ? <StatePill state="superseded" label={`${j.state} · requeued`} family="hist" />
+              ? <StatePill state="superseded" label="requeued" family="hist" />
               : <StatePill state={j.state} />}</td>
             <td>{fmtTime(j.started || j.not_before_epoch || j.created) || "—"}</td>
             <td>{j.state === "queued"
@@ -327,8 +320,7 @@ export default function QueuePage() {
 
   return (
     <main>
-      <PageHeader title="Run queue"
-                  sub="One job per board at a time. Each run is prechecked for memory and a stale output directory, and its serving flags are diffed against the declared baseline before lm-eval starts." />
+      <PageHeader title="Queue" sub="One job per board at a time, checked before it starts." />
 
       {!boxes.length && <p className="empty">Asking both boards for their queues&hellip;</p>}
       <div className="qgrid">

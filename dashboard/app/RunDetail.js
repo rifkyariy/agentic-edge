@@ -97,7 +97,57 @@ function RunCost({ d, minutes }) {
   );
 }
 
-function ReqStats({ r, run, median }) {
+// iOS's ProcessInfo.ThermalState: the phone's only signal about heat.
+const THERMAL = ["nominal", "fair", "serious", "critical"];
+const thermalWord = (v) => (v == null ? "—" : THERMAL[v] ?? String(v));
+
+/* The iPhone's version of RunCost. It has no power rails: energy is either
+   measured afterwards from PowerLog (battery V×I, whole phone) or estimated from
+   battery % × capacity, and the app says which in energy_source. Heat is iOS's
+   thermal state, not a temperature. */
+function PhoneCost({ d, minutes }) {
+  const src = d.energy_source || "none";
+  const how = src.startsWith("measured") ? "measured: PowerLog battery V×I, whole phone"
+    : src.startsWith("estimate") ? "estimate: battery % used × capacity, whole phone"
+    : "not measured: attach a PowerLog trace in the app";
+  return (
+    <div className="reqcard runcost">
+      <div className="reqcard-head">
+        <span className="reqcard-title">Device cost</span>
+        {minutes ? <span className="reqcard-when">over {fmt(minutes)} min</span> : null}
+        {d.throttled
+          ? <span className="chip warn">⚠ thermal state serious or worse · {fmt(d.throttled)} s</span>
+          : <span className="chip ok">✓ thermal state never serious</span>}
+      </div>
+      <div className="reqcard-hero">
+        <div>
+          <span className="tile-label">Energy</span>
+          <b className="hero-value">{fmt(d.energy_wh, 2)}<i>Wh</i></b>
+          <em className={`delta ${src.startsWith("estimate") ? "poor" : "flat"}`}>{how}</em>
+        </div>
+      </div>
+      <div className="tiles">
+        <Tile label="Energy per token" value={fmt(d.j_per_token, 2)} unit="J/tok"
+              sub={<em className="delta flat">generated tokens</em>} />
+        <Tile label="Decode (median)" value={fmt(d.decode_tok_s, 1)} unit="tok/s"
+              sub={<em className="delta flat">{fmt(d.prefill_tok_s, 0)} tok/s prefill</em>} />
+        {d.mean_w != null && <Tile label="Mean power" value={fmt(d.mean_w, 2)} unit="W" accent="var(--power)"
+              sub={<em className="delta flat">{fmt(d.peak_w, 2)} W peak</em>} />}
+        <Tile label="App CPU" value={fmt(d.cpu_mean, 0)} unit="%" accent="var(--cpu)"
+              sub={<em className="delta flat">mean, % of one core</em>} />
+        <Tile label="App memory" value={fmt(d.mem_peak_mb == null ? null : d.mem_peak_mb / 1024, 2)} unit="GB"
+              sub={<em className="delta flat">peak footprint</em>} />
+        <Tile label="Battery used" value={fmt(d.battery_used_pct, 0)} unit="%"
+              sub={<em className="delta flat">{d.battery_wh_capacity ? `of ${fmt(d.battery_wh_capacity, 1)} Wh` : "capacity not set"}</em>} />
+        <Tile label="Worst thermal state" value={thermalWord(d.thermal_max)} accent="var(--temp)"
+              sub={d.temp_max != null ? <em className="delta flat">battery {fmt(d.temp_max, 1)} °C</em>
+                : <em className="delta flat">no °C on iOS</em>} />
+      </div>
+    </div>
+  );
+}
+
+function ReqStats({ r, run, median, phone }) {
   if (!r) return null;
   const d = r.dev || {};
   const pre = r.pms / 1000, dec = r.gms / 1000, tot = pre + dec;
@@ -142,6 +192,7 @@ function ReqStats({ r, run, median }) {
               sub={<em className="delta flat">{fmt(r.pts, 1)} tok/s prefill</em>} />
         <Tile label="Tokens out" value={fmt(r.gt)} unit="tok"
               sub={r.gt >= 2048 ? <em className="delta poor">hit the 2,048 cap</em> : null} />
+        {!phone && <>
         <Tile label="Board power" value={fmt(d.w_mean, 2)} unit="W" accent="var(--power)"
               sub={<><Delta value={d.w_mean} base={run?.mean_w} decimals={2} unit=" W" />
                      <em className="delta flat">{fmt(d.w_max, 2)} W peak</em></>} />
@@ -149,13 +200,16 @@ function ReqStats({ r, run, median }) {
               sub={<em className="delta flat">{fmt(d.j / 3600, 4)} Wh</em>} />
         <Tile label="Energy per token" value={fmt(d.j_per_token, 2)} unit="J/tok"
               sub={<Delta value={d.j_per_token} base={run?.j_per_token} decimals={2} />} />
-        <Tile label="CPU" value={fmt(d.cpu, 0)} unit="%" accent="var(--cpu)"
+        </>}
+        <Tile label={phone ? "App CPU" : "CPU"} value={fmt(d.cpu, 0)} unit="%" accent="var(--cpu)"
               sub={<Delta value={d.cpu} base={run?.cpu_mean} decimals={0} unit="%" />} />
         {gpu && <Tile label="GPU" value={fmt(d.gpu, 0)} unit="%" accent="var(--gpu)" />}
-        <Tile label="Peak temperature" value={fmt(d.temp_max, 1)} unit="°C" accent="var(--temp)"
-              sub={<Delta value={d.temp_max} base={run?.temp_max} decimals={1} unit="°C" vs="run peak" />} />
-        <Tile label="Server memory" value={fmt(d.rss_mb / 1024, 2)} unit="GB"
-              sub={<em className="delta flat">{fmt(d.rss_mb)} MB resident</em>} />
+        {phone
+          ? <Tile label="Thermal state" value={thermalWord(d.thermal)} accent="var(--temp)" />
+          : <Tile label="Peak temperature" value={fmt(d.temp_max, 1)} unit="°C" accent="var(--temp)"
+              sub={<Delta value={d.temp_max} base={run?.temp_max} decimals={1} unit="°C" vs="run peak" />} />}
+        <Tile label={phone ? "App memory" : "Server memory"} value={fmt(d.rss_mb / 1024, 2)} unit="GB"
+              sub={<em className="delta flat">{fmt(d.rss_mb)} MB {phone ? "footprint" : "resident"}</em>} />
       </div>
     </div>
   );
@@ -181,7 +235,7 @@ function Cell({ v, d, rec, why }) {
   );
 }
 
-function RequestTable({ rows, onPick }) {
+function RequestTable({ rows, onPick, phone }) {
   const [open, setOpen] = useState(false);
   if (!rows?.length) return null;
   const shown = open ? rows : rows.slice(0, 8);
@@ -212,16 +266,17 @@ function RequestTable({ rows, onPick }) {
             <tr>
               <th className="grp" /><th className="grp" colSpan={2}>tokens</th>
               <th className="grp" colSpan={3}>timing</th>
-              <th className="grp" colSpan={4}>power &amp; energy</th>
-              <th className="grp" colSpan={anyGpu ? 4 : 3}>board</th>
+              {!phone && <th className="grp" colSpan={4}>power &amp; energy</th>}
+              <th className="grp" colSpan={anyGpu ? 4 : 3}>{phone ? "phone" : "board"}</th>
             </tr>
             <tr>
               <th>#</th>
               <th>in</th><th>out</th>
               <th>prefill<i>s</i></th><th>decode<i>s</i></th><th>decode<i>tok/s</i></th>
-              <th>mean<i>W</i></th><th>peak<i>W</i></th><th>energy<i>J</i></th><th>per token<i>J</i></th>
-              <th>cpu<i>%</i></th>{anyGpu && <th>gpu<i>%</i></th>}
-              <th>temp<i>°C</i></th><th>server rss<i>MB</i></th>
+              {!phone && <><th>mean<i>W</i></th><th>peak<i>W</i></th><th>energy<i>J</i></th><th>per token<i>J</i></th></>}
+              <th>{phone ? "app cpu" : "cpu"}<i>%</i></th>{anyGpu && <th>gpu<i>%</i></th>}
+              {phone ? <th>thermal</th> : <th>temp<i>°C</i></th>}
+              <th>{phone ? "app memory" : "server rss"}<i>MB</i></th>
             </tr>
           </thead>
           <tbody>
@@ -234,16 +289,19 @@ function RequestTable({ rows, onPick }) {
                 <td>{fmt(r.pms / 1000, 1)}</td><td>{fmt(r.gms / 1000, 1)}</td>
                 <Cell v={r.gts} d={2} rec={r.gts === rec.tps && "low"}
                       why="slowest decode of the run" />
+                {!phone && <>
                 <td>{fmt(r.dev?.w_mean, 2)}</td>
                 <Cell v={r.dev?.w_max} d={2} rec={r.dev?.w_max === rec.w && "high"}
                       why="highest draw of the run" />
                 <td>{fmt(r.dev?.j, 0)}</td>
                 <Cell v={r.dev?.j_per_token} d={2} rec={r.dev?.j_per_token === rec.jpt && "high"}
                       why="least efficient request of the run" />
+                </>}
                 <td>{fmt(r.dev?.cpu, 0)}</td>
                 {anyGpu && <td>{fmt(r.dev?.gpu, 0)}</td>}
-                <Cell v={r.dev?.temp_max} d={1} rec={r.dev?.temp_max === rec.temp && "high"}
-                      why="hottest the board got all run" />
+                {phone ? <td>{thermalWord(r.dev?.thermal)}</td>
+                  : <Cell v={r.dev?.temp_max} d={1} rec={r.dev?.temp_max === rec.temp && "high"}
+                      why="hottest the board got all run" />}
                 <td>{fmt(r.dev?.rss_mb)}</td>
               </tr>
             ))}
@@ -254,18 +312,20 @@ function RequestTable({ rows, onPick }) {
               <td>{fmt(sum(agg.pt))}</td><td>{fmt(sum(agg.gt))}</td>
               <td>{fmt(sum(agg.pms) / 1000, 0)}</td><td>{fmt(sum(agg.gms) / 1000, 0)}</td>
               <td>{fmt(median(tps), 2)}</td>
+              {!phone && <>
               <td>{fmt(mean(agg.wmean), 2)}</td><td>{fmt(rec.w, 2)}</td>
               <td>{fmt(sum(agg.j), 0)}</td><td>{fmt(mean(jpt), 2)}</td>
+              </>}
               <td>{fmt(mean(agg.cpu), 0)}</td>
               {anyGpu && <td>{agg.gpu.length ? fmt(mean(agg.gpu), 0) : "—"}</td>}
-              <td>{fmt(rec.temp, 1)}</td>
+              <td>{phone ? (col((r) => r.dev?.thermal).length ? thermalWord(Math.max(...col((r) => r.dev?.thermal))) : "—") : fmt(rec.temp, 1)}</td>
               <td>{fmt(Math.max(...agg.rss))}</td>
             </tr>
             <tr className="aggkey">
               <th />
               <td>total</td><td>total</td><td>total</td><td>total</td>
               <td>median</td>
-              <td>mean</td><td>max</td><td>total</td><td>mean</td>
+              {!phone && <><td>mean</td><td>max</td><td>total</td><td>mean</td></>}
               <td>mean</td>{anyGpu && <td>mean</td>}<td>max</td><td>max</td>
             </tr>
           </tfoot>
@@ -313,6 +373,8 @@ export default function RunDetail({ boxId, boxLabel, run, onClose }) {
   // spike lines up with the question that caused it.
   const tl = data?.timeline;
   const lastReq = tl?.length ? tl[tl.length - 1] : null;
+  // The iPhone uploads a different set of measures (no rails, no °C): see PhoneCost.
+  const phone = boxId === "iphone" || data?.engine === "mlx";
   const runSpan = lastReq ? lastReq.t + (lastReq.pms + lastReq.gms) / 1000
     : data?.telemetry?.length ? data.telemetry[data.telemetry.length - 1].t : undefined;
 
@@ -373,12 +435,25 @@ export default function RunDetail({ boxId, boxLabel, run, onClose }) {
             {data.note && <p className="note-partial">{data.note}</p>}
 
             {tab === "device" && (<>
-            {data.device && <RunCost d={data.device} minutes={data.summary?.minutes} />}
+            {data.device && (phone
+              ? <PhoneCost d={data.device} minutes={data.summary?.minutes} />
+              : <RunCost d={data.device} minutes={data.summary?.minutes} />)}
 
             <section>
               <h3>Request timeline <em>and device conditions through the run</em></h3>
               <TimelineChart rows={data.timeline} onPick={pick} />
-              {data.telemetry?.length > 0 && (
+              {data.telemetry?.length > 0 && (phone ? (
+                <div className="tracks">
+                  <TrackChart points={data.telemetry} span={runSpan} dataKey="cpu"
+                    color="var(--cpu)" unit="%" label="app cpu (% of one core)" />
+                  <TrackChart points={data.telemetry} span={runSpan} dataKey="rss"
+                    color="var(--iphone)" unit="MB" label="app memory" />
+                  <TrackChart points={data.telemetry} span={runSpan} dataKey="battery"
+                    color="var(--power)" unit="%" label="battery" domainMax={100} />
+                  <TrackChart points={data.telemetry} span={runSpan} dataKey="thermal"
+                    color="var(--temp)" unit="" label="thermal state (0 nominal – 3 critical)" domainMax={3} />
+                </div>
+              ) : (
                 <div className="tracks">
                   <TrackChart points={data.telemetry} span={runSpan} dataKey="w"
                     color="var(--power)" unit="W" label="board power" decimals={2} />
@@ -389,12 +464,12 @@ export default function RunDetail({ boxId, boxLabel, run, onClose }) {
                   <TrackChart points={data.telemetry} span={runSpan} dataKey="temp"
                     color="var(--temp)" unit="°C" label="temperature" decimals={1} />
                 </div>
-              )}
+              ))}
             </section>
 
             <section>
               <h3>Per request <em>tokens and what the board was doing</em></h3>
-              <RequestTable rows={data.timeline} onPick={pick} />
+              <RequestTable rows={data.timeline} onPick={pick} phone={phone} />
             </section>
 
             </>)}
@@ -425,7 +500,7 @@ export default function RunDetail({ boxId, boxLabel, run, onClose }) {
                     </button>
                     {open === q._i && (
                       <div className="qdetail">
-                        <ReqStats r={data.timeline?.[q._i]} run={data.device} median={medianTps} />
+                        <ReqStats r={data.timeline?.[q._i]} run={data.device} median={medianTps} phone={phone} />
                         {q.q && <p className="qfull">{q.q}</p>}
                         {q.options?.length > 0 && (
                           <ol className="opts">

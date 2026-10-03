@@ -95,3 +95,27 @@ test("little-gemma's own thinking comparison stays inside little-gemma", () => {
   const llama = thinking.find((t) => t.board === "jetson" && t.engine === "llama.cpp");
   assert.equal(llama.groups[0].pooled, null);
 });
+
+// The iPhone: the same questions on MLX, thinking off, paired with each board.
+const mlx = (model, subset, correct, done = true) =>
+  ({ ...run(model, subset, "off", correct, done), engine: "mlx" });
+
+test("the iPhone is compared with each board on the baseline", () => {
+  const boxes = [
+    { id: "pi", runs: [run("e2b", "s1", "off", q("1100"))] },
+    { id: "jetson", runs: [run("e2b", "s1", "off", q("1110")), lg("e2b", "s1", "off", q("0000"))] },
+    { id: "iphone", runs: [mlx("e2b", "s1", q("1111"))] },
+  ];
+  const { phone } = comparisons(boxes);
+  const vsPi = phone.find((c) => c.board === "pi").groups[0];
+  assert.equal(vsPi.pooled.aAcc, 50);       // a = the board
+  assert.equal(vsPi.pooled.bAcc, 100);      // b = the iPhone
+  // the Orin side is its llama.cpp run, never its little-gemma one
+  assert.equal(phone.find((c) => c.board === "jetson").groups[0].pooled.aAcc, 75);
+});
+
+test("an iPhone run never stands in for a board in the board comparison", () => {
+  const boxes = [{ id: "pi", runs: [run("e4b", "s2", "off", q("10"))] },
+                 { id: "iphone", runs: [mlx("e4b", "s2", q("11"))] }];
+  assert.equal(comparisons(boxes).board[0].groups[1].pooled, null);
+});

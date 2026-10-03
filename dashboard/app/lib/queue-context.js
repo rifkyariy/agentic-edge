@@ -9,16 +9,16 @@ const VISIBLE_MS = 10000;
 // A hidden tab keeps asking, slowly: the blocked/failed alerts depend on it.
 const HIDDEN_MS = 60000;
 
-const QueueContext = createContext({ boxes: [], ts: null, loaded: false, refresh: async () => {} });
+const QueueContext = createContext({ boxes: [], phone: null, ts: null, loaded: false, refresh: async () => {} });
 
 export function QueueProvider({ children }) {
-  const [state, setState] = useState({ boxes: [], ts: null, loaded: false });
+  const [state, setState] = useState({ boxes: [], phone: null, ts: null, loaded: false });
 
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/queue", { cache: "no-store" });
       const data = await res.json();
-      setState({ boxes: data.boxes || [], ts: data.ts, loaded: true });
+      setState({ boxes: data.boxes || [], phone: data.phone ?? null, ts: data.ts, loaded: true });
     } catch { /* keep the last answer; the next tick tries again */ }
   }, []);
 

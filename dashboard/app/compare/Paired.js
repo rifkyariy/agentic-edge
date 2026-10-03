@@ -85,13 +85,10 @@ function Block({ title, a, b, groups }) {
 export default function Paired({ data, err }) {
   return (
     <section className="card paired-card">
-      <h2>Paired accuracy <i className="sub">computed from the boards, updates as runs finish</i></h2>
-      <p className="sub">
-        Every pair of runs is compared question by question on the identical subsets.
-        Only the questions exactly one side gets right carry information; the exact
-        McNemar test asks whether those split evenly. &ldquo;No difference&rdquo; means
-        p ≥ {ALPHA}, not that the scores are equal. Pooled rows cover only subsets
-        finished on <em>both</em> sides; the rest are named.
+      <h2>Paired accuracy</h2>
+      <p className="sub" title="Only questions exactly one side gets right carry information; the exact McNemar test asks whether those split evenly. Pooled rows cover only subsets finished on both sides.">
+        Question by question on identical subsets, exact McNemar. &ldquo;No difference&rdquo;
+        means p ≥ {ALPHA}, not equal scores.
       </p>
       {err && <p className="pre-error"><b>{err}</b></p>}
       {!data && !err && <p className="sub">Reading per-question answers from both boards…</p>}
@@ -116,6 +113,11 @@ export default function Paired({ data, err }) {
             <Block key={`engine-${c.condition}`}
                    title={c.condition === "off" ? "llama.cpp vs little-gemma on the Orin Nano — baseline (thinking off)"
                                                 : "llama.cpp vs little-gemma on the Orin Nano — thinking on (budget 320)"}
+                   a={c.a} b={c.b} groups={c.groups} />
+          ))}
+          {(data.phone || []).map((c) => (
+            <Block key={`phone-${c.board}`}
+                   title={`${c.a} (llama.cpp) vs iPhone (MLX) — baseline (thinking off)`}
                    a={c.a} b={c.b} groups={c.groups} />
           ))}
           <p className="sub paired-foot">

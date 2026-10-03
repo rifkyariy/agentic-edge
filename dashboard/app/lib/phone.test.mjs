@@ -79,3 +79,33 @@ test("a late live snapshot never puts a finished run back to running", async () 
   assert.equal(await saveRun(run("mmlupro-e2b-s3-race", "running", 1, [])), false);
   assert.equal((await loadRun("mmlupro-e2b-s3-race")).status, "done");
 });
+
+test("the status carries the phone's own measures, not board ones", async () => {
+  const live = run("mmlupro-e2b-s2-phone", "running", 1000, [[31, true, "A"]]);
+  live.subset = "s2";
+  live.timeline = [{ start_epoch: 0, end_epoch: 30 }];
+  live.telemetry = [{ cpu: 140, rss: 3900, thermal: 2, battery: 81 }];
+  await saveRun(live);
+  const d = (await phoneBox("status")).data;
+  assert.deepEqual([d.phone.thermal, d.phone.battery_pct, d.phone.footprint_mb], [2, 81, 3900]);
+  assert.equal(d.phone.ram_gb, 8);
+  assert.equal(d.phone.os, "iOS 18.6");
+  assert.ok(d.phone.upload_age_s >= 0 && d.phone.upload_age_s < 60);
+  // no board measures are invented for it
+  assert.equal(d.power_w, null);
+  assert.equal(d.temp_c, null);
+});
+
+test("the phone's device status comes from its uploads", async () => {
+  const { phoneStatus, statusOf } = await import("./phone.js");
+  const now = 1_000_000;
+  const at = (ago) => new Date((now - ago) * 1000).toISOString();
+  assert.equal(statusOf([], now).state, "never");
+  assert.equal(statusOf([{ status: "running", received_at: at(60) }], now).state, "running");
+  // a run that stopped uploading mid-way: the app died, was stopped, or lost the network
+  assert.equal(statusOf([{ status: "running", received_at: at(STALE_S + 60) }], now).state, "lost");
+  assert.equal(statusOf([{ status: "done", received_at: at(7200) }], now).state, "idle");
+  assert.equal(statusOf([{ status: "done", received_at: at(7200) }], now).age_s, 7200);
+  // and the live helper answers from whatever is on disk
+  assert.ok(["running", "lost", "idle", "never"].includes((await phoneStatus()).state));
+});

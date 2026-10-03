@@ -82,6 +82,21 @@ const hms = (s) => {
 export const STALE_S = 15 * 60;
 export const TOTAL = 100; // every subset is 100 questions (findings/stdbench)
 
+/** The phone's device status. It has no ssh to probe, so its uploads are the only
+ * sign of life: running (a live snapshot inside STALE_S), lost (a run that stopped
+ * uploading mid-way), idle (its last run ended), or never (nothing uploaded). */
+export function statusOf(runs, now) {
+  const latest = runs.reduce((a, r) => (!a || Date.parse(r.received_at) > Date.parse(a.received_at) ? r : a), null);
+  if (!latest) return { state: "never", age_s: null };
+  const age = Math.round(now - Date.parse(latest.received_at) / 1000);
+  const state = latest.status !== "running" ? "idle" : age < STALE_S ? "running" : "lost";
+  return { state, age_s: age, run: latest.run, name: latest.host_name ?? null };
+}
+
+export async function phoneStatus() {
+  return { id: PHONE.id, ...statusOf(await all(), Date.now() / 1000) };
+}
+
 /** probe_status.py's shape, from the uploads: what the Monitor card and matrix read. */
 function probe(runs, now) {
   const latest = runs[0];
@@ -105,6 +120,16 @@ function probe(runs, now) {
     measured: live ? { dir: live.run, samples: live.telemetry?.length ?? 0 }
       : latest && done(latest) ? { dir: latest.run, summary: latest.device } : null,
     completed, disks: {},
+    // What the phone measures instead of rails and temperatures (Telemetry.swift):
+    // the app's CPU (% of one core, can pass 100), its memory footprint, iOS's
+    // thermal state (0 nominal .. 3 critical) and the battery level.
+    phone: {
+      cpu_pct: t.cpu ?? null, footprint_mb: t.rss ?? null,
+      thermal: t.thermal ?? null, battery_pct: t.battery ?? null,
+      ram_gb: latest?.ram_gb ?? null, os: latest?.os ?? null, model_id: latest?.host ?? null,
+      upload_age_s: latest?.received_at ? Math.round(now - Date.parse(latest.received_at) / 1000) : null,
+      state: statusOf(runs, now).state,
+    },
   };
 }
 

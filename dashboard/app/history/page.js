@@ -69,8 +69,7 @@ export default function HistoryPage() {
 
   return (
     <main>
-      <PageHeader title="Experiment history"
-                  sub="Every benchmark run on disk on both boards — complete, failed and superseded alike, each with the telemetry of the run that produced it. Click a run for its answers, timeline and device cost." />
+      <PageHeader title="History" sub="Every run on disk, failed and superseded included. Click one to open it." />
 
       <section className="card">
         <div className="filters">
@@ -97,7 +96,7 @@ export default function HistoryPage() {
         {!loading && !shown.length && <p className="empty">No runs match these filters.</p>}
 
         {shown.length > 0 && (
-          <div className="table-wrap">
+          <div className="table-wrap scroll-box history-scroll" tabIndex={0} role="region" aria-label="run history">
             <table className="history-table">
               <thead>
                 <tr>
@@ -135,7 +134,9 @@ export default function HistoryPage() {
                         : "—"}
                     </td>
                     <td className="num">{dur(r.minutes)}</td>
-                    <td className="num">{r.device ? `${fmt(r.device.energy_wh, 1)} Wh` : "—"}</td>
+                    <td className="num" title={r.device?.energy_source}>
+                      {r.device ? `${fmt(r.device.energy_wh, 1)} Wh` : "—"}
+                      {r.device?.energy_source?.startsWith("estimate") && <i> est.</i>}</td>
                     <td className="num">{r.device ? fmt(r.device.j_per_token, 2) : "—"}</td>
                     <td className="when">{r.at ?? "—"}</td>
                   </tr>

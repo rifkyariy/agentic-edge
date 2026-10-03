@@ -20,3 +20,13 @@ export const clock = (epoch, seconds = false) =>
   epoch ? new Date(epoch * 1000).toLocaleTimeString([], {
     hour: "2-digit", minute: "2-digit", ...(seconds ? { second: "2-digit" } : {}),
   }) : null;
+
+// An epoch as a short moment: the clock time today, otherwise the date too, so
+// a list spanning days never shows two different days as the same time.
+export const when = (epoch) => {
+  if (!epoch) return null;
+  const d = new Date(epoch * 1000);
+  const t = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return d.toDateString() === new Date().toDateString() ? t
+    : `${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${t}`;
+};

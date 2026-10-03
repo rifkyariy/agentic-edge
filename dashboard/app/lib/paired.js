@@ -110,6 +110,8 @@ const LLAMA = "llama.cpp", LG = "little-gemma";
 //   thinking: baseline against thinking-on, same board, engine and model.
 //   engine:   llama.cpp against little-gemma (S3), on the Orin, same model
 //             and condition — the Pi has no little-gemma runs.
+//   phone:    each board's llama.cpp baseline against the iPhone on MLX. Only
+//             thinking off: the app never runs with thinking on.
 // Each is given per model and pooled over both models.
 export function comparisons(boxes) {
   const { ready, waiting } = index(boxes);
@@ -133,5 +135,10 @@ export function comparisons(boxes) {
     groups: scopes.map(([label, ms]) =>
       compare(ready, label, k("jetson", t, LLAMA), k("jetson", t, LG), ms)),
   }));
-  return { board, thinking, engine, running: Object.keys(waiting) };
+  const phone = DEVICE.map(([id, name]) => ({
+    board: id, a: name, b: "iPhone",
+    groups: scopes.map(([label, ms]) =>
+      compare(ready, label, k(id, "off", LLAMA), k("iphone", "off", "mlx"), ms)),
+  }));
+  return { board, thinking, engine, phone, running: Object.keys(waiting) };
 }

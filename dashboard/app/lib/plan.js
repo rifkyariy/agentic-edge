@@ -10,7 +10,8 @@ export const PLAN = { models: ["e2b", "e4b"], subsets: ["s1", "s2", "s3"],
                                 { id: "little-gemma", short: "LG", boards: ["jetson"] },
                                 { id: "turboquant", short: "TQ", boards: ["pi", "jetson"] },
                                 // The iPhone (benchmark/apps/ios): same task on MLX; cells come from its uploads.
-                                { id: "mlx", short: "MLX", boards: ["iphone"] }] };
+                                // The app runs thinking off only (enable_thinking: false), so no think rows.
+                                { id: "mlx", short: "MLX", boards: ["iphone"], thinking: ["off"] }] };
 
 // The telemetry rerun started here. Results older than this are real, but they
 // belong to the first batch (no power/thermal data), so the matrix shows them

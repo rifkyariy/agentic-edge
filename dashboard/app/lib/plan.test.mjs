@@ -131,3 +131,8 @@ test("an iPhone (mlx) result fills only its own cell", () => {
   assert.equal(cell(box, "e2b", "s1", "off", null, "llama.cpp").status, "pending");
   assert.equal(cell(box, "e2b", "s2", "off", null, "mlx").status, "pending");
 });
+
+test("the iPhone's MLX engine has no thinking rows", () => {
+  const mlx = PLAN.engines.find((e) => e.id === "mlx");
+  assert.deepEqual(mlx.thinking, ["off"]);
+});

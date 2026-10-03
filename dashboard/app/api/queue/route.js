@@ -1,6 +1,7 @@
 import { byId } from "../../lib/hosts";
 import { onBoard, onEveryBoard, shq } from "../../lib/ssh";
 import { shared, invalidate } from "../../lib/shared";
+import { phoneStatus } from "../../lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,9 @@ export async function GET(request) {
     ts: Date.now(),
     boxes: await onEveryBoard("queue_ctl.py", [describe ? "--describe" : "--status"],
                               { python: "venv" }, { jobs: [] }),
+    // The iPhone has no queue; its status rides along so the sidebar can show
+    // it next to the boards without a poll of its own.
+    ...(describe ? {} : { phone: await phoneStatus() }),
   })));
 }
 

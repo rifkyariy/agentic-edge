@@ -120,6 +120,71 @@ function Chart({ title, note, data, unit, decimals = 2, goodWhen = "higher",
   );
 }
 
+// iOS's ProcessInfo.ThermalState, the phone's only heat signal.
+const THERMAL = ["nominal", "fair", "serious", "critical"];
+
+/* The iPhone against both boards, baseline only. Not the same experiment as
+   Pi vs Orin: the engine (MLX, not llama.cpp) and the quantisation (MLX 4-bit
+   of the same QAT checkpoint) differ too, and its energy is whole-phone battery
+   drain, usually estimated from battery %. So it gets its own card, with those
+   differences named, instead of a third bar in the board charts. */
+function PhoneCompare({ rowsFor, devMean }) {
+  const ids = ["pi", "jetson", "iphone"];
+  const any = MODELS.some(([m]) => rowsFor("iphone", m).length);
+  const per = (f, d) => (id) => MODELS.map(([m]) => f(id, m)).map((v) => fmt(v, d)).join(" · ");
+  const dev = (key, d) => per((id, m) => devMean(id, m, key), d);
+  const acc = per((id, m) => pooled(rowsFor(id, m))?.pct, 1);
+  const runMin = per((id, m) => mean(rowsFor(id, m).map((r) => r.minutes).filter((x) => x != null)), 0);
+  const estimated = MODELS.some(([m]) => rowsFor("iphone", m)
+    .some((r) => r.device?.energy_source?.startsWith("estimate")));
+  const heat = (id) => (id === "iphone"
+    ? MODELS.map(([m]) => {
+        const v = rowsFor(id, m).map((r) => r.device?.thermal_max).filter((x) => x != null);
+        return v.length ? THERMAL[Math.max(...v)] ?? "—" : "—";
+      }).join(" · ")
+    : `${dev("temp_max", 1)(id)} °C`);
+  const subsets = (id) => MODELS.map(([m]) => rowsFor(id, m).filter((r) => r.score != null).length).join(" · ");
+  const rows = [
+    ["Accuracy", "pooled %, E2B · E4B", acc],
+    ["Subsets finished", "of 3, E2B · E4B", subsets],
+    ["Decode", "tok/s", dev("decode_tok_s", 1)],
+    ["Prefill", "tok/s", dev("prefill_tok_s", 0)],
+    ["Energy per token", estimated ? "J · iPhone estimated" : "J", dev("j_per_token", 2)],
+    ["Energy per run", "Wh", dev("energy_wh", 1)],
+    ["Time per run", "min", runMin],
+    ["Heat", "boards peak °C · iPhone worst thermal state", heat],
+  ];
+  return (
+    <section className="card phonecmp">
+      <h2>iPhone against the boards</h2>
+      <p className="sub">Same questions and prompts on MLX, thinking off. The engine and
+        quantisation differ too, so read it as a device-and-runtime comparison; the
+        paired accuracy tests are above.</p>
+      {!any ? (
+        <p className="empty">No iPhone runs yet. The app uploads each run when it ends.</p>
+      ) : (
+        <div className="table-wrap">
+          <table className="score">
+            <thead><tr><th>E2B · E4B</th>{ids.map((id) => <th key={id}>{DEV[id].short}</th>)}</tr></thead>
+            <tbody>
+              {rows.map(([label, unit, f]) => (
+                <tr key={label}>
+                  <th>{label} <em>{unit}</em></th>
+                  {ids.map((id) => <td key={id}>{f(id)}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {any && estimated && (
+        <p className="foot">iPhone energy is whole-phone battery drain from battery % × capacity, at 1%
+          resolution; the boards&apos; is measured board DC draw. Compare the order of magnitude, not decimals.</p>
+      )}
+    </section>
+  );
+}
+
 export default function Compare() {
   const [d, setD] = useState(null);
   const [err, setErr] = useState(null);
@@ -238,20 +303,20 @@ export default function Compare() {
     : `Significant difference — paired McNemar p = ${pStr(accP[0])} (E2B), ${pStr(accP[1])} (E4B)`;
 
   const pending = MODELS.flatMap(([m, label]) =>
-    Object.entries(runs).flatMap(([id, r]) =>
+    Object.entries(runs).filter(([id]) => id !== "iphone").flatMap(([id, r]) =>
       ["s1", "s2", "s3"].filter((s) => !r[`${m}-${s}`]?.score)
         .map((s) => `${DEV[id].short} ${label} ${s}`)));
 
   return (
     <main className="cmp">
-      <PageHeader eyebrow="Agentic Edge · baseline" title="Raspberry Pi 5 versus Jetson Orin Nano"
-                  sub="Gemma 4 E2B and E4B, same Q4_K_XL QAT weights, same MMLU-Pro subsets, greedy decoding. Only the board differs." />
+      <PageHeader title="Compare"
+                  sub="Pi 5, Orin Nano and iPhone on the same MMLU-Pro questions." />
 
       {/* The three numbers the comparison exists to produce. */}
       {/* The experiment in one block, then its verdict — so the page reads as
           a summary of what was run, not a chart dump. */}
-      <section className="card design">
-        <h2>What was run</h2>
+      <details className="card design fold">
+        <summary><h2>Setup</h2><span>question set, models, serving flags, power method</span></summary>
         <dl className="design-grid">
           <div><dt>Question set</dt>
             <dd>MMLU-Pro, three disjoint 100-question stratified subsets
@@ -276,7 +341,7 @@ export default function Compare() {
               INA3221 <code>VDD_IN</code>. Excludes PSU conversion loss; not wall
               power.</dd></div>
         </dl>
-      </section>
+      </details>
 
       <section className="card scorecard">
         <h2>What it found</h2>
@@ -322,28 +387,21 @@ export default function Compare() {
           </tbody>
         </table>
         <p className="cmp-lede">
-          <b>The two boards are equally accurate and not equally fast.</b> The Orin
-          answers the same questions just as well, {fmt(speedX, 1)}× quicker and for{" "}
-          {fmt(energyX, 1)}× less energy per token, despite drawing {fmt(powerX, 1)}×
-          the power — it finishes soon enough that the higher draw is billed for a
-          fraction of the time. What it buys that with is headroom: every layer sits
-          in a 7,485 MB pool it shares with the CPU and cannot swap, and two runs were
-          killed for it. The Pi is the slower, cooler-running, roomier board; the Orin
-          is the efficient one.
+          <b>Equally accurate, not equally fast.</b> The Orin is {fmt(speedX, 1)}× quicker
+          and {fmt(energyX, 1)}× cheaper per token; the Pi has the memory headroom.
         </p>
       </section>
 
       <Paired data={pairedData} err={pairedErr} />
+
+      <PhoneCompare rowsFor={rowsFor} devMean={devMean} />
 
       {/* What is fixed here and what is still open, so the page is not read as
           a final result for the paper. */}
       {/* Totals, because per-token rates hide what a campaign actually costs. */}
       <section className="card cost">
         <h2>What the whole benchmark cost</h2>
-        <p className="sub">
-          Six runs per board — 2 models × 3 subsets, 600 questions each, every
-          run wrapped in telemetry.
-        </p>
+        <p className="sub">Six baseline runs per board, 600 questions each.</p>
         <table className="score cost-table">
           <thead>
             <tr><th>Across all six runs</th><th>Pi 5</th><th>Orin Nano</th><th>Ratio</th></tr>
@@ -388,8 +446,8 @@ export default function Compare() {
         </table>
 
         {breakeven && (
-          <div className="tradeoff">
-            <h3>The trade-off</h3>
+          <details className="tradeoff">
+            <summary>Idle against load: where the Pi wins back</summary>
             <p>
               Under load the Orin is the efficient board. <b>At rest it is not</b> —
               it idles at {fmt(T.jetson.idle_w, 2)} W against the Pi&apos;s{" "}
@@ -421,12 +479,12 @@ export default function Compare() {
               assumes the board is idle whenever it is not decoding, so it is a
               floor for the Orin rather than an exact duty cycle.
             </p>
-          </div>
+          </details>
         )}
       </section>
 
-      <section className="card scope">
-        <h2>What this page is — and what it is not yet</h2>
+      <details className="card scope fold">
+        <summary><h2>Scope</h2><span>what these numbers cover, and what is still open</span></summary>
         <p>
           Every number here is the <b>baseline condition on both boards</b>: Gemma 4
           served by <b>llama.cpp</b> with thinking genuinely off —{" "}
@@ -438,13 +496,11 @@ export default function Compare() {
         </p>
         <ul className="scope-list">
           <li>
-            <span className="scope-tag open">planned</span>
+            <span className="scope-tag done">run</span>
             <div>
-              <b>Reasoning mode on.</b> A second row, <code>THINKING=on</code>, which
-              flips <code>-rea</code> to <code>on</code> so the model actually thinks
-              before answering — and pins <code>--reasoning-format none</code> so
-              lm-eval can still see the result. Both scripts now take the switch;
-              neither board has run the row yet.
+              <b>Reasoning mode on.</b> <code>THINKING=on</code> (<code>-rea on</code>,
+              budget 320, <code>--reasoning-format none</code>) has run on both
+              boards; it is compared in the paired tests, not in the figures above.
             </div>
           </li>
           <li>
@@ -469,7 +525,7 @@ export default function Compare() {
             </div>
           </li>
         </ul>
-      </section>
+      </details>
 
       <div className="cmp-grid">
         {/* tied comes from the paired test, never from the size of the gap:
@@ -499,11 +555,7 @@ export default function Compare() {
         <div className="card-head">
           <div>
             <h2>What the Orin&apos;s GPU is doing</h2>
-            <p className="sub">
-              The entire speed and efficiency gap comes from here. The Pi 5 has no
-              CUDA device: llama.cpp runs Gemma on four Cortex-A76 cores, and every
-              token is CPU work.
-            </p>
+            <p className="sub">Where the speed gap comes from. The Pi has no CUDA device.</p>
           </div>
         </div>
 
@@ -533,7 +585,8 @@ export default function Compare() {
           </div>
         </div>
 
-        <div className="gpunote">
+        <details className="gpunote">
+          <summary>GPU and memory notes</summary>
           <p>
             <b>Ampere GPU, compute capability sm_87</b>, on a Jetson Orin Nano Super
             developer kit in its <b>15 W</b> power mode. llama.cpp is built for sm_87
@@ -559,11 +612,11 @@ export default function Compare() {
             that gate by 12 MB and by 1 MB. The Pi&apos;s ceiling is speed, the
             Orin&apos;s is memory.
           </p>
-        </div>
+        </details>
       </section>
 
-      <section className="card caveats">
-        <h2>Reading this fairly</h2>
+      <details className="card caveats fold">
+        <summary><h2>Caveats</h2><span>significance, answer agreement, superseded runs, serving parity</span></summary>
         <ul>
           <li className="bad">
             <b>The accuracy difference is not significant.</b> The bars differ by a
@@ -645,10 +698,10 @@ export default function Compare() {
             </li>
           )}
         </ul>
-      </section>
+      </details>
 
       <section className="card">
-        <h2>Every run behind these numbers</h2>
+        <h2>Runs</h2>
         <div className="reqtable">
           <div className="reqtable-scroll">
             <table>
@@ -683,10 +736,7 @@ export default function Compare() {
             </table>
           </div>
         </div>
-        <p className="foot">
-          n/a in the GPU column is the Pi 5, which has no CUDA device to sample —
-          not a missing measurement.
-        </p>
+        <p className="foot">GPU n/a: the Pi 5 has no CUDA device to sample.</p>
       </section>
     </main>
   );
