@@ -5,8 +5,8 @@
     "dev": "next dev -p 3939",
     "build": "next build",
     "start": "next start -p 3939",
-    "check": "NODE_NO_WARNINGS=1 node scripts/check-ssh.mjs",
-    "predev": "NODE_NO_WARNINGS=1 node scripts/check-ssh.mjs || true"
+    "check": "node --no-warnings scripts/check-ssh.mjs",
+    "predev": "node --no-warnings scripts/check-ssh.mjs || exit 0"
   },
   "dependencies": {
     "next": "15.5.4",
