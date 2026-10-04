@@ -109,3 +109,23 @@ test("the phone's device status comes from its uploads", async () => {
   // and the live helper answers from whatever is on disk
   assert.ok(["running", "lost", "idle", "never"].includes((await phoneStatus()).state));
 });
+
+test("an oQ4 upload gets its own cell name and opens by it", async () => {
+  const oq4 = { ...run("mmlupro-e4b-oq4-s1-x", "done", 5000, [[31, true, "A"]]), model: "e4b", engine: "mlx-oq4" };
+  await saveRun(oq4);
+  const d = (await phoneBox("status")).data;
+  assert.ok(d.completed.some((c) => c.run === "mmlupro100-mlx-oq4-e4b-s1"));
+  assert.equal((await loadRun("mmlupro100-mlx-oq4-e4b-s1")).run, "mmlupro-e4b-oq4-s1-x");
+  assert.equal(await loadRun("mmlupro100-mlx-e4b-s1"), null); // not the qat-4bit cell
+  assert.ok((await phoneBox("baseline")).runs.some((r) => r.run === "mmlupro-e4b-oq4-s1-x" && r.engine === "mlx-oq4"));
+});
+
+test("history shows a silent running upload as incomplete, a fresh one as running", async () => {
+  const { writeFile } = await import("node:fs/promises");
+  const old = { ...run("mmlupro-e2b-s2-died", "running", 10, [[41, true, "A"]]), received_at: new Date(Date.now() - (STALE_S + 60) * 1000).toISOString() };
+  await writeFile(path.join(process.env.PHONE_DIR, "mmlupro-e2b-s2-died.json"), JSON.stringify(old));
+  await saveRun(run("mmlupro-e2b-s3-going", "running", 20, [[42, true, "A"]]));
+  const h = (await phoneBox("history")).runs;
+  assert.equal(h.find((r) => r.run === "mmlupro-e2b-s2-died").status, "incomplete");
+  assert.equal(h.find((r) => r.run === "mmlupro-e2b-s3-going").status, "running");
+});

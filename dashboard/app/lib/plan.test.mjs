@@ -113,7 +113,7 @@ test("a queued little-gemma thinking job shows in its own cell only", () => {
 });
 
 test("little-gemma is planned for the Jetson only, TurboQuant for both", () => {
-  assert.deepEqual(PLAN.engines.map((e) => e.id), ["llama.cpp", "little-gemma", "turboquant", "mlx"]);
+  assert.deepEqual(PLAN.engines.map((e) => e.id), ["llama.cpp", "little-gemma", "turboquant", "mlx", "mlx-oq4"]);
   assert.deepEqual(PLAN.engines.find((e) => e.id === "mlx").boards, ["iphone"]);
   assert.deepEqual(PLAN.engines.find((e) => e.id === "turboquant").boards, ["pi", "jetson"]);
   assert.deepEqual(PLAN.engines.find((e) => e.id === "little-gemma").boards, ["jetson"]);
@@ -135,4 +135,10 @@ test("an iPhone (mlx) result fills only its own cell", () => {
 test("the iPhone's MLX engine has no thinking rows", () => {
   const mlx = PLAN.engines.find((e) => e.id === "mlx");
   assert.deepEqual(mlx.thinking, ["off"]);
+});
+
+test("iPhone oQ4 and plain mlx results never share a cell", () => {
+  const box = doneBox("mmlupro100-mlx-oq4-e4b-s1");
+  assert.equal(cell(box, "e4b", "s1", "off", null, "mlx-oq4").status, "done");
+  assert.equal(cell(box, "e4b", "s1", "off", null, "mlx").status, "pending");
 });

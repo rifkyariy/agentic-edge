@@ -152,8 +152,20 @@ Energy precedence everywhere: PowerLog measured Wh > battery-% estimate (`*` in
    twice). The store therefore keeps models **text-only** (`ModelStore.makeTextOnly`):
    `language_model.*` tensors byte-identical, towers dropped — what llama.cpp's GGUF holds
    too. E2B 4.03 → ~3.15 GiB, E4B 6.33 → ~5.45 GiB; `meta.json → weights` records it. Runs
-   before this (the first E2B s1) loaded the full files: same weights, more memory. If E4B
-   still dies, that is a result — record it from the JetsamEvent report, don't hide it.
+   before this (the first E2B s1) loaded the full files: same weights, more memory.
+   **E4B qat-4bit still does not fit** (2026-10-04): even text-only it loads (5,581 MB),
+   answers one question at 4.95 tok/s under memory pressure, then iOS kills it
+   (`proc-thrashing`, 5.96 GiB). That is the result for an 8 GB iPhone; the app labels it
+   "too big for this iPhone" and the full grid skips it (`GemmaModel.fitsThisPhone`).
+   **E4B oQ4** (`mlx-community/unsloth-gemma-4-E4B-it-qat-oQ4`, pinned `eaa5413`) is the E4B
+   that runs here: same QAT checkpoint, all 4-bit with sensitive layers at 5/6-bit instead of
+   126 layers at 8-bit, 4.09 GiB text-only. It reports as model `e4b`, engine **`mlx-oq4`**,
+   with its own dashboard row and cells — it never stands in for qat-4bit. Google's
+   `qat-mobile` (2.93 GiB, 2-bit embeddings) would be smaller still, but no mlx-swift-lm
+   release can load its format (checked up to main 5e46681, 2026-10-03).
+   The prompt's last token is also prefilled on its own (`Bench.ask`): Gemma 4 otherwise
+   projects the whole last chunk (up to 512 positions) onto its 262,144-word vocabulary to
+   keep one row, ~400 MB at peak.
 5. **Every `n/a` gets a written reason.** iOS has no power rails, so `energy_wh`/`mean_w`/
    `j_per_token` stay null in `summary.json` with `na_reasons`. The comparison uses an
    **estimate** instead (`*_battery_est`): battery % used during the requests × battery

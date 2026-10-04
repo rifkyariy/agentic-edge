@@ -32,7 +32,9 @@ info:
     **The iPhone.** The iOS app (`benchmark/apps/ios`) runs the same MMLU-Pro
     task on-device with MLX. It has no ssh, so it POSTs each run to
     `/api/phone`, and `history`, `baseline`, `compare` and `run` serve it as a
-    third box, `iphone` (`engine: "mlx"`). During a run the app also uploads
+    third box, `iphone` (`engine: "mlx"`, or `"mlx-oq4"` for the smaller E4B
+    quantization an 8 GB iPhone can hold; it has its own cells and never stands in
+    for `mlx`). During a run the app also uploads
     a `status: running` snapshot every 10 questions, so `status` shows the
     iPhone live too: its `data` is built from the newest upload in
     `probe_status.py`'s shape (progress, cpu, memory; no power or temperature),

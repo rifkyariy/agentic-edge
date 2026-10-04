@@ -39,13 +39,19 @@ export async function saveRun(r) {
 }
 
 // The matrix and the Monitor card name runs the way the boards do,
-// mmlupro100-mlx-<model>-<subset>; that alias means the newest upload for the cell.
-const CELL_RE = /^mmlupro100-mlx-(e2b|e4b)-(s\d)$/;
-export const cellName = (r) => `mmlupro100-mlx-${r.model}-${r.subset}`;
+// mmlupro100-<engine>-<model>-<subset>; that alias means the newest upload for the cell.
+// engine is mlx, or mlx-oq4 for E4B quantized small enough for an 8 GB iPhone: a different
+// quantization of the same model, so it gets its own cells and never stands in for mlx.
+const ENGINES = ["mlx", "mlx-oq4"];
+const engineOf = (r) => (ENGINES.includes(r.engine) ? r.engine : "mlx");
+const CELL_RE = /^mmlupro100-(mlx|mlx-oq4)-(e2b|e4b)-(s\d)$/;
+export const cellName = (r) => `mmlupro100-${engineOf(r)}-${r.model}-${r.subset}`;
 
 export async function loadRun(name) {
   const cellHit = CELL_RE.exec(name || "");
-  if (cellHit) return (await all()).find((r) => r.model === cellHit[1] && r.subset === cellHit[2]) ?? null;
+  if (cellHit) {
+    return (await all()).find((r) => engineOf(r) === cellHit[1] && r.model === cellHit[2] && r.subset === cellHit[3]) ?? null;
+  }
   if (!RUN_RE.test(name)) return null;
   try {
     return JSON.parse(await readFile(path.join(DIR(), `${name}.json`), "utf8"));
@@ -65,7 +71,7 @@ async function all() {
 
 const done = (r) => r.status === "done";
 const row = (r) => ({
-  run: r.run, engine: "mlx", model: r.model, subset: r.subset, thinking: "off",
+  run: r.run, engine: engineOf(r), model: r.model, subset: r.subset, thinking: "off",
   done: done(r), score: done(r) ? r.summary?.score ?? null : null,
   stderr: r.summary?.stderr ?? null, minutes: r.summary?.minutes ?? null,
   at: r.received_at?.slice(0, 16).replace("T", " "), device: r.device ?? null,
@@ -144,14 +150,16 @@ export async function phoneBox(view) {
   if (view === "baseline") return { ...box, runs: runs.filter(done).map(row), failed: [] };
   if (view === "history") {
     return { ...box, runs: runs.map((r) => ({
-      ...row(r), place: "current", status: r.status, tag: null, task: "mmlu_pro",
+      // A run that went silent mid-way (killed, stopped, out of network) is reported, not "running".
+      ...row(r), place: "current",
+      status: r.status === "running" && Date.now() / 1000 - Date.parse(r.received_at) / 1000 >= STALE_S ? "incomplete" : r.status, tag: null, task: "mmlu_pro",
       ended: r.timeline?.at(-1)?.end_epoch ?? null })) };
   }
   if (view === "paired") {
     return { ...box, runs: runs.map((r) => {
       const correct = Object.fromEntries((r.questions || []).filter((q) => q.question_id != null)
         .map((q) => [String(q.question_id), q.ok ? 1 : 0]));
-      return { run: r.run, engine: "mlx", model: r.model, subset: r.subset, thinking: "off", done: done(r),
+      return { run: r.run, engine: engineOf(r), model: r.model, subset: r.subset, thinking: "off", done: done(r),
                correct: Object.keys(correct).length ? correct : null,
                no_answer: (r.questions || []).filter((q) => !q.got).length };
     }) };

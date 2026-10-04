@@ -957,7 +957,8 @@ extension RunRecord {
                            "temp_max": "battery temperature from PowerLog when attached; iOS gives apps no SoC temperature"],
         ]
         return [
-            "run": dir, "engine": "mlx", "model": model, "subset": subset, "thinking": "off",
+            "run": dir, "engine": GemmaModel(rawValue: model)?.engine ?? "mlx", "model": GemmaModel.base(model),
+            "model_key": model, "model_repo": GemmaModel(rawValue: model)?.repo ?? "", "subset": subset, "thinking": "off",
             "status": status == "done" ? "done" : status == "running" ? "running" : "incomplete",
             "note": status == "done" ? nul : status,
             "summary": ["score": (score * 10).rounded() / 10, "stderr": (stderr * 10).rounded() / 10, "minutes": minutes.rounded()],

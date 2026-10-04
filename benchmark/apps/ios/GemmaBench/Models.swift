@@ -9,7 +9,11 @@ import Foundation
 extension GemmaModel {
     /// Pinned commits: every iPhone run uses the same weights even if the repo is updated.
     var revision: String {
-        self == .e2b ? "42f62737af7a9fd8c1d55d79666c1a217be4e2e2" : "0f35c6f6d386f7f74e628bd7c6526ce531212300"
+        switch self {
+        case .e2b: "42f62737af7a9fd8c1d55d79666c1a217be4e2e2"
+        case .e4b: "0f35c6f6d386f7f74e628bd7c6526ce531212300"
+        case .e4bOQ4: "eaa5413e7ee2ce04f6e9544c06b420b365b0bfce"
+        }
     }
 
     var dir: URL {

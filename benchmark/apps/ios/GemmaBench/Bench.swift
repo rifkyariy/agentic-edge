@@ -40,11 +40,28 @@ struct PromptFile: Codable {
 
 enum GemmaModel: String, CaseIterable, Identifiable, Sendable {
     case e2b, e4b
+    /// E4B from the same QAT checkpoint, quantized smaller (4-bit, sensitive layers 5/6-bit):
+    /// qat-4bit keeps 126 layers at 8-bit and needs 5.45 GiB, which an 8 GB iPhone's ~6 GiB app
+    /// limit can't hold (jetsam, 2026-10-04); this is 4.09 GiB. A different quantization of the
+    /// same weights, so it reports as model e4b with engine mlx-oq4 — never mixed with qat-4bit.
+    case e4bOQ4 = "e4b-oq4"
     var id: String { rawValue }
-    /// Same QAT checkpoint as the agentic-edge GGUFs (gemma-4-E?B-it-qat-UD-Q4_K_XL), MLX 4-bit affine g64.
+    /// Same QAT checkpoint as the agentic-edge GGUFs (gemma-4-E?B-it-qat-UD-Q4_K_XL).
     var repo: String {
-        self == .e2b ? "mlx-community/gemma-4-E2B-it-qat-4bit" : "mlx-community/gemma-4-E4B-it-qat-4bit"
+        switch self {
+        case .e2b: "mlx-community/gemma-4-E2B-it-qat-4bit"
+        case .e4b: "mlx-community/gemma-4-E4B-it-qat-4bit"
+        case .e4bOQ4: "mlx-community/unsloth-gemma-4-E4B-it-qat-oQ4"
+        }
     }
+    /// The model the boards ran: what reference scores and pairing use.
+    var base: String { self == .e4bOQ4 ? "e4b" : rawValue }
+    var engine: String { self == .e4bOQ4 ? "mlx-oq4" : "mlx" }
+    var title: String { self == .e4bOQ4 ? "E4B oQ4" : rawValue.uppercased() }
+    var quant: String { self == .e4bOQ4 ? "QAT oQ4 (4/5/6-bit)" : "QAT 4-bit" }
+    /// qat-4bit E4B needs more than an 8 GB iPhone gives one app.
+    var fitsThisPhone: Bool { self != .e4b || ProcessInfo.processInfo.physicalMemory > 10 << 30 }
+    static func base(_ key: String) -> String { GemmaModel(rawValue: key)?.base ?? key }
 }
 
 // MARK: - Scoring (lm-eval mmlu_pro "custom-extract")
@@ -298,6 +315,7 @@ final class Bench {
         let params = GenerateParameters(maxTokens: Self.maxGenToks, temperature: 0)  // greedy -> ArgMaxSampler
         var meta: [String: Any] = [
             "label": label, "model": model.rawValue, "subset": subset, "model_repo": model.repo,
+            "base_model": model.base, "engine_id": model.engine, "quantization": model.quant,
             "engine": "mlx-swift-lm 3.31.4 / mlx-swift 0.31.4 (LLMModelFactory, text-only)",
             "server_args": "maxTokens=\(Self.maxGenToks) temperature=0 (argmax) enable_thinking=false extraEOS=<turn|> until=Question: kv=full prefillStep=\(params.prefillStepSize) (all but the last prompt token, cache only; last token alone) mlxCache=32MB",
             "host": Telemetry.machine, "os": UIDevice.current.systemName + " " + UIDevice.current.systemVersion,
@@ -478,7 +496,7 @@ final class Bench {
         let preS = rs.reduce(0.0) { $0 + $1.1.firstToken.timeIntervalSince($1.1.start) }
         let warm = rs.dropFirst().map { $0.1.end.timeIntervalSince($0.1.start) * 1000 }.sorted()
         let run = tel.samples.filter { $0.t >= 0 }, idle = tel.samples.filter { $0.t < 0 }
-        let ref = prompts.reference["\(m.rawValue)-\(s)"] ?? [:]
+        let ref = prompts.reference["\(m.base)-\(s)"] ?? [:]
         let why = "iOS exposes no power rails; only battery_level at 1% steps. See battery_* fields."
         var out: [String: Any] = [
             "status": status, "n": rs.count, "score": (p * 1000).rounded() / 10,
@@ -538,19 +556,19 @@ final class Bench {
         for m in GemmaModel.allCases {
             var pooled = (ok: 0, n: 0)
             for sub in ["s1", "s2", "s3"] {
-                let r = done["\(m.rawValue)-\(sub)"], ref = prompts.reference["\(m.rawValue)-\(sub)"] ?? [:]
+                let r = done["\(m.rawValue)-\(sub)"], ref = prompts.reference["\(m.base)-\(sub)"] ?? [:]
                 if let r { pooled = (pooled.ok + r.correct, pooled.n + r.n) }
-                md += "| \(m.rawValue.uppercased()) | \(sub) | \(cell(r?.score)) | \(cell(ref["pi"]?.score)) | \(cell(ref["jetson"]?.score)) | "
+                md += "| \(m.title) | \(sub) | \(cell(r?.score)) | \(cell(ref["pi"]?.score)) | \(cell(ref["jetson"]?.score)) | "
                     + "\(cell(r?.medianDecode, 2)) | \(cell(ref["pi"]?.decode_tok_s, 2)) | \(cell(ref["jetson"]?.decode_tok_s, 2)) | "
                     + "\(cell(r?.minutes, 0)) | \(cell(ref["pi"]?.minutes, 0)) | \(cell(ref["jetson"]?.minutes, 0)) | "
                     + "\(cell(r?.bestWh, 2))\(r?.measuredWh == nil && r?.energyWh != nil ? "*" : "") | \(cell(ref["pi"]?.energy_wh, 2)) | \(cell(ref["jetson"]?.energy_wh, 2)) | "
                     + "\(r.map { thermalNames[$0.thermalMax] } ?? "—") | \(r?.dir ?? "not run") |\n"
             }
             let refPool = { (b: String) -> Double? in
-                let xs = ["s1", "s2", "s3"].compactMap { self.prompts.reference["\(m.rawValue)-\($0)"]?[b]?.score }
+                let xs = ["s1", "s2", "s3"].compactMap { self.prompts.reference["\(m.base)-\($0)"]?[b]?.score }
                 return xs.count == 3 ? xs.reduce(0, +) / 3 : nil
             }
-            md += "| **\(m.rawValue.uppercased())** | **pooled n=\(pooled.n)** | **\(pooled.n == 300 ? fmt(100 * Double(pooled.ok) / 300, 1) : "—")** | "
+            md += "| **\(m.title)** | **pooled n=\(pooled.n)** | **\(pooled.n == 300 ? fmt(100 * Double(pooled.ok) / 300, 1) : "—")** | "
                 + "**\(cell(refPool("pi")))** | **\(cell(refPool("jetson")))** | | | | | | | | | | | |\n"
         }
         md += "\nGenerated by GemmaBench on \(Telemetry.deviceName) (\(Telemetry.machine)), iOS \(UIDevice.current.systemVersion), \(Date().formatted()).\n"

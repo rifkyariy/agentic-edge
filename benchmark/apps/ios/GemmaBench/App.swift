@@ -22,7 +22,7 @@ struct ContentView: View {
     @State private var deleting: GemmaModel?
     @Environment(\.verticalSizeClass) private var vSize  // .compact = iPhone in landscape
 
-    private var ref: [String: Ref] { bench.prompts.reference["\(model.rawValue)-\(subset)"] ?? [:] }
+    private var ref: [String: Ref] { bench.prompts.reference["\(model.base)-\(subset)"] ?? [:] }
     private var pct: Double { bench.done > 0 ? 100 * Double(bench.correct) / Double(bench.done) : 0 }
 
     var body: some View {
@@ -65,7 +65,7 @@ struct ContentView: View {
             }
             .sheet(isPresented: $settings) { SettingsView(bench: bench) }
             .task { if CommandLine.arguments.contains("-downloadModels") { bench.downloadAll() } }  // devicectl hook
-            .confirmationDialog("Delete \(deleting?.rawValue.uppercased() ?? "") from this iPhone?",
+            .confirmationDialog("Delete \(deleting?.title ?? "") from this iPhone?",
                                 isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
                                 titleVisibility: .visible) {
                 Button("Delete", role: .destructive) { if let m = deleting { bench.deleteModel(m) } }
@@ -73,7 +73,7 @@ struct ContentView: View {
                 Text("Frees the space. Runs and results are kept; the model downloads again on the next run.")
             }
             .sheet(item: $detail, onDismiss: { bench.runs = RunRecord.loadAll(); bench.writeComparison() }) {
-                RunDetailView(rec: $0, ref: bench.prompts.reference["\($0.model)-\($0.subset)"] ?? [:],
+                RunDetailView(rec: $0, ref: bench.prompts.reference["\(GemmaModel.base($0.model))-\($0.subset)"] ?? [:],
                               upload: { await bench.upload($0) })
             }
         }
@@ -94,7 +94,7 @@ struct ContentView: View {
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
                 ForEach(GemmaModel.allCases) { m in
-                    Chip(m.rawValue.uppercased(), "cpu", .indigo, selected: model == m) { model = m }
+                    Chip(m.title, "cpu", .indigo, selected: model == m) { model = m }
                 }
                 Spacer()
                 ForEach(["s1", "s2", "s3"], id: \.self) { s in
@@ -127,13 +127,14 @@ struct ContentView: View {
                 .buttonStyle(.borderedProminent).tint(.red)
             } else {
                 Button { bench.start([(model, subset)]) } label: {
-                    Label("Run \(model.rawValue.uppercased()) \(subset)", systemImage: "play.fill").frame(maxWidth: .infinity)
+                    Label("Run \(model.title) \(subset)", systemImage: "play.fill").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent).tint(.indigo)
                 Button {
-                    bench.start(GemmaModel.allCases.flatMap { m in ["s1", "s2", "s3"].map { (m, $0) } })
+                    // Skips what this phone can't hold (qat-4bit E4B on 8 GB): those runs only crash.
+                    bench.start(GemmaModel.allCases.filter(\.fitsThisPhone).flatMap { m in ["s1", "s2", "s3"].map { (m, $0) } })
                 } label: {
-                    Label("Run full grid · 6 runs", systemImage: "square.grid.3x2").frame(maxWidth: .infinity)
+                    Label("Run full grid · \(GemmaModel.allCases.filter(\.fitsThisPhone).count * 3) runs", systemImage: "square.grid.3x2").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered).tint(.indigo)
             }
@@ -214,7 +215,10 @@ struct ContentView: View {
                     Image(systemName: st.complete ? "checkmark.circle.fill" : p != nil ? "arrow.down.circle" : "icloud.and.arrow.down")
                         .font(.title3).foregroundStyle(st.complete ? .green : p != nil ? .blue : .secondary)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("\(m.rawValue.uppercased()) · QAT 4-bit").font(.subheadline.weight(.semibold))
+                        Text("\(m.title) · \(m.quant)").font(.subheadline.weight(.semibold))
+                        if !m.fitsThisPhone {
+                            Text("Too big for this iPhone's per-app memory: loads, then iOS kills it").font(.caption2).foregroundStyle(.orange)
+                        }
                         Text(p.map { "Downloading \(Int($0 * 100))%" + (st.total > 0 ? " of \(gb(st.total))" : "") }
                              ?? (st.complete ? "Downloaded · \(gb(st.bytes)) · rev \(m.revision.prefix(7))"
                                  + (ModelStore.isTextOnly(m) ? " · text-only" : "")
@@ -230,7 +234,7 @@ struct ContentView: View {
                             .foregroundStyle(.secondary).accessibilityLabel("Cancel download")
                     } else if st.complete {
                         Button { deleting = m } label: { Image(systemName: "trash") }
-                            .foregroundStyle(.red).disabled(bench.running).accessibilityLabel("Delete \(m.rawValue)")
+                            .foregroundStyle(.red).disabled(bench.running).accessibilityLabel("Delete \(m.title)")
                     } else {
                         Button("Download") { bench.download(m) }.buttonStyle(.bordered).controlSize(.small)
                     }
