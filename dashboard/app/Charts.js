@@ -6,7 +6,7 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 
-import { fmt } from "./lib/format";
+import { fmt, timeTicks } from "./lib/format";
 // Re-exported so existing `import { fmt } from "./Charts"` keeps working; the
 // definition lives in lib/format.js with the other formatters.
 export { fmt };
@@ -34,6 +34,7 @@ export function MetricChart({ data, dataKey, color, unit, label, domainMax, deci
   const tMax = ts.length ? Math.max(...ts) : Date.now();
   const tMin = ts.length ? Math.min(...ts) : tMax - 60000;
   const tDomain = tMax > tMin ? [tMin, tMax] : [tMax - 60000, tMax + 1];
+  const tTicks = timeTicks(tDomain);
 
   return (
     <div className="panel">
@@ -56,7 +57,7 @@ export function MetricChart({ data, dataKey, color, unit, label, domainMax, deci
           </defs>
           <CartesianGrid stroke="var(--line)" vertical={false} />
           <XAxis dataKey="t" type="number" domain={tDomain} scale="time"
-                 tickFormatter={clock} minTickGap={44} {...axis} />
+                 ticks={tTicks} interval={0} tickFormatter={clock} {...axis} />
           <YAxis width={40} tickCount={4}
                  domain={[0, domainMax ?? (warnAt ? (m) => Math.max(m * 1.1, warnAt * 1.05) : "auto")]}
                  tickFormatter={(v) => fmt(v, decimals)} {...axis} />

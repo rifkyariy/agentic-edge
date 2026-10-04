@@ -30,3 +30,14 @@ export const when = (epoch) => {
   return d.toDateString() === new Date().toDateString() ? t
     : `${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${t}`;
 };
+
+// Our own x ticks, on whole minutes, each value once. Recharts' default
+// interval ("preserveEnd") re-adds the end tick when it is already in the list,
+// two ticks with one value and one x, which it then gives the same React key.
+const STEPS_MIN = [1, 2, 5, 10, 15, 30, 60];
+export function timeTicks([t0, t1], most = 4) {
+  const step = 60000 * (STEPS_MIN.find((m) => (t1 - t0) / (60000 * m) <= most) ?? 60);
+  const ticks = [];
+  for (let t = Math.ceil(t0 / step) * step; t <= t1; t += step) ticks.push(t);
+  return ticks.length >= 2 ? ticks : [...new Set([t0, t1])];
+}
