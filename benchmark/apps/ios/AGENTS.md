@@ -145,10 +145,15 @@ Energy precedence everywhere: PowerLog measured Wh > battery-% estimate (`*` in
    `MLXHuggingFaceMacros` macro; CLI builds need `-skipMacroValidation`.
 3. **Keep the app in the foreground.** iOS stops Metal work in the background; the app
    disables the idle timer during runs. A locked screen = a failed run.
-4. **Memory.** E2B is ~4.3 GB on disk, E4B ~6.8 GB (includes vision/audio towers, which the
-   text-only loader drops). The entitlements `increased-memory-limit` and
-   `extended-virtual-addressing` are required; E4B on an 8 GB iPhone (15 Pro) may still be
-   jetsam-killed — that is a result, record it, don't hide it.
+4. **Memory.** An 8 GB iPhone 15 Pro gives one app ~6.0 GiB even with the
+   `increased-memory-limit` + `extended-virtual-addressing` entitlements. The MLX loader reads
+   **every** tensor in the files, audio and vision towers included, so the full E4B download
+   (6.33 GiB) was jetsam-killed at 6.0 GiB while loading (2026-10-04, `per-process-limit`,
+   twice). The store therefore keeps models **text-only** (`ModelStore.makeTextOnly`):
+   `language_model.*` tensors byte-identical, towers dropped — what llama.cpp's GGUF holds
+   too. E2B 4.03 → ~3.15 GiB, E4B 6.33 → ~5.45 GiB; `meta.json → weights` records it. Runs
+   before this (the first E2B s1) loaded the full files: same weights, more memory. If E4B
+   still dies, that is a result — record it from the JetsamEvent report, don't hide it.
 5. **Every `n/a` gets a written reason.** iOS has no power rails, so `energy_wh`/`mean_w`/
    `j_per_token` stay null in `summary.json` with `na_reasons`. The comparison uses an
    **estimate** instead (`*_battery_est`): battery % used during the requests × battery

@@ -131,7 +131,16 @@ final class Bench {
 
     /// One after the other, so each gets the full bandwidth and E2B is usable first.
     func downloadAll() {
-        Task { for m in GemmaModel.allCases where !ModelStore.status(m).complete { await download(m).value } }
+        Task {
+            for m in GemmaModel.allCases {
+                if !ModelStore.status(m).complete {
+                    await download(m).value  // ends with the text-only step
+                } else if !ModelStore.isTextOnly(m) {
+                    do { try await Task.detached { try ModelStore.makeTextOnly(m) }.value } catch { modelError[m] = error.localizedDescription }
+                    modelTick += 1
+                }
+            }
+        }
     }
 
     func cancelDownload(_ m: GemmaModel) { downloadJobs[m]?.cancel() }
@@ -263,6 +272,17 @@ final class Bench {
                 return
             }
         }
+        // Existing downloads predate the text-only step: convert once, before anything is measured.
+        if ModelStore.status(model).complete && !ModelStore.isTextOnly(model) {
+            say("mmlupro-\(model.rawValue)-\(subset): making \(model.rawValue.uppercased()) text-only (one-time)")
+            do {
+                try await Task.detached { try ModelStore.makeTextOnly(model) }.value
+                modelTick += 1
+            } catch {
+                say("mmlupro-\(model.rawValue)-\(subset): not run — \(error.localizedDescription)")
+                return
+            }
+        }
         let stamp = Self.stampFmt.string(from: Date())
         let root = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let label = "mmlupro-\(model.rawValue)-\(subset)"
@@ -288,6 +308,7 @@ final class Bench {
             "start_epoch": Date().timeIntervalSince1970,
             "idle_baseline_s": Self.idleBaselineS,
             "model_revision": model.revision,
+            "weights": "text-only: language_model.* tensors byte-identical; audio/vision towers dropped (llama.cpp's GGUF is text-only too)",
             // inside the measured window: ~1 s of radio every N questions (dashboard live view)
             "live_upload_every": autoUpload && !apiURL.isEmpty ? Self.liveEvery : 0,
         ]

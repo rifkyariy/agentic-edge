@@ -217,6 +217,7 @@ struct ContentView: View {
                         Text("\(m.rawValue.uppercased()) · QAT 4-bit").font(.subheadline.weight(.semibold))
                         Text(p.map { "Downloading \(Int($0 * 100))%" + (st.total > 0 ? " of \(gb(st.total))" : "") }
                              ?? (st.complete ? "Downloaded · \(gb(st.bytes)) · rev \(m.revision.prefix(7))"
+                                 + (ModelStore.isTextOnly(m) ? " · text-only" : "")
                                  : st.bytes > 0 ? "\(gb(st.bytes)) of \(gb(st.total)) · tap Download to resume"
                                  : "Not downloaded"))
                             .font(.caption2).foregroundStyle(.secondary)
