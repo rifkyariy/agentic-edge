@@ -299,7 +299,7 @@ final class Bench {
         var meta: [String: Any] = [
             "label": label, "model": model.rawValue, "subset": subset, "model_repo": model.repo,
             "engine": "mlx-swift-lm 3.31.4 / mlx-swift 0.31.4 (LLMModelFactory, text-only)",
-            "server_args": "maxTokens=\(Self.maxGenToks) temperature=0 (argmax) enable_thinking=false extraEOS=<turn|> until=Question: kv=full prefillStep=\(params.prefillStepSize)",
+            "server_args": "maxTokens=\(Self.maxGenToks) temperature=0 (argmax) enable_thinking=false extraEOS=<turn|> until=Question: kv=full prefillStep=\(params.prefillStepSize) (all but the last prompt token, cache only; last token alone) mlxCache=32MB",
             "host": Telemetry.machine, "os": UIDevice.current.systemName + " " + UIDevice.current.systemVersion,
             "cpus": ProcessInfo.processInfo.processorCount,
             "ram_mb": ProcessInfo.processInfo.physicalMemory >> 20,
@@ -327,7 +327,7 @@ final class Bench {
             try await Task.sleep(for: .seconds(Self.idleBaselineS))
 
             say("\(label): loading \(model.repo) from the phone")
-            Memory.cacheLimit = 256 << 20  // ponytail: fixed cap so buffer cache doesn't eat the jetsam headroom
+            Memory.cacheLimit = 32 << 20  // freed buffers MLX keeps count against the ~6 GiB app limit too
             let t0 = Date()
             // A .directory configuration never touches the downloader; the files are already local.
             let container = try await LLMModelFactory.shared.loadContainer(
@@ -397,8 +397,22 @@ final class Bench {
         var first: Date?
         var out: [Int] = []
         var stop = "eos"
+        // Prefill everything but the last token ourselves, in the same prefillStepSize chunks,
+        // evaluating only the KV cache. mlx-swift-lm's own prepare hands the generator the last
+        // chunk (up to 512 tokens), and Gemma 4 then projects every one of those positions onto
+        // its 262,144-word vocabulary (plus a softcap copy) to use only the last: ~400 MB that put
+        // E4B over the 8 GB iPhone's ~6 GiB app limit on its first question (2026-10-04).
+        let cache = ctx.model.newCache(parameters: params)
+        let tokens = MLXArray(prompt)
+        var pos = 0
+        while pos < prompt.count - 1 {
+            let end = min(pos + params.prefillStepSize, prompt.count - 1)
+            _ = ctx.model(tokens[pos ..< end][.newAxis], cache: cache)  // logits stay lazy: never computed
+            eval(cache)
+            pos = end
+        }
         let (stream, task) = try generateTokensTask(
-            input: LMInput(tokens: MLXArray(prompt)), parameters: params, context: ctx)
+            input: LMInput(tokens: tokens[(prompt.count - 1)...]), cache: cache, parameters: params, context: ctx)
         for await g in stream {
             guard case .token(let t) = g else { continue }
             if first == nil { first = Date() }
