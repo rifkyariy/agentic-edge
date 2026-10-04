@@ -213,13 +213,19 @@ function Device({ box, hist, onOpen }) {
       </section>
     );
   }
-  const p = d.progress, m = d.measured, s = d.setup, procs = d.procs || {};
+  const m = d.measured, s = d.setup, procs = d.procs || {};
+  // progress is the newest lm_eval.log, which keeps reading 100/100 for days
+  // after the run; it is only the current run while lm_eval is alive.
+  const p = procs.lm_eval ? d.progress : null;
+  // A run_measured.sh run that is not lm-eval (an ae_gate.py sweep, any raw
+  // job) is still a run; m.gate is the gate's own same/DIFF count.
+  const g = procs.run_measured && !procs.lm_eval ? m?.gate : null;
   const throttled = d.throttled && d.throttled !== "0x0";
   // Whichever engine is serving: llama-server, or little-gemma's run-cuda-i8.
   const engine = procs.little_gemma ? "little-gemma" : procs.llama_server ? "llama.cpp" : null;
   const model = (procs.little_gemma || procs.llama_server)?.model
     ?.replace(/gemma-4-|-it-qat-UD-Q4_K_XL\.gguf/g, "");
-  const activity = procs.lm_eval ? "benchmark" : procs.build ? "building" :
+  const activity = procs.lm_eval ? "benchmark" : procs.run_measured ? "measured run" : procs.build ? "building" :
     procs.download ? "downloading" : "idle";
   const live = activity !== "idle";
 
@@ -236,6 +242,21 @@ function Device({ box, hist, onOpen }) {
       </div>
 
       {p && <Progress p={p} tag={model ? `${model} · ${engine}` : null} onOpen={() => onOpen(box, p.run)} />}
+
+      {procs.run_measured && !procs.lm_eval && m?.dir && (
+        <div className="run">
+          <div className="run-top">
+            <span className="run-name">{m.dir.replace(/-\d{8}-\d{6}$/, "")}{model ? <em> · {model} · {engine}</em> : null}</span>
+            {g?.total ? <span className="run-count">{g.done}<i>/{g.total}</i></span> : null}
+          </div>
+          {g?.total ? <div className="track"><i style={{ width: `${(100 * g.done) / g.total}%` }} /></div> : null}
+          <div className="run-foot">
+            {g ? <span>{g.same} byte-identical{g.diff ? <b style={{ color: "var(--danger)" }}> · {g.diff} DIFF</b> : null}</span>
+               : <span>{fmt(m.samples)} telemetry samples</span>}
+            {g?.finished && <span className="eta">gate done, engine shutting down</span>}
+          </div>
+        </div>
+      )}
 
       {s?.build_pct !== undefined && !s.build_done && (
         <div className="run">

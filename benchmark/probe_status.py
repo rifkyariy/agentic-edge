@@ -171,6 +171,43 @@ def progress():
             "age_s": round(time.time() - os.path.getmtime(path))}
 
 
+GATE_LINE = re.compile(r"^(same|DIFF)\s")
+
+
+def gate_progress(d):
+    """An ae_gate.py run (S9 sweep) prints one same/DIFF line per replayed
+    question to command.log; lm-eval's progress parser never sees it. Total is
+    --per-category questions from each samples file under --against."""
+    try:
+        cmd = json.load(open(os.path.join(d, "meta.json"))).get("command", "")
+    except (OSError, ValueError):
+        return None
+    if "ae_gate.py" not in cmd:
+        return None
+    same = diff = 0
+    finished = False
+    try:
+        for line in open(os.path.join(d, "command.log"), errors="replace"):
+            m = GATE_LINE.match(line)
+            if m:
+                same += m.group(1) == "same"
+                diff += m.group(1) == "DIFF"
+            elif line.startswith("== "):
+                finished = True
+    except OSError:
+        pass
+    total = None
+    per = re.search(r"--per-category\s+(\d+)", cmd)
+    against = re.search(r"--against\s+(\S+)", cmd)
+    if per and against:
+        total = 0
+        for f in glob.glob(os.path.join(against.group(1), "*", "samples_mmlu_pro_*.jsonl")):
+            with open(f) as fh:
+                total += min(int(per.group(1)), sum(1 for _ in fh))
+    return {"done": same + diff, "same": same, "diff": diff, "total": total or None,
+            "finished": finished}
+
+
 def measured_latest():
     dirs = sorted(glob.glob(f"{ROOT}/measured/*"), key=os.path.getmtime)
     if not dirs:
@@ -192,6 +229,9 @@ def measured_latest():
                                 "proc_rss_mb", "throttled")}
         except OSError:
             pass
+    gate = gate_progress(d)
+    if gate:
+        out["gate"] = gate
     s = os.path.join(d, "summary.json")
     if os.path.exists(s):
         try:
