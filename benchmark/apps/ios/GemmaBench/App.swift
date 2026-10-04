@@ -82,7 +82,8 @@ struct ContentView: View {
     // MARK: sections
 
     private var setup: some View {
-        Card {
+        let _ = bench.modelTick  // chips show downloaded state; re-read after a download/delete
+        return Card {
             HStack {
                 Label(Telemetry.deviceName, systemImage: "iphone").font(.headline)
                 Spacer()
@@ -92,17 +93,27 @@ struct ContentView: View {
             }
             Label("MMLU-Pro · 5-shot CoT · greedy · 2048 tok", systemImage: "graduationcap")
                 .font(.caption).foregroundStyle(.secondary)
-            HStack {
-                ForEach(GemmaModel.allCases) { m in
-                    Chip(m.title, "cpu", .indigo, selected: model == m) { model = m }
+            Group {
+                Text("Model").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    ForEach(GemmaModel.allCases) { m in
+                        ModelChip(model: m, selected: model == m, downloaded: ModelStore.status(m).complete) { model = m }
+                    }
                 }
-                Spacer()
-                ForEach(["s1", "s2", "s3"], id: \.self) { s in
-                    Chip(s, nil, .teal, selected: subset == s) { subset = s }
+                Text("Subset").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    ForEach(["s1", "s2", "s3"], id: \.self) { s in
+                        Chip(s, nil, .teal, selected: subset == s) { subset = s }.frame(maxWidth: .infinity)
+                    }
                 }
             }
             .disabled(bench.running)
-            Text(model.repo).font(.caption.monospaced()).foregroundStyle(.secondary)
+            Text(model.repo).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+            if !model.fitsThisPhone {
+                Label("Too big for this iPhone's per-app memory (iOS kills it after loading). Use E4B oQ4.",
+                      systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption).foregroundStyle(.orange)
+            }
         }
     }
 
@@ -130,6 +141,7 @@ struct ContentView: View {
                     Label("Run \(model.title) \(subset)", systemImage: "play.fill").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent).tint(.indigo)
+                .disabled(!model.fitsThisPhone)
                 Button {
                     // Skips what this phone can't hold (qat-4bit E4B on 8 GB): those runs only crash.
                     bench.start(GemmaModel.allCases.filter(\.fitsThisPhone).flatMap { m in ["s1", "s2", "s3"].map { (m, $0) } })
@@ -401,5 +413,34 @@ struct SettingsView: View {
             .toolbar { Button("Done") { dismiss() } }
             .disabled(bench.running)  // settings are captured per run; don't change them mid-run
         }
+    }
+}
+
+/// One model in the picker: name, quantization, downloaded or not, and a warning when this phone
+/// can't hold it. Equal widths so three fit a portrait row.
+struct ModelChip: View {
+    let model: GemmaModel, selected: Bool, downloaded: Bool, action: () -> Void
+    var body: some View {
+        let tint: Color = model.fitsThisPhone ? .indigo : .orange
+        Button(action: action) {
+            VStack(spacing: 2) {
+                HStack(spacing: 4) {
+                    Image(systemName: !model.fitsThisPhone ? "exclamationmark.triangle.fill"
+                          : downloaded ? "checkmark.circle.fill" : "icloud.and.arrow.down")
+                        .font(.caption2)
+                    Text(model.title).font(.subheadline.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                }
+                Text(model == .e4bOQ4 ? "oQ4 · 4/5/6-bit" : "QAT 4-bit")
+                    .font(.caption2).lineLimit(1).minimumScaleFactor(0.8)
+                    .opacity(0.85)
+            }
+            .padding(.vertical, 8).padding(.horizontal, 6)
+            .frame(maxWidth: .infinity)
+            .foregroundStyle(selected ? .white : tint)
+            .background(selected ? tint : tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(model.title), \(model.quant), \(downloaded ? "downloaded" : "not downloaded")"
+                            + (model.fitsThisPhone ? "" : ", too big for this iPhone"))
     }
 }
