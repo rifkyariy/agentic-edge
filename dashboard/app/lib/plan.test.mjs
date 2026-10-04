@@ -113,7 +113,7 @@ test("a queued little-gemma thinking job shows in its own cell only", () => {
 });
 
 test("little-gemma is planned for the Jetson only, TurboQuant for both", () => {
-  assert.deepEqual(PLAN.engines.map((e) => e.id), ["llama.cpp", "little-gemma", "turboquant", "mlx"]);
+  assert.deepEqual(PLAN.engines.map((e) => e.id), ["llama.cpp", "little-gemma", "turboquant", "mlx", "ae-base", "ae-reuse", "ae-ngram", "ae-full"]);
   assert.deepEqual(PLAN.engines.find((e) => e.id === "mlx").boards, ["iphone"]);
   assert.deepEqual(PLAN.engines.find((e) => e.id === "turboquant").boards, ["pi", "jetson"]);
   assert.deepEqual(PLAN.engines.find((e) => e.id === "little-gemma").boards, ["jetson"]);
@@ -135,4 +135,13 @@ test("an iPhone (mlx) result fills only its own cell", () => {
 test("the iPhone's MLX engine has no thinking rows", () => {
   const mlx = PLAN.engines.find((e) => e.id === "mlx");
   assert.deepEqual(mlx.thinking, ["off"]);
+});
+
+test("a proposed-engine (ae) run fills only its own variant's cell", () => {
+  const box = doneBox("mmlupro100-ae-full-e2b-s2");
+  assert.equal(cell(box, "e2b", "s2", "off", null, "ae-full").status, "done");
+  assert.equal(cell(box, "e2b", "s2", "off", null, "ae-reuse").status, "pending");
+  assert.equal(cell(box, "e2b", "s2", "off", null, "little-gemma").status, "pending");
+  assert.equal(cell(box, "e2b", "s2", "off").status, "pending");
+  assert.deepEqual(PLAN.engines.find((e) => e.id === "ae-full").boards, ["jetson"]);
 });
