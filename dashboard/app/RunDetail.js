@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { TrackChart, TimelineChart, fmt } from "./Charts";
+import { ArrowDown, ArrowUp, Check, TriangleAlert, X } from "lucide-react";
 
 
 /* What one question cost the board. Stat tiles rather than a run of text: the
@@ -14,7 +15,7 @@ function Delta({ value, base, decimals = 1, goodWhen = "lower", unit = "", vs = 
   const good = goodWhen === "lower" ? diff < 0 : diff > 0;
   return (
     <em className={`delta ${good ? "good" : "poor"}`}>
-      {diff > 0 ? "▲" : "▼"} {fmt(Math.abs(diff), decimals)}{unit} vs {vs}
+      {diff > 0 ? <ArrowUp className="ic" /> : <ArrowDown className="ic" />} {fmt(Math.abs(diff), decimals)}{unit} vs {vs}
     </em>
   );
 }
@@ -42,8 +43,8 @@ function RunCost({ d, minutes }) {
         {minutes ? <span className="reqcard-when">over {fmt(minutes)} min</span> : null}
         {d.provisional && <span className="chip warn">so far — run still in progress</span>}
         {d.throttled
-          ? <span className="chip warn">⚠ thermally throttled · {fmt(d.throttled)} samples</span>
-          : <span className="chip ok">✓ never throttled</span>}
+          ? <span className="chip warn"><TriangleAlert className="ic" /> thermally throttled · {fmt(d.throttled)} samples</span>
+          : <span className="chip ok"><Check className="ic" /> never throttled</span>}
       </div>
 
       <div className="reqcard-hero">
@@ -116,8 +117,8 @@ function PhoneCost({ d, minutes }) {
         <span className="reqcard-title">Device cost</span>
         {minutes ? <span className="reqcard-when">over {fmt(minutes)} min</span> : null}
         {d.throttled
-          ? <span className="chip warn">⚠ thermal state serious or worse · {fmt(d.throttled)} s</span>
-          : <span className="chip ok">✓ thermal state never serious</span>}
+          ? <span className="chip warn"><TriangleAlert className="ic" /> thermal state serious or worse · {fmt(d.throttled)} s</span>
+          : <span className="chip ok"><Check className="ic" /> thermal state never serious</span>}
       </div>
       <div className="reqcard-hero">
         <div>
@@ -158,7 +159,7 @@ function ReqStats({ r, run, median, phone }) {
       <div className="reqcard-head">
         <span className="reqcard-title">Request #{r.i + 1}</span>
         <span className="reqcard-when">{fmt(r.t / 60, 1)} min into the run</span>
-        {d.throttled && <span className="chip warn">⚠ thermally throttled</span>}
+        {d.throttled && <span className="chip warn"><TriangleAlert className="ic" /> thermally throttled</span>}
         {d.samples ? <span className="reqcard-when">{fmt(d.samples)} telemetry samples</span> : null}
       </div>
 
@@ -423,7 +424,7 @@ export default function RunDetail({ boxId, boxLabel, run, onClose }) {
                   ))}
               </nav>
             )}
-            <button type="button" onClick={onClose} aria-label="Close">esc ✕</button>
+            <button type="button" onClick={onClose} aria-label="Close">esc <X className="ic" /></button>
           </div>
         </div>
 

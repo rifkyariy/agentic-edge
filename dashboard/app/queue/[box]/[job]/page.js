@@ -6,6 +6,7 @@ import { usePoll } from "../../../lib/usePoll";
 import { clock } from "../../../lib/format";
 import StatePill from "../../../components/StatePill";
 import PageHeader from "../../../components/PageHeader";
+import { Check, TriangleAlert, X } from "lucide-react";
 
 const POLL_MS = 5000;
 const STREAMS = ["lm_eval", "server", "command"];
@@ -31,14 +32,14 @@ function Fingerprint({ fp }) {
 
   return (
     <div className={`fingerprint ${fp.agrees ? "ok" : "drift"}`}>
-      <h4>Fingerprint {fp.agrees ? "✓ matches baseline" : "⚠ drift"}
+      <h4>Fingerprint {fp.agrees ? <><Check className="ic" /> matches baseline</> : <><TriangleAlert className="ic" /> drift</>}
         <i> {fp.baseline}</i></h4>
       <table>
         <tbody>
           {(fp.diff || []).map((r) => (
             <tr key={r.key} className={r.ok ? "ok" : "bad"}>
               <td>{r.key}</td>
-              <td>{r.ok ? "✓" : "✗"}</td>
+              <td>{r.ok ? <Check className="ic" /> : <X className="ic" />}</td>
               <td>{String(r.actual ?? "MISSING")}</td>
               <td className="sub">expected {String(r.expected)}</td>
             </tr>

@@ -1,9 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import {
-  Bar, BarChart, CartesianGrid, Cell, LabelList,
-  ResponsiveContainer, Tooltip, XAxis, YAxis,
-} from "recharts";
+  Check, Gauge, Lightbulb, MemoryStick, Plug, Target, Thermometer, Zap,
+} from "lucide-react";
 import { fmt } from "../lib/format";
 import PageHeader from "../components/PageHeader";
 import { comparisons } from "../lib/paired";
@@ -15,13 +14,6 @@ const DEV = {
   jetson: { label: "Jetson Orin Nano", short: "Orin Nano", color: "var(--jetson)" },
   iphone: { label: "iPhone", short: "iPhone", color: "var(--iphone)" },
 };
-
-const TIP = {
-  background: "var(--panel)", border: "1px solid var(--line-2)", borderRadius: "8px",
-  font: "11px var(--mono)", padding: "6px 9px", boxShadow: "0 4px 14px rgba(0,0,0,.14)",
-};
-const axis = { stroke: "var(--line-2)",
-               tick: { fill: "var(--ink-3)", fontSize: 10, fontFamily: "var(--mono)" } };
 
 /* One run per (device, model, subset). The Pi has runs named without a subset
    from before the subsets existed — those are s1, but an explicit -s1 wins. */
@@ -49,73 +41,51 @@ function pooled(rows) {
            ci95: 1.96 * Math.sqrt((p * (1 - p)) / n) * 100 };
 }
 
-/* Outcome, not identity: for each model the better board's bar goes green and
-   the worse one red, with grey for a tie. Two things keep that honest —
-   "better" is only ever decided by `goodWhen`, never by which board it is, and
-   a tie must be passed in explicitly (`tied`) rather than inferred from a
-   small gap, so a statistical dead heat cannot be painted as a win.
-
-   Red and green are the one pair colour-vision deficiency collapses, so they
-   never carry the meaning alone: every bar is also labelled with its value and
-   a ▲ / ▼ / = glyph, the device order is fixed (Pi left, Orin right) and
-   named on the axis, and the verdict is written underneath in words. The
-   steps themselves are picked to survive it — deutan ΔE 8.5 light, 8.1 dark. */
-const OUTCOME = { win: "var(--better)", lose: "var(--worse)", tie: "var(--neutral)" };
-const GLYPH = { win: "\u25b2", lose: "\u25bc", tie: "=" };
-
-function verdictFor(row, goodWhen, tied) {
-  const { pi, jetson } = row;
-  if (tied || pi == null || jetson == null) return { pi: "tie", jetson: "tie" };
-  if (pi === jetson) return { pi: "tie", jetson: "tie" };
-  const piBetter = goodWhen === "lower" ? pi < jetson : pi > jetson;
-  return piBetter ? { pi: "win", jetson: "lose" } : { pi: "lose", jetson: "win" };
+/* One answer per measure, in big type: the thing a reader came for. */
+function Headline({ icon: Icon, label, big, who, color, detail }) {
+  return (
+    <div className="hl">
+      <span className="hl-label"><Icon className="ic" /> {label}</span>
+      <b className="hl-big" style={color ? { color } : undefined}>{big}</b>
+      <span className="hl-who">{who}</span>
+      {detail && <span className="hl-detail">{detail}</span>}
+    </div>
+  );
 }
 
-function Chart({ title, note, data, unit, decimals = 2, goodWhen = "higher",
-                 tied = false, verdict }) {
-  // tied may be one flag for the chart or one per row (per model), so a model
-  // whose own test is not significant is never coloured by the other's.
-  const marks = data.map((row, i) =>
-    verdictFor(row, goodWhen, Array.isArray(tied) ? tied[i] : tied));
+/* Side by side on one shared scale per measure, every bar labelled with its
+   value. Bars carry the device's own colour, so the legend is the same on every
+   card; which one is better is a tick next to the number, never colour alone.
+   "Better" is decided only by `goodWhen`, and a tie must be passed in (`tied`,
+   from the paired test) rather than inferred from a small gap, so a
+   statistical dead heat is never marked as a win. */
+function Versus({ title, unit, rows, decimals = 1, goodWhen = "higher", tied = false,
+                  verdict, ids = ["pi", "jetson"] }) {
+  const max = Math.max(0, ...rows.flatMap((r) => ids.map((id) => r[id] ?? 0))) || 1;
   return (
-    <figure className="cmp-fig">
-      <figcaption>
-        <h3>{title}</h3>
-        {note && <p>{note}</p>}
-        <ul className="cmp-key">
-          <li><i className="swatch better" />better</li>
-          <li><i className="swatch worse" />worse</li>
-          {marks.some((m) => m.pi === "tie") && <li><i className="swatch neutral" />no difference</li>}
-          <li className="order">bars: Pi 5 left, Orin right</li>
-        </ul>
-      </figcaption>
-      <ResponsiveContainer width="100%" height={176}>
-        <BarChart data={data} margin={{ top: 22, right: 12, bottom: 0, left: 0 }} barGap={6}>
-          <CartesianGrid stroke="var(--line)" vertical={false} />
-          <XAxis dataKey="model" {...axis} />
-          <YAxis width={52} tickFormatter={(v) => fmt(v, decimals)} {...axis} />
-          <Tooltip contentStyle={TIP} cursor={{ fill: "var(--line)", opacity: 0.4 }}
-                   isAnimationActive={false}
-                   formatter={(v, n) => [`${fmt(v, decimals)} ${unit}`, DEV[n]?.short ?? n]} />
-          {Object.keys(DEV).map((id) => (
-            <Bar key={id} dataKey={id} name={id} radius={[4, 4, 0, 0]}
-                 maxBarSize={54} isAnimationActive={false}>
-              {data.map((_, i) => (
-                <Cell key={i} fill={OUTCOME[marks[i][id]]} />
-              ))}
-              <LabelList dataKey={id} position="top"
-                         content={({ x, y, width, value, index }) => (
-                           value == null ? null : (
-                             <text x={x + width / 2} y={y - 6} textAnchor="middle"
-                                   className={`barlab ${marks[index][id]}`}>
-                               {GLYPH[marks[index][id]]} {fmt(value, decimals)}
-                             </text>
-                           ))} />
-            </Bar>
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
-      {verdict && <p className="cmp-better">{verdict}</p>}
+    <figure className="vs">
+      <figcaption><h3>{title}</h3><span>{unit}</span></figcaption>
+      {rows.map((r, i) => {
+        const tie = Array.isArray(tied) ? tied[i] : tied;
+        const have = ids.filter((id) => r[id] != null);
+        const best = tie || have.length < 2 ? null : have.reduce((x, y) =>
+          ((goodWhen === "lower" ? r[y] < r[x] : r[y] > r[x]) ? y : x));
+        return (
+          <div className="vs-group" key={r.label ?? i}>
+            {r.label && <span className="vs-model">{r.label}</span>}
+            {ids.map((id) => (
+              <div key={id} className={`vs-row ${best === id ? "best" : ""}`}>
+                <span className="vs-dev">{DEV[id].short}</span>
+                <span className="vs-track">
+                  <i style={{ width: `${r[id] == null ? 0 : (100 * r[id]) / max}%`, background: DEV[id].color }} />
+                </span>
+                <b>{fmt(r[id], decimals)}{best === id && <Check className="ic" aria-label="better" />}</b>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+      {verdict && <p className="vs-verdict">{verdict}</p>}
     </figure>
   );
 }
@@ -130,57 +100,33 @@ const THERMAL = ["nominal", "fair", "serious", "critical"];
    differences named, instead of a third bar in the board charts. */
 function PhoneCompare({ rowsFor, devMean }) {
   const ids = ["pi", "jetson", "iphone"];
-  const any = MODELS.some(([m]) => rowsFor("iphone", m).length);
-  const per = (f, d) => (id) => MODELS.map(([m]) => f(id, m)).map((v) => fmt(v, d)).join(" · ");
-  const dev = (key, d) => per((id, m) => devMean(id, m, key), d);
-  const acc = per((id, m) => pooled(rowsFor(id, m))?.pct, 1);
-  const runMin = per((id, m) => mean(rowsFor(id, m).map((r) => r.minutes).filter((x) => x != null)), 0);
+  if (!MODELS.some(([m]) => rowsFor("iphone", m).length)) return null;
   const estimated = MODELS.some(([m]) => rowsFor("iphone", m)
     .some((r) => r.device?.energy_source?.startsWith("estimate")));
-  const heat = (id) => (id === "iphone"
-    ? MODELS.map(([m]) => {
-        const v = rowsFor(id, m).map((r) => r.device?.thermal_max).filter((x) => x != null);
-        return v.length ? THERMAL[Math.max(...v)] ?? "—" : "—";
-      }).join(" · ")
-    : `${dev("temp_max", 1)(id)} °C`);
-  const subsets = (id) => MODELS.map(([m]) => rowsFor(id, m).filter((r) => r.score != null).length).join(" · ");
-  const rows = [
-    ["Accuracy", "pooled %, E2B · E4B", acc],
-    ["Subsets finished", "of 3, E2B · E4B", subsets],
-    ["Decode", "tok/s", dev("decode_tok_s", 1)],
-    ["Prefill", "tok/s", dev("prefill_tok_s", 0)],
-    ["Energy per token", estimated ? "J · iPhone estimated" : "J", dev("j_per_token", 2)],
-    ["Energy per run", "Wh", dev("energy_wh", 1)],
-    ["Time per run", "min", runMin],
-    ["Heat", "boards peak °C · iPhone worst thermal state", heat],
-  ];
+  const rows = (f) => MODELS.map(([m, label]) =>
+    ({ label, ...Object.fromEntries(ids.map((id) => [id, f(id, m)])) }));
+  const dev = (key) => rows((id, m) => devMean(id, m, key));
+  const heat = MODELS.map(([m]) => {
+    const v = rowsFor("iphone", m).map((r) => r.device?.thermal_max).filter((x) => x != null);
+    return v.length ? THERMAL[Math.max(...v)] ?? "—" : "—";
+  });
   return (
-    <section className="card phonecmp">
-      <h2>iPhone against the boards</h2>
-      <p className="sub">Same questions and prompts on MLX, thinking off. The engine and
-        quantisation differ too, so read it as a device-and-runtime comparison; the
-        paired accuracy tests are above.</p>
-      {!any ? (
-        <p className="empty">No iPhone runs yet. The app uploads each run when it ends.</p>
-      ) : (
-        <div className="table-wrap">
-          <table className="score">
-            <thead><tr><th>E2B · E4B</th>{ids.map((id) => <th key={id}>{DEV[id].short}</th>)}</tr></thead>
-            <tbody>
-              {rows.map(([label, unit, f]) => (
-                <tr key={label}>
-                  <th>{label} <em>{unit}</em></th>
-                  {ids.map((id) => <td key={id}>{f(id)}</td>)}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {any && estimated && (
-        <p className="foot">iPhone energy is whole-phone battery drain from battery % × capacity, at 1%
-          resolution; the boards&apos; is measured board DC draw. Compare the order of magnitude, not decimals.</p>
-      )}
+    <section className="card">
+      <div>
+        <h2>iPhone against the boards</h2>
+        <p className="sub">Same questions on MLX, thinking off. The engine and quantisation differ
+          too, so this compares device and runtime together.</p>
+      </div>
+      <div className="vs-grid">
+        <Versus title="Accuracy" unit="% correct" ids={ids} tied
+                rows={rows((id, m) => pooled(rowsFor(id, m))?.pct)}
+                verdict="Paired tests above decide any winner" />
+        <Versus title="Decode speed" unit="tokens / s" ids={ids} rows={dev("decode_tok_s")} />
+        <Versus title="Energy per token" unit={estimated ? "J · iPhone estimated" : "J"} ids={ids}
+                decimals={2} goodWhen="lower" rows={dev("j_per_token")} />
+      </div>
+      <p className="foot">iPhone worst thermal state: E2B {heat[0]}, E4B {heat[1]}.
+        {estimated && " iPhone energy is whole-phone battery drain estimated from battery %, at 1% resolution; the boards' is measured board DC draw. Compare the order of magnitude, not decimals."}</p>
     </section>
   );
 }
@@ -215,7 +161,6 @@ export default function Compare() {
   if (err) return <main><p className="err">{err}</p></main>;
   if (!d) return <main><p className="sub">Reading both boards…</p></main>;
 
-  const box = Object.fromEntries(d.boxes.map((b) => [b.id, b]));
   const runs = Object.fromEntries(d.boxes.map((b) => [b.id, canonical(b.runs || [])]));
 
   const rowsFor = (id, model) =>
@@ -226,27 +171,35 @@ export default function Compare() {
     return v.length ? mean(v) : null;
   };
 
-  const series = (key, decimals) => MODELS.map(([m, label]) => ({
-    model: label,
+  const series = (key) => MODELS.map(([m, label]) => ({
+    label: label.replace("Gemma 4 ", ""),
     pi: devMean("pi", m, key), jetson: devMean("jetson", m, key),
   }));
 
-  const acc = MODELS.map(([m, label]) => {
-    const p = pooled(rowsFor("pi", m)), j = pooled(rowsFor("jetson", m));
-    return { model: label, pi: p?.pct ?? null, jetson: j?.pct ?? null, _p: p, _j: j };
-  });
+  const acc = MODELS.map(([m, label]) => ({
+    label: label.replace("Gemma 4 ", ""),
+    pi: pooled(rowsFor("pi", m))?.pct ?? null, jetson: pooled(rowsFor("jetson", m))?.pct ?? null,
+  }));
 
-  // the headline ratios, computed rather than written down
-  const ratio = (key, inverse) => {
-    const v = MODELS.map(([m]) => {
-      const p = devMean("pi", m, key), j = devMean("jetson", m, key);
-      return p && j ? (inverse ? p / j : j / p) : null;
-    }).filter(Boolean);
-    return v.length ? mean(v) : null;
+  /* Who leads on a measure, and by how much — computed from the runs, never
+     written down. Only a lead on both models counts; otherwise it is mixed. */
+  const lead = (key, goodWhen = "higher") => {
+    const pairs = MODELS.map(([m]) => [devMean("pi", m, key), devMean("jetson", m, key)])
+      .filter(([p, j]) => p && j);
+    if (!pairs.length) return null;
+    const better = (x, y) => (goodWhen === "lower" ? x < y : x > y);
+    const id = pairs.every(([p, j]) => better(p, j)) ? "pi"
+      : pairs.every(([p, j]) => better(j, p)) ? "jetson" : null;
+    return { id, x: mean(pairs.map(([p, j]) => Math.max(p, j) / Math.min(p, j))) };
   };
-  const speedX = ratio("decode_tok_s");
-  const energyX = ratio("j_per_token", true);
-  const powerX = ratio("mean_w");
+  const speed = lead("decode_tok_s");
+  const energy = lead("j_per_token", "lower");
+  const power = lead("mean_w", "lower");
+  const perW = lead("tok_s_per_w");
+  const tempGap = mean(MODELS.map(([m]) => devMean("pi", m, "temp_max") - devMean("jetson", m, "temp_max"))
+    .filter((v) => !Number.isNaN(v)));
+  const name = (l) => (l?.id ? DEV[l.id].short : "neither");
+  const color = (l) => (l?.id ? DEV[l.id].color : undefined);
 
   /* Campaign totals: what running the whole grid actually cost each board.
      canonical() has already dropped the Pi's duplicate pre-subset directory,
@@ -264,7 +217,6 @@ export default function Compare() {
     };
   };
   const T = { pi: totals("pi"), jetson: totals("jetson") };
-  const whPerK = (t) => (t.tokens ? (1000 * t.wh) / t.tokens : null);
 
   /* Where the trade turns over. Under load the Orin is far cheaper per token;
      at rest it costs more than twice what the Pi does. Over a 24h day doing T
@@ -297,24 +249,198 @@ export default function Compare() {
   const [pE2b, pE4b] = pairedData?.board[0].groups || [];
   const accP = pE2b?.pooled && pE4b?.pooled ? [pE2b.pooled, pE4b.pooled] : null;
   const accTied = accP ? accP.every((r) => !r.sig) : true;
-  const pStr = (r) => r.p.toFixed(2);
-  const accVerdict = !accP ? "paired test loading…"
-    : accTied ? `No significant difference — paired McNemar p = ${pStr(accP[0])} (E2B), ${pStr(accP[1])} (E4B)`
-    : `Significant difference — paired McNemar p = ${pStr(accP[0])} (E2B), ${pStr(accP[1])} (E4B)`;
+  const accLine = accP
+    ? `E2B ${fmt(accP[0].aAcc, 1)} vs ${fmt(accP[0].bAcc, 1)}% · E4B ${fmt(accP[1].aAcc, 1)} vs ${fmt(accP[1].bAcc, 1)}%`
+    : `E2B ${fmt(acc[0].pi, 1)} vs ${fmt(acc[0].jetson, 1)}% · E4B ${fmt(acc[1].pi, 1)} vs ${fmt(acc[1].jetson, 1)}%`;
 
   const pending = MODELS.flatMap(([m, label]) =>
     Object.entries(runs).filter(([id]) => id !== "iphone").flatMap(([id, r]) =>
       ["s1", "s2", "s3"].filter((s) => !r[`${m}-${s}`]?.score)
         .map((s) => `${DEV[id].short} ${label} ${s}`)));
 
+  const allRuns = d.boxes.flatMap((b) => MODELS.flatMap(([m]) => ["s1", "s2", "s3"]
+    .map((s) => ({ b, m, s, r: runs[b.id]?.[`${m}-${s}`] })))).filter((x) => x.r);
+
   return (
     <main className="cmp">
       <PageHeader title="Compare"
-                  sub="Pi 5, Orin Nano and iPhone on the same MMLU-Pro questions." />
+                  sub="Pi 5 against Orin Nano, same MMLU-Pro questions, same model files." />
 
-      {/* The three numbers the comparison exists to produce. */}
-      {/* The experiment in one block, then its verdict — so the page reads as
-          a summary of what was run, not a chart dump. */}
+      {/* The short answer: one sentence, then one card per measure. */}
+      <section className="card answer">
+        <p className="answer-lede">
+          <b>{accTied ? "Same accuracy." : "Accuracy differs."}</b>{" "}
+          The {name(speed)} is <b>{fmt(speed?.x, 1)}× faster</b> and{" "}
+          {energy?.id === speed?.id ? "" : `the ${name(energy)} `}
+          <b>{fmt(energy?.x, 1)}× cheaper per token</b>. The {name(power)} draws less power,
+          idles lower and has memory to spare.
+        </p>
+        <div className="hl-grid">
+          <Headline icon={Target} label="Accuracy" big={accTied ? "Tie" : "Differ"}
+                    color={accTied ? "var(--ink-3)" : undefined}
+                    who={accTied ? "no real difference" : "a significant difference"}
+                    detail={accLine} />
+          <Headline icon={Gauge} label="Speed" big={`${fmt(speed?.x, 1)}×`} color={color(speed)}
+                    who={`faster on the ${name(speed)}`} detail="tokens generated per second" />
+          <Headline icon={Zap} label="Energy per token" big={`${fmt(energy?.x, 1)}×`} color={color(energy)}
+                    who={`cheaper on the ${name(energy)}`} detail="joules for each word-piece" />
+          <Headline icon={Plug} label="Power draw" big={`${fmt(power?.x, 1)}×`} color={color(power)}
+                    who={`lower on the ${name(power)}`} detail="watts while working" />
+          <Headline icon={Thermometer} label="Heat" big={`${fmt(Math.abs(tempGap))} °C`}
+                    color={tempGap > 0 ? DEV.jetson.color : DEV.pi.color}
+                    who={`cooler on the ${tempGap > 0 ? "Orin Nano" : "Pi 5"}`} detail="peak, neither throttled" />
+          <Headline icon={MemoryStick} label="Memory headroom" big="3.9 GB" color={DEV.pi.color}
+                    who="spare on the Pi 5" detail="Orin: 165 MB, OOM-killed twice" />
+        </div>
+      </section>
+
+      {/* The same measures as bars, one card each. */}
+      <section className="card">
+        <div className="card-head">
+          <div>
+            <h2>Side by side</h2>
+            <p className="sub">Averaged over three 100-question runs per model.</p>
+          </div>
+          <ul className="vs-key">
+            <li><i style={{ background: DEV.pi.color }} />Pi 5</li>
+            <li><i style={{ background: DEV.jetson.color }} />Orin Nano</li>
+            <li><Check className="ic" /> better</li>
+          </ul>
+        </div>
+        <div className="vs-grid">
+          {/* tied comes from the paired test, never from the size of the gap:
+              a 1-point bar gap is not a win and is not drawn as one. */}
+          <Versus title="Accuracy" unit="% correct" rows={acc}
+                  tied={accP ? accP.map((r) => !r.sig) : true}
+                  verdict={accTied ? "Within noise: no winner" : "Significant on at least one model"} />
+          <Versus title="Speed" unit="tokens / s" rows={series("decode_tok_s")} decimals={1}
+                  verdict={`${name(speed)} ${fmt(speed?.x, 1)}× faster`} />
+          <Versus title="Energy per token" unit="joules, lower is better" rows={series("j_per_token")}
+                  decimals={2} goodWhen="lower"
+                  verdict={`${name(energy)} ${fmt(energy?.x, 1)}× cheaper`} />
+          <Versus title="Work per watt" unit="tokens / s / W" rows={series("tok_s_per_w")} decimals={2}
+                  verdict={`${name(perW)} ${fmt(perW?.x, 1)}× more`} />
+          <Versus title="Power while working" unit="watts, lower is better" rows={series("mean_w")}
+                  decimals={1} goodWhen="lower"
+                  verdict={`${name(power)} draws less, but for far longer`} />
+          <Versus title="Peak temperature" unit="°C, lower is better" rows={series("temp_max")}
+                  decimals={0} goodWhen="lower" verdict="Neither board throttled" />
+        </div>
+      </section>
+
+      <Paired data={pairedData} err={pairedErr} />
+
+      {/* Totals, because per-token rates hide what a campaign actually costs. */}
+      <section className="card">
+        <div>
+          <h2>What the whole benchmark cost</h2>
+          <p className="sub">All {T.pi.runs} baseline runs per board, {fmt(T.pi.runs * 100)} questions.
+            Both did the same work: {fmt(T.pi.tokens / 1000)}k vs {fmt(T.jetson.tokens / 1000)}k tokens.</p>
+        </div>
+        <div className="vs-grid">
+          <Versus title="Time" unit="hours" decimals={1} goodWhen="lower"
+                  rows={[{ pi: T.pi.minutes / 60, jetson: T.jetson.minutes / 60 }]}
+                  verdict={`${fmt(T.pi.minutes / T.jetson.minutes, 1)}× quicker on the Orin`} />
+          <Versus title="Energy used" unit="Wh" decimals={0} goodWhen="lower"
+                  rows={[{ pi: T.pi.wh, jetson: T.jetson.wh }]}
+                  verdict={`${fmt(T.pi.wh / T.jetson.wh, 1)}× less on the Orin`} />
+          <Versus title="Idle draw" unit="watts at rest" decimals={2} goodWhen="lower"
+                  rows={[{ pi: T.pi.idle_w, jetson: T.jetson.idle_w }]}
+                  verdict={`${fmt(T.jetson.idle_w / T.pi.idle_w, 1)}× lower on the Pi`} />
+        </div>
+
+        {breakeven && (
+          <>
+            <p className="callout">
+              <Lightbulb className="ic" />
+              <span>
+                <b>Rule of thumb:</b> a board busy for more than about{" "}
+                <b>{fmt(breakeven.tokens / 1000)}k tokens a day</b> uses less energy as an
+                Orin. Below that, the Pi wins, because the Orin idles at{" "}
+                {fmt(T.jetson.idle_w / T.pi.idle_w, 1)}× its draw. Answering all day: Orin.
+                Waiting for a wake word: Pi.
+              </span>
+            </p>
+            <details className="tradeoff">
+              <summary>How that is worked out</summary>
+              <p>
+                It idles at {fmt(T.jetson.idle_w, 2)} W against the Pi&apos;s{" "}
+                {fmt(T.pi.idle_w, 2)} W. Over a 24-hour day the two cross at roughly{" "}
+                <b>{fmt(breakeven.tokens / 1000)}k generated tokens</b> — about{" "}
+                {fmt(breakeven.jetHours, 1)} h of Orin decoding, or{" "}
+                {fmt(breakeven.piHours, 1)} h of the Pi&apos;s.
+              </p>
+              <p>
+                That sits near the Pi&apos;s ceiling: flat out for a whole day it tops
+                out at <b>{fmt(breakeven.piCeiling / 1000)}k tokens</b> against the
+                Orin&apos;s <b>{fmt(breakeven.jetCeiling / 1000)}k</b>, so break-even already
+                takes {fmt(100 * breakeven.piHours / 24)}% of the Pi&apos;s day. Past that the
+                question is not which board is cheaper but whether the Pi can keep up.
+              </p>
+              <p className="tradeoff-note">
+                From these runs&apos; E2B decode rate, working watts and idle baseline.
+                Assumes the board is idle whenever it is not decoding, so it is a floor
+                for the Orin rather than an exact duty cycle.
+              </p>
+            </details>
+          </>
+        )}
+      </section>
+
+      {/* What the Orin actually brings: the GPU the Pi does not have. */}
+      <section className="card gpucard">
+        <div>
+          <h2>Why the Orin is faster</h2>
+          <p className="sub">Its GPU does the work. The Pi has no CUDA device, so its CPU does.</p>
+        </div>
+        <div className="tiles">
+          <div className="tile">
+            <span className="tile-label">Orin GPU busy</span>
+            <b className="tile-value" style={{ color: "var(--jetson)" }}>
+              {fmt(gpu.mean, 1)}<i>%</i></b>
+            <em className="delta flat">{fmt(Math.min(100, gpu.max), 0)}% peak · E4B runs</em>
+          </div>
+          <div className="tile">
+            <span className="tile-label">Orin CPU busy</span>
+            <b className="tile-value" style={{ color: "var(--jetson)" }}>
+              {fmt(devMean("jetson", "e4b", "cpu_mean"), 1)}<i>%</i></b>
+            <em className="delta flat">every layer on the GPU</em>
+          </div>
+          <div className="tile">
+            <span className="tile-label">Pi CPU busy</span>
+            <b className="tile-value" style={{ color: "var(--pi)" }}>
+              {fmt(devMean("pi", "e4b", "cpu_mean"), 0)}<i>%</i></b>
+            <em className="delta flat">doing all of it</em>
+          </div>
+          <div className="tile">
+            <span className="tile-label">GPU clock</span>
+            <b className="tile-value">{fmt(gpu.mhz, 0)}<i>MHz</i></b>
+            <em className="delta flat">306–612 MHz observed</em>
+          </div>
+        </div>
+
+        <details className="gpunote">
+          <summary>GPU and memory notes</summary>
+          <p>
+            <b>Ampere GPU, sm_87</b>, on a Jetson Orin Nano Super in its <b>15 W</b> mode.
+            llama.cpp is built for sm_87 and offloads every layer (<code>-ngl 99</code>).
+          </p>
+          <p>
+            Memory is the catch, and not capacity: <b>8,062 MB</b> on the Pi against{" "}
+            <b>7,485 MB</b> on the Orin. The Pi mmaps the model, so the weights sit in
+            evictable page cache and an E4B run peaks at <b>4,118–4,294 MB</b> in use. The
+            Orin pins them in its shared pool, which has no swap: E4B peaked at{" "}
+            <b>6,874–7,320 MB</b>, leaving as little as <b>165 MB</b>. Two E4B runs were
+            OOM-killed when a second user logged in; both are kept under{" "}
+            <code>stdbench/failed/</code>. So <code>queue_jetson.sh</code> refuses to start
+            E4B below 5,400 MB free. The Pi&apos;s limit is speed, the Orin&apos;s is memory.
+          </p>
+        </details>
+      </section>
+
+      <PhoneCompare rowsFor={rowsFor} devMean={devMean} />
+
+      {/* The fine print: one line each until opened. */}
       <details className="card design fold">
         <summary><h2>Setup</h2><span>question set, models, serving flags, power method</span></summary>
         <dl className="design-grid">
@@ -343,353 +469,76 @@ export default function Compare() {
         </dl>
       </details>
 
-      <section className="card scorecard">
-        <h2>What it found</h2>
-        <table className="score">
-          <thead>
-            <tr><th>Measure</th><th>Pi 5</th><th>Orin Nano</th><th>Result</th></tr>
-          </thead>
-          <tbody>
-            <tr className={accTied ? "tie" : ""}>
-              <th>Accuracy <em>MMLU-Pro, n={accP ? accP[0].n : 300}</em></th>
-              <td>{accP ? `${fmt(accP[0].aAcc, 1)}% · ${fmt(accP[1].aAcc, 1)}%` : "…"}</td>
-              <td>{accP ? `${fmt(accP[0].bAcc, 1)}% · ${fmt(accP[1].bAcc, 1)}%` : "…"}</td>
-              <td>{accTied
-                ? <span className="pillv tie">= tied</span>
-                : <span className="pillv win">≠ differ</span>}
-                <em>McNemar p = {accP ? `${pStr(accP[0])} / ${pStr(accP[1])}` : "…"}</em></td>
-            </tr>
-            <tr>
-              <th>Decode throughput</th>
-              <td>6.80 · 3.37 <i>tok/s</i></td><td>23.00 · 11.62 <i>tok/s</i></td>
-              <td><span className="pillv win">▲ Orin</span><em>{fmt(speedX, 1)}× faster</em></td>
-            </tr>
-            <tr>
-              <th>Energy per token</th>
-              <td>1.15 · 2.20 <i>J</i></td><td>0.47 · 0.96 <i>J</i></td>
-              <td><span className="pillv win">▲ Orin</span><em>{fmt(energyX, 1)}× cheaper</em></td>
-            </tr>
-            <tr>
-              <th>Board power</th>
-              <td>7.01 · 6.80 <i>W</i></td><td>10.12 · 10.54 <i>W</i></td>
-              <td><span className="pillv win">▲ Pi</span><em>{fmt(powerX, 1)}× lower draw</em></td>
-            </tr>
-            <tr>
-              <th>Peak temperature</th>
-              <td>72.0 · 73.8 <i>°C</i></td><td>58.4 · 59.0 <i>°C</i></td>
-              <td><span className="pillv win">▲ Orin</span><em>~14 °C cooler</em></td>
-            </tr>
-            <tr>
-              <th>Memory headroom <em>worst run</em></th>
-              <td>~3.9 GB spare</td><td>165 MB spare</td>
-              <td><span className="pillv win">▲ Pi</span><em>Orin OOM-killed twice</em></td>
-            </tr>
-          </tbody>
-        </table>
-        <p className="cmp-lede">
-          <b>Equally accurate, not equally fast.</b> The Orin is {fmt(speedX, 1)}× quicker
-          and {fmt(energyX, 1)}× cheaper per token; the Pi has the memory headroom.
-        </p>
-      </section>
-
-      <Paired data={pairedData} err={pairedErr} />
-
-      <PhoneCompare rowsFor={rowsFor} devMean={devMean} />
-
-      {/* What is fixed here and what is still open, so the page is not read as
-          a final result for the paper. */}
-      {/* Totals, because per-token rates hide what a campaign actually costs. */}
-      <section className="card cost">
-        <h2>What the whole benchmark cost</h2>
-        <p className="sub">Six baseline runs per board, 600 questions each.</p>
-        <table className="score cost-table">
-          <thead>
-            <tr><th>Across all six runs</th><th>Pi 5</th><th>Orin Nano</th><th>Ratio</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th>Wall-clock time</th>
-              <td>{fmt(T.pi.minutes / 60, 1)} h <i>{fmt(T.pi.minutes)} min</i></td>
-              <td>{fmt(T.jetson.minutes / 60, 1)} h <i>{fmt(T.jetson.minutes)} min</i></td>
-              <td><span className="pillv win">▲ Orin</span>
-                <em>{fmt(T.pi.minutes / T.jetson.minutes, 1)}× quicker</em></td>
-            </tr>
-            <tr>
-              <th>Energy consumed</th>
-              <td>{fmt(T.pi.wh, 1)} <i>Wh</i></td>
-              <td>{fmt(T.jetson.wh, 1)} <i>Wh</i></td>
-              <td><span className="pillv win">▲ Orin</span>
-                <em>{fmt(T.pi.wh / T.jetson.wh, 1)}× less</em></td>
-            </tr>
-            <tr>
-              <th>Energy per 1,000 tokens</th>
-              <td>{fmt(whPerK(T.pi), 2)} <i>Wh</i></td>
-              <td>{fmt(whPerK(T.jetson), 2)} <i>Wh</i></td>
-              <td><span className="pillv win">▲ Orin</span>
-                <em>{fmt(whPerK(T.pi) / whPerK(T.jetson), 1)}× cheaper</em></td>
-            </tr>
-            <tr>
-              <th>Idle draw <em>board at rest</em></th>
-              <td>{fmt(T.pi.idle_w, 2)} <i>W</i></td>
-              <td>{fmt(T.jetson.idle_w, 2)} <i>W</i></td>
-              <td><span className="pillv win">▲ Pi</span>
-                <em>{fmt(T.jetson.idle_w / T.pi.idle_w, 1)}× lower floor</em></td>
-            </tr>
-            <tr className="tie">
-              <th>Tokens generated <em>the work itself</em></th>
-              <td>{fmt(T.pi.tokens)}</td>
-              <td>{fmt(T.jetson.tokens)}</td>
-              <td><span className="pillv tie">= same work</span>
-                <em>within {fmt(Math.abs(100 * (T.pi.tokens / T.jetson.tokens - 1)), 1)}%</em></td>
-            </tr>
-          </tbody>
-        </table>
-
-        {breakeven && (
-          <details className="tradeoff">
-            <summary>Idle against load: where the Pi wins back</summary>
-            <p>
-              Under load the Orin is the efficient board. <b>At rest it is not</b> —
-              it idles at {fmt(T.jetson.idle_w, 2)} W against the Pi&apos;s{" "}
-              {fmt(T.pi.idle_w, 2)} W, a floor it pays whether or not it is
-              answering anything. Over a 24-hour day the two cross at roughly{" "}
-              <b>{fmt(breakeven.tokens / 1000)}k generated tokens</b> — about{" "}
-              {fmt(breakeven.jetHours, 1)} h of Orin decoding, or{" "}
-              {fmt(breakeven.piHours, 1)} h of the Pi&apos;s.
-            </p>
-            <p>
-              Above that the Orin wins on total energy; below it the Pi&apos;s lower
-              floor does, because the Orin spends the rest of the day idling at
-              two and a half times the cost. A board answering steadily wants the
-              Orin. A board waiting for a wake word most of the day wants the Pi.
-            </p>
-            <p>
-              That crossover sits near the Pi&apos;s ceiling, which is the sharper
-              limit. Decoding flat out for a full day the Pi tops out at{" "}
-              <b>{fmt(breakeven.piCeiling / 1000)}k tokens</b> against the
-              Orin&apos;s <b>{fmt(breakeven.jetCeiling / 1000)}k</b>, so the
-              break-even already demands {fmt(100 * breakeven.piHours / 24)}% of the
-              Pi&apos;s day. Past roughly {fmt(breakeven.piCeiling / 1000)}k the
-              question stops being which board is cheaper and becomes whether the
-              Pi can keep up at all — it cannot, at any power budget.
-            </p>
-            <p className="tradeoff-note">
-              Computed from these runs&apos; own E2B figures — decode rate, working
-              watts and the idle baseline each run records before it starts. It
-              assumes the board is idle whenever it is not decoding, so it is a
-              floor for the Orin rather than an exact duty cycle.
-            </p>
-          </details>
-        )}
-      </section>
-
       <details className="card scope fold">
         <summary><h2>Scope</h2><span>what these numbers cover, and what is still open</span></summary>
         <p>
-          Every number here is the <b>baseline condition on both boards</b>: Gemma 4
-          served by <b>llama.cpp</b> with thinking genuinely off —{" "}
-          <code>-rea off</code> is llama.cpp&apos;s <code>--reasoning</code> switch,
-          so the model answers directly rather than reasoning first — greedy
-          decoding, the same
-          Q4_K_XL QAT weights and the same MMLU-Pro subsets. That holds the model,
-          the engine and the decoding fixed so the only variable left is the board.
+          The figures above are the <b>baseline on both boards</b>: llama.cpp, thinking
+          off (<code>-rea off</code>), greedy decoding, same weights, same questions. Only
+          the board varies.
         </p>
         <ul className="scope-list">
           <li>
             <span className="scope-tag done">run</span>
-            <div>
-              <b>Reasoning mode on.</b> <code>THINKING=on</code> (<code>-rea on</code>,
-              budget 320, <code>--reasoning-format none</code>) has run on both
-              boards; it is compared in the paired tests, not in the figures above.
-            </div>
+            <div><b>Thinking on</b> (<code>-rea on</code>, budget 320,{" "}
+              <code>--reasoning-format none</code>) has run on both boards; it is in the
+              accuracy tests, not the bars.</div>
           </li>
           <li>
             <span className="scope-tag undecided">undecided</span>
-            <div>
-              <b>Inference engine.</b> llama.cpp is what these runs use, not a
-              conclusion. The engine axis also holds <code>little-gemma</code> and
-              this project&apos;s own pipeline; LiteRT-LM was dropped. Which engine
-              carries the standard-benchmark rows has not been decided, so treat
-              these as llama.cpp figures rather than device figures.
-              little-gemma (S3) runs the same task on the Orin only, since its
-              fast path is CUDA. Its rows are compared with llama.cpp in the
-              paired tests below and never enter the Pi-vs-Orin figures.
-            </div>
+            <div><b>Engine.</b> llama.cpp is what these runs use, not a conclusion.
+              little-gemma runs on the Orin only (CUDA) and appears in the accuracy tests,
+              never in the Pi-vs-Orin bars. LiteRT-LM was dropped.</div>
           </li>
           <li>
             <span className="scope-tag open">planned</span>
-            <div>
-              <b>Capability (b) and (c).</b> Tool calling still rests on the custom
-              10-case suite — IFEval and BFCL are installed but unrun. No safety
-              benchmark has been chosen.
-            </div>
+            <div><b>Capability (b) and (c).</b> IFEval and BFCL are installed but unrun;
+              tool calling rests on the custom 10-case suite. No safety benchmark chosen.</div>
           </li>
         </ul>
       </details>
-
-      <div className="cmp-grid">
-        {/* tied comes from the paired test, never from the size of the gap:
-            a 1-point bar gap is not a win and is not drawn as one. */}
-        <Chart title="Accuracy" note="MMLU-Pro, pooled n=300 per model"
-               data={acc} unit="%" decimals={1} tied={accP ? accP.map((r) => !r.sig) : true} goodWhen="higher"
-               verdict={accVerdict} />
-        <Chart title="Decode throughput" note="tokens per second, generation only"
-               data={series("decode_tok_s")} unit="tok/s" decimals={2} goodWhen="higher"
-               verdict="Orin ~3.4x faster on both models" />
-        <Chart title="Energy per generated token" note="board DC draw ÷ tokens produced"
-               data={series("j_per_token")} unit="J/tok" goodWhen="lower"
-               verdict="Orin ~2.4x cheaper per token" />
-        <Chart title="Throughput per watt" note="decode tokens per second per watt"
-               data={series("tok_s_per_w")} unit="tok/s/W" decimals={3} goodWhen="higher"
-               verdict="Orin ~2.2x more work per watt" />
-        <Chart title="Board power while working" note="PMIC rails (Pi) / INA3221 VDD_IN (Orin)"
-               data={series("mean_w")} unit="W" goodWhen="lower"
-               verdict="Pi draws less — but for far longer, so it loses on energy" />
-        <Chart title="Peak temperature" note="SoC, across the whole run"
-               data={series("temp_max", 1)} unit="°C" decimals={1} goodWhen="lower"
-               verdict="Orin runs ~14 °C cooler; neither board throttled" />
-      </div>
-
-      {/* What the Orin actually brings: the GPU the Pi does not have. */}
-      <section className="card gpucard">
-        <div className="card-head">
-          <div>
-            <h2>What the Orin&apos;s GPU is doing</h2>
-            <p className="sub">Where the speed gap comes from. The Pi has no CUDA device.</p>
-          </div>
-        </div>
-
-        <div className="tiles">
-          <div className="tile">
-            <span className="tile-label">GPU utilisation</span>
-            <b className="tile-value" style={{ color: "var(--jetson)" }}>
-              {fmt(gpu.mean, 1)}<i>%</i></b>
-            <em className="delta flat">{fmt(Math.min(100, gpu.max), 0)}% peak · E4B runs</em>
-          </div>
-          <div className="tile">
-            <span className="tile-label">GPU clock</span>
-            <b className="tile-value">{fmt(gpu.mhz, 0)}<i>MHz</i></b>
-            <em className="delta flat">306–612 MHz observed</em>
-          </div>
-          <div className="tile">
-            <span className="tile-label">Layers offloaded</span>
-            <b className="tile-value">all<i>-ngl 99</i></b>
-            <em className="delta flat">nothing left on the CPU</em>
-          </div>
-          <div className="tile">
-            <span className="tile-label">Host CPU while decoding</span>
-            <b className="tile-value" style={{ color: "var(--pi)" }}>
-              {fmt(devMean("jetson", "e4b", "cpu_mean"), 1)}<i>%</i></b>
-            <em className="delta flat">
-              vs {fmt(devMean("pi", "e4b", "cpu_mean"), 0)}% on the Pi</em>
-          </div>
-        </div>
-
-        <details className="gpunote">
-          <summary>GPU and memory notes</summary>
-          <p>
-            <b>Ampere GPU, compute capability sm_87</b>, on a Jetson Orin Nano Super
-            developer kit in its <b>15 W</b> power mode. llama.cpp is built for sm_87
-            and offloads every layer, so the six Cortex-A78AE cores sit near idle at{" "}
-            {fmt(devMean("jetson", "e4b", "cpu_mean"), 1)}% while the GPU holds{" "}
-            {fmt(gpu.mean, 0)}%. On the Pi the same work pins the CPU at{" "}
-            {fmt(devMean("pi", "e4b", "cpu_mean"), 0)}%.
-          </p>
-          <p>
-            The catch is memory, and it is not capacity — the two boards are within
-            600 MB of each other, <b>8,062 MB</b> on the Pi against <b>7,485 MB</b> on
-            the Orin. It is what the memory is spent on. The Pi mmaps the GGUF, so
-            the weights live in evictable page cache and an E4B run peaks at{" "}
-            <b>4,118–4,294 MB</b> in use across its three runs — its resident set runs
-            higher than that, but those pages are reclaimable. Offloading every layer
-            to CUDA makes the allocation pinned device memory in the Orin&apos;s shared
-            pool, which has no swap: six E4B runs peaked at <b>6,874–7,320 MB</b>, the
-            worst of them leaving <b>165 MB</b> of headroom. Two E4B runs were killed
-            by the OOM killer when a second user logged in and took 1.25 GB; both are
-            kept under <code>stdbench/failed/</code>. That is why{" "}
-            <code>queue_jetson.sh</code> refuses to start an E4B run below 5,400 MB
-            free — the two E4B re-runs launched through it on 22 September cleared
-            that gate by 12 MB and by 1 MB. The Pi&apos;s ceiling is speed, the
-            Orin&apos;s is memory.
-          </p>
-        </details>
-      </section>
 
       <details className="card caveats fold">
         <summary><h2>Caveats</h2><span>significance, answer agreement, superseded runs, serving parity</span></summary>
         <ul>
           <li className="bad">
-            <b>The accuracy difference is not significant.</b> The bars differ by a
-            point or two, but the two boards answer the <em>same</em> questions, so the
-            honest test is paired, not two independent intervals. All six subsets are
-            now re-run with both boards configured identically, so the test runs over
-            the full <b>600 questions</b>: 321 right on both, 213 wrong on both, 31
-            only the Pi, 35 only the Orin. Sixty-six discordant pairs gives an exact
-            McNemar <b>p = 0.71</b> — no detectable difference. It holds within each
-            model too: E2B <b>p = 0.76</b> (51.7% against 52.7%), E4B <b>p = 1.00</b>{" "}
-            (65.7% against 66.0%). Read the accuracy chart as a tie.
+            <b>The accuracy gap is not significant.</b> Paired over all 600 questions: 321
+            right on both, 213 wrong on both, 31 only the Pi, 35 only the Orin — McNemar{" "}
+            <b>p = 0.71</b>. Per model: E2B p = 0.76 (51.7% vs 52.7%), E4B p = 1.00
+            (65.7% vs 66.0%).
           </li>
           <li>
-            <b>They do disagree on the answers themselves, though.</b> The two boards
-            pick the same letter on <b>475 of 600</b> questions — 79% — while landing
-            on scores 0.6 points apart. Same weights, same prompts, greedy decoding,
-            so the divergence is CPU versus CUDA arithmetic tipping near-ties, and it
-            is accuracy-neutral: of the 125 they answer differently, the Pi wins 31
-            and the Orin 35, the rest wrong both ways. That is the interesting result
-            here, not the score gap. The agreement rate is itself model-dependent —
-            E4B agrees on <b>258 of 300</b> (86%), E2B on only <b>217 of 300</b>{" "}
-            (72%), so the smaller model sits on more near-ties for the arithmetic
-            to tip.
+            <b>The boards still pick different answers.</b> Same letter on <b>475 of 600</b>{" "}
+            (79%): E4B 86%, E2B 72%. Same weights and greedy decoding, so CPU vs CUDA
+            arithmetic tips near-ties — and it cancels out (31 to the Pi, 35 to the Orin).
           </li>
           <li>
-            <b>Every Orin run here is a re-run; the originals are superseded.</b>{" "}
-            The first six ran without <code>-rea off --reasoning-budget -1</code>, so
-            llama.cpp split Gemma&apos;s thinking into <code>reasoning_content</code>{" "}
-            and lm-eval — which reads only <code>content</code> — scored what was
-            left: medians of 877–1,085 characters against the Pi&apos;s 1,792–1,947,
-            and
-            <b> 73 of 600 answers returned completely empty</b>. All six were re-run
-            on 21–22 September with the flags matched to the Pi; every one now has
-            zero empty answers and a 1,686–2,063 character median. The cost was
-            <b> 5.2 points of accuracy</b>, not the one point the first re-run
-            suggested: E2B moved 50→56, 48→47, 47→55 and E4B 59→67, 59→66, 62→65,
-            pooling 48.3→52.7 and 60.0→66.0. Five of the six superseded runs are kept
-            under <code>stdbench/failed/</code> and listed below; the sixth, the E4B s1
-            original, sits under <code>stdbench/archive/</code>, which this page does
-            not read — it is the one superseded run not shown here. The broken runs
-            were also <em>slower</em>{" "}
-            — 158–167 minutes against 98–102 for E4B — because the discarded thinking
-            was still generated and paid for.
+            <b>Every Orin run is a re-run.</b> The first six lacked{" "}
+            <code>-rea off --reasoning-budget -1</code>, so the thinking went to{" "}
+            <code>reasoning_content</code>, which lm-eval never reads: <b>73 of 600 answers
+            came back empty</b>. Re-run on 21–22 September with matched flags: zero empty,
+            and <b>+5.2 points</b> (E2B 48.3→52.7, E4B 60.0→66.0). Five originals are under{" "}
+            <code>stdbench/failed/</code>; the E4B s1 original is under{" "}
+            <code>stdbench/archive/</code>, which this page does not read. The broken runs
+            were also slower (E4B 158–167 min vs 98–102).
           </li>
           <li>
-            <b>The two boards were served identically.</b> Per-board defaults drift,
-            so the check is the actual command line each run used — the Pi&apos;s from
-            its <code>command.log</code> after <code>std_mmlupro.sh</code> rewrites{" "}
-            <code>runtime.env</code>, the Orin&apos;s from the live process. They
-            differ in exactly one place, which is the thing being compared:{" "}
-            <code>-t 3</code> on the Pi against <code>-ngl 99</code> on the Orin. Same
-            GGUF quant, same <code>-c 8192</code>, same{" "}
-            <code>-rea off --reasoning-budget -1 --cache-ram 0</code> on both. Note
-            that <code>meta.json</code> on the Pi is <em>not</em> the evidence for
-            this: it snapshots the server before the run script switches models, so it
-            reports the deployed defaults rather than what served the eval.
+            <b>Both boards were served identically.</b> Checked from the real command line
+            (the Pi&apos;s <code>command.log</code>, the Orin&apos;s live process): only{" "}
+            <code>-t 3</code> vs <code>-ngl 99</code> differs. The Pi&apos;s{" "}
+            <code>meta.json</code> is not evidence — it snapshots the server before the run
+            switches models.
           </li>
           <li>
-            <b>Uncertainty is from question sampling</b>, not repeats: ±9.7 points at
-            n=100 and ±5.6 pooled at n=300, at 95%. Differences smaller than that
-            are not differences.
+            <b>Uncertainty comes from question sampling</b>, not repeats: ±9.7 points at
+            n=100, ±5.6 pooled at n=300 (95%). Smaller gaps are not differences.
           </li>
           {pending.length > 0 && (
-            <li>
-              <b>Not finished yet:</b> {pending.join(", ")}. Those models pool over
-              fewer than three subsets, so their interval is wider than ±5.6.
-            </li>
+            <li><b>Not finished yet:</b> {pending.join(", ")}. Those pool over fewer than
+              three subsets, so their interval is wider.</li>
           )}
           <li>
-            <b>Power is board DC draw</b> — the Pi&apos;s PMIC rails summed, the
-            Orin&apos;s INA3221 <code>VDD_IN</code>. Same method on both, so the
-            comparison holds, but it is not wall power and excludes PSU conversion
-            loss.
+            <b>Power is board DC draw</b> (Pi PMIC rails, Orin INA3221 <code>VDD_IN</code>).
+            Same method on both, but not wall power.
           </li>
           {d.boxes.some((b) => b.failed?.length > 0) && (
             <li>
@@ -700,8 +549,8 @@ export default function Compare() {
         </ul>
       </details>
 
-      <section className="card">
-        <h2>Runs</h2>
+      <details className="card fold">
+        <summary><h2>All runs</h2><span>{allRuns.length} runs, one row each</span></summary>
         <div className="reqtable">
           <div className="reqtable-scroll">
             <table>
@@ -714,30 +563,29 @@ export default function Compare() {
                 </tr>
               </thead>
               <tbody>
-                {d.boxes.flatMap((b) =>
-                  MODELS.flatMap(([m]) => ["s1", "s2", "s3"].map((s) => {
-                    const r = runs[b.id]?.[`${m}-${s}`];
-                    const dv = r?.device || {};
-                    return (
-                      <tr key={`${b.id}-${m}-${s}`} className={r?.score == null ? "dim" : ""}>
-                        <td>{DEV[b.id].short}</td>
-                        <td>{m.toUpperCase()}</td><td>{s}</td>
-                        <td className="runname">{r?.run ?? "—"}</td>
-                        <td>{r?.score == null ? (r ? "running" : "—") : fmt(r.score, 1)}</td>
-                        <td>{fmt(dv.decode_tok_s, 2)}</td><td>{fmt(dv.j_per_token, 2)}</td>
-                        <td>{fmt(dv.mean_w, 2)}</td><td>{fmt(dv.energy_wh, 2)}</td>
-                        <td>{fmt(dv.temp_max, 1)}</td>
-                        <td>{dv.gpu_mean == null ? "n/a" : fmt(dv.gpu_mean, 1)}</td>
-                        <td>{fmt(r?.minutes)}</td>
-                      </tr>
-                    );
-                  })))}
+                {allRuns.map(({ b, m, s, r }) => {
+                  const dv = r.device || {};
+                  return (
+                    <tr key={`${b.id}-${m}-${s}`} className={r.score == null ? "dim" : ""}>
+                      <td>{DEV[b.id].short}</td>
+                      <td>{m.toUpperCase()}</td><td>{s}</td>
+                      <td className="runname">{r.run}</td>
+                      <td>{r.score == null ? "running" : fmt(r.score, 1)}</td>
+                      <td>{fmt(dv.decode_tok_s, 2)}</td><td>{fmt(dv.j_per_token, 2)}</td>
+                      <td>{fmt(dv.mean_w, 2)}</td><td>{fmt(dv.energy_wh, 2)}</td>
+                      <td>{fmt(dv.temp_max, 1)}</td>
+                      <td>{dv.gpu_mean == null ? "n/a" : fmt(dv.gpu_mean, 1)}</td>
+                      <td>{fmt(r.minutes)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
-        <p className="foot">GPU n/a: the Pi 5 has no CUDA device to sample.</p>
-      </section>
+        <p className="foot">GPU n/a: the Pi 5 has no CUDA device to sample.
+          {!MODELS.some(([m]) => rowsFor("iphone", m).length) && " No iPhone runs uploaded yet."}</p>
+      </details>
     </main>
   );
 }

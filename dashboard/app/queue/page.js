@@ -5,6 +5,7 @@ import { useQueue, latestPerRun } from "../lib/queue-context";
 import { when as fmtTime } from "../lib/format";
 import PageHeader from "../components/PageHeader";
 import StatePill from "../components/StatePill";
+import { Check, Hourglass, X } from "lucide-react";
 
 // Batches go out one model at a time: every subset of E2B (s1, s2, s3), then
 // every subset of E4B. A model's row is finished before the next one starts.
@@ -24,7 +25,7 @@ function expand(spec, sel, text) {
   return combos;
 }
 
-const MARK = (c) => (c.deferred ? "⏳" : c.ok ? "✓" : "✗");
+const MARK = (c) => (c.deferred ? <Hourglass className="ic" /> : c.ok ? <Check className="ic" /> : <X className="ic" />);
 
 function JobForm({ box, onQueued }) {
   // Only the kinds this board can run: job_kinds.json is one file for both
@@ -213,7 +214,7 @@ function JobForm({ box, onQueued }) {
       )}
 
       {results.some((r) => r.prechecks.some((c) => c.deferred)) && (
-        <p className="batch-note">⏳ checked when the job starts, since the board is busy now.</p>
+        <p className="batch-note"><Hourglass className="ic" /> checked when the job starts, since the board is busy now.</p>
       )}
 
       {waivable && (
