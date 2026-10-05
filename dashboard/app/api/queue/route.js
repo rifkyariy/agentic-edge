@@ -2,6 +2,7 @@ import { byId } from "../../lib/hosts";
 import { onBoard, onEveryBoard, shq } from "../../lib/ssh";
 import { shared, invalidate } from "../../lib/shared";
 import { phoneStatus } from "../../lib/phone";
+import { withoutForeignJobs } from "../../lib/plan";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +22,8 @@ export async function GET(request) {
   const ttl = describe ? 60000 : 4000;
   return Response.json(await shared(key, ttl, async () => ({
     ts: Date.now(),
-    boxes: await onEveryBoard("queue_ctl.py", [describe ? "--describe" : "--status"],
-                              { python: "venv" }, { jobs: [] }),
+    boxes: (await onEveryBoard("queue_ctl.py", [describe ? "--describe" : "--status"],
+                               { python: "venv" }, { jobs: [] })).map(withoutForeignJobs),
     // The iPhone has no queue; its status rides along so the sidebar can show
     // it next to the boards without a poll of its own.
     ...(describe ? {} : { phone: await phoneStatus() }),

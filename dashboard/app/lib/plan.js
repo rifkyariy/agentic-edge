@@ -41,6 +41,29 @@ export function parseRun(name) {
     thinking: m[4] ? "on" : "off",
   };
 }
+// Other projects borrow the boards through the same queue and run_measured.sh
+// (edge-grader's board_grade.sh runs as a raw job), so their jobs and run
+// directories sit next to ours. They are not this project's data: the routes
+// drop them before any page sees them. A name may carry a place prefix
+// (failed/, archive/) from run_detail.py --history.
+export const FOREIGN_PREFIXES = ["edge-grader"];
+export const isForeign = (name) => {
+  const base = (name || "").trim().toLowerCase().split("/").pop();
+  return FOREIGN_PREFIXES.some((p) => base.startsWith(p));
+};
+const foreignJob = (j) => isForeign(j.label) || isForeign(j.output_dir);
+
+// A board's queue_ctl --status answer without other projects' jobs, or the
+// events that belong to them.
+export function withoutForeignJobs(box) {
+  if (!Array.isArray(box?.jobs)) return box;
+  const drop = new Set(box.jobs.filter(foreignJob).map((j) => j.id));
+  if (!drop.size) return box;
+  return { ...box, jobs: box.jobs.filter((j) => !drop.has(j.id)),
+           ...(Array.isArray(box.events)
+             ? { events: box.events.filter((e) => !drop.has(e.job)) } : {}) };
+}
+
 const matches = (name, model, subset, thinking = "off", engine = "llama.cpp") => {
   const r = parseRun(name);
   return Boolean(r) && r.engine === engine && r.model === model

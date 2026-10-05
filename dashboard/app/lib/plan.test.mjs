@@ -1,7 +1,7 @@
 // Run with: node --test dashboard/app/lib/plan.test.mjs
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cell, parseRun, PLAN } from "./plan.js";
+import { cell, isForeign, parseRun, PLAN, withoutForeignJobs } from "./plan.js";
 
 const doneBox = (run, at = "2026-09-21 10:00") => ({
   data: { procs: {}, completed: [{ task: "mmlu_pro", run, score: 66, stderr: 4.7, at }] },
@@ -154,4 +154,23 @@ test("parseRun reads every engine prefix, and refuses tagged runs", () => {
   assert.equal(parseRun("mmlupro100-e2b").explicitSubset, false);
   assert.equal(parseRun("mmlupro100-e2b-s3-letter-r6"), null);
   assert.equal(parseRun("failed/mmlupro100-e2b-s1"), null);
+});
+
+test("edge-grader runs are another project's, wherever they sit", () => {
+  assert.ok(isForeign("edge-grader-e4b-test_ua-t3"));
+  assert.ok(isForeign("failed/edge-grader-e2b-test_ua"));
+  assert.ok(!isForeign("mmlupro100-e4b-s2"));
+  assert.ok(!isForeign("pi-verify-cost-e2b"));
+  assert.ok(!isForeign(undefined));
+});
+
+test("the queue feed drops other projects' jobs and their events", () => {
+  const box = { id: "pi", ok: true,
+    jobs: [{ id: "a", label: "mmlupro-e2b-s1", output_dir: "mmlupro100-e2b-s1", state: "done" },
+           { id: "b", label: "edge-grader-e2b-test_ua", output_dir: "edge-grader-e2b-test_ua", state: "failed" }],
+    events: [{ job: "a", event: "queued" }, { job: "b", event: "failed" }] };
+  const out = withoutForeignJobs(box);
+  assert.deepEqual(out.jobs.map((j) => j.id), ["a"]);
+  assert.deepEqual(out.events.map((e) => e.job), ["a"]);
+  assert.equal(withoutForeignJobs({ ok: false, error: "x" }).error, "x");
 });
