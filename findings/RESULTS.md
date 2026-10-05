@@ -418,15 +418,201 @@ Device cost is **not comparable to §7** and is only indicative:
 - iOS gives apps no SoC temperature, power rail or GPU utilisation readings.
   Each `n/a` carries its reason in the file's `na_reasons`.
 
+## 7.4 S3 — little-gemma on the Jetson (2026-09-25 – 27)
+
+The baseline task through a second engine: **little-gemma** (pinned upstream
+`aee759d`, patched for `-raw` prompts, whole-prompt tokenisation and a 2,048
+answer cap; AGENTS.md §5). It runs the same GGUFs, subsets, prompts and caps,
+with thinking off (`--thinking off`, engine `-think -1`) and on (`--thinking
+on`, `-think 320`, the §7.2 budget). Jetson only: on the Pi's CPU little-gemma
+decodes ~6× slower and prefills 41–43× slower than llama.cpp. That would put
+the six Pi runs at ~110 h, so they were not run
+(`docs/proposals/EXPERIMENT-MATRIX.md`). All 12 runs passed the serving-flag
+fingerprint (`lg-baseline` / `lg-thinking-on`).
+
+| Jetson | llama.cpp (S1 / S2) | little-gemma (S3 / S3t) | Δ | both / neither / llama.cpp only / lg only | McNemar |
+|---|---|---|---|---|---|
+| E2B, off | 52.7% | **53.0%** (54/51/54) | +0.3 | 145 / 128 / 13 / 14 | p = 1.00 |
+| E4B, off | 66.0% | **65.3%** (64/67/65) | −0.7 | 183 / 89 / 15 / 13 | p = 0.85 |
+| E2B, thinking on | 49.7% | **49.3%** (48/49/51) | −0.4 | 125 / 128 / 24 / 23 | p = 1.00 |
+| E4B, thinking on | 66.7% | **63.7%** (62/63/66) | −3.0 | 176 / 85 / 24 / 15 | p = 0.20 |
+
+**The engine is not a confound.** little-gemma matches llama.cpp within noise
+in all four cells. The two engines agree on the answer letter for 77% (E2B) and
+83% (E4B) of questions with thinking off. That is about the same agreement as
+between the two boards in §7.1, so swapping the engine moves individual answers
+about as much as swapping the hardware does.
+
+**Thinking on fails again, on a second engine.** S3t against S3: E2B −3.7
+points (126 / 119 / S3 only 33 / S3t only 22, p = 0.18), E4B −1.6 (177 / 90 /
+19 / 14, p = 0.49). Unextractable answers rise the same way as in §7.2: E2B
+17 → 39, E4B 18 → 32. That makes six model × engine × board combinations
+(§7.2 and here), and none is positive beyond noise.
+
+Device cost, pooled over s1/s2/s3:
+
+| Jetson | energy | wall time | decode tok/s | prefill tok/s | mean W | J / gen. token |
+|---|---|---|---|---|---|---|
+| E2B llama.cpp (S1) | 25.6 Wh | 155 min | 23.0 | 477 | 10.1 | 0.46 |
+| E2B little-gemma (S3) | **24.5 Wh** (−4%) | **141 min** (−9%) | 25.6 | 1,690 | 10.6 | 0.45 |
+| E4B llama.cpp (S1) | 54.5 Wh | 313 min | 11.6 | 275 | 10.5 | 0.96 |
+| E4B little-gemma (S3) | **47.6 Wh** (−13%) | **260 min** (−17%) | 15.1 | 352 | 11.1 | 0.84 |
+| E2B little-gemma, thinking (S3t) | 30.5 Wh (+24% vs S3) | 174 min (+23%) | 25.6 | 1,689 | 10.7 | 0.44 |
+| E4B little-gemma, thinking (S3t) | 58.7 Wh (+23% vs S3) | 316 min (+22%) | 15.1 | 366 | 11.3 | 0.82 |
+
+little-gemma draws ~0.5 W more but finishes sooner, so it is the cheaper engine
+on the Jetson, by more on E4B. It still prefills the whole prompt on every
+request: 144k prompt tokens per E4B subset against llama.cpp's 38k. The
+Jetson's prefill speed makes that cheap. One caveat on E4B: the S3 s3 run made
+**105 requests for 100 questions**, because lm-eval retried 5. That adds about
+3.6k tokens and a few minutes to the S3 E4B totals. The scores are unaffected,
+since each question is scored once. No throttling was recorded; maximum
+temperature was 60.9 °C.
+
+These are measurements of two engines other people wrote. They set the bar
+that §7.6 must clear. They are not a contribution (`docs/proposals/ISO-ACCURACY.md`).
+
+## 7.5 S8 — llama.cpp with a TurboQuant KV cache (2026-09-29 – 10-03)
+
+The S1/S2 task unchanged, served by the TurboQuant fork of llama.cpp
+(`TheTom/llama-cpp-turboquant` @ `bcb85fc`, built beside each board's pinned
+llama.cpp, never over it) with **`-ctk turbo3 -ctv turbo3`**. The fork upgrades
+K to `q8_0` itself for Gemma 4's 8:1 GQA, and that default is kept, so the
+effective cache is **K = q8_0, V = turbo3**. Both boards, both thinking modes,
+24 runs. Every run's captured command line matched `tq-baseline` /
+`tq-thinking-on`.
+
+Scores s1/s2/s3, and each S8 cell against the matching llama.cpp cell on the
+same board and questions:
+
+| | Pi 5 | vs S1/S2 | Jetson | vs S1/S2 |
+|---|---|---|---|---|
+| E2B, off | 52.7% (58/50/50) | +1.0 · 18 / 21 · p = 0.75 | 52.0% (58/49/49) | −0.7 · 20 / 18 · p = 0.87 |
+| E4B, off | 62.3% (61/61/65) | **−3.4** · 25 / 15 · p = 0.15 | 63.3% (65/61/64) | **−2.7** · 26 / 18 · p = 0.29 |
+| E2B, thinking on | 51.3% (53/49/52) | +1.3 · 28 / 32 · p = 0.70 | 49.7% (52/46/51) | ±0.0 · 30 / 30 · p = 1.00 |
+| E4B, thinking on | 61.3% (61/62/61) | **−5.0** · 29 / 14 · p = **0.03** | 61.3% (66/58/60) | **−5.4** · 34 / 18 · p = **0.04** |
+
+The middle pair in each cell is llama.cpp-only / TurboQuant-only correct.
+
+**On E4B the compressed cache costs accuracy.** All four E4B cells lose points.
+The losses are significant with thinking on, on both boards. Pooled over both
+boards and both thinking modes, plain llama.cpp alone gets 114 questions right
+and TurboQuant alone 65 (p = 0.0003). Thinking off alone, pooled over both
+boards: 51 against 33 (p = 0.06). E2B shows nothing: 96 against 101 over the
+same four cells (p = 0.78). The likely reason is that the thinking-on responses
+are longer, so the V cache error accumulates over more positions, but this data
+cannot show that. The loss repeats across both boards, so it is not
+backend-specific: Pi vs Jetson under S8 stays tied (E2B p = 0.86, E4B p =
+0.75; thinking on, p = 0.59 and 1.00).
+
+**It is also slower and costlier on both boards**, pooled over s1/s2/s3:
+
+| | energy | wall time | decode tok/s | prefill tok/s | J / gen. token |
+|---|---|---|---|---|---|
+| Pi E2B, S1 → S8 | 64.2 → 93.4 Wh (+45%) | 552 → 850 min (+54%) | 6.80 → 4.92 | 36.9 → 14.9 | 1.15 → 1.69 |
+| Pi E4B, S1 → S8 | 125.5 → 215.8 Wh (+72%) | 1111 → 1988 min (+79%) | 3.37 → 2.19 | 21.3 → 6.4 | 2.20 → 3.75 |
+| Jetson E2B, S1 → S8 | 25.6 → 31.4 Wh (+23%) | 155 → 202 min (+30%) | 23.0 → 16.8 | 477 → 438 | 0.46 → 0.59 |
+| Jetson E4B, S1 → S8 | 54.5 → 65.7 Wh (+21%) | 313 → 404 min (+29%) | 11.6 → 9.0 | 275 → 209 | 0.96 → 1.15 |
+
+The thinking-on rows add 18–32% on top of that: Pi 113.6 / 254.5 Wh,
+Jetson 41.3 / 81.8 Wh, for E2B / E4B.
+
+Two other observations:
+
+- **Memory is the one gain.** The Jetson's peak memory in use fell from 4,841 to
+  3,323 MB on E2B and from 6,961 to 4,428 MB on E4B (s1). That frees about
+  2.5 GB on a 7.5 GB board. On the Pi, E2B peaked about 0.2 GB lower.
+- **The fork prefills more.** It processed ~36% more prompt tokens per subset
+  (51.9k against 38.1k on Pi E2B s1), which suggests it reuses less of each
+  slot's cached prefix. That adds to its prefill deficit, on top of the
+  slower cache arithmetic.
+
+At an 8,192-token context, neither board is short of KV memory with the
+uncompressed cache. For this workload, S8 trades accuracy (E4B) and 20-80% more
+energy for memory the boards did not need. It would only pay off at contexts
+long enough for the KV cache to dominate memory, and this task never reaches
+those.
+
+## 7.6 S9 — the proposed engine (2026-10-04 – 05)
+
+S9 is little-gemma plus this project's `ae.patch` (`benchmark/little_gemma/`).
+It adds two switches, each designed to change speed only:
+
+- **`-ngram -block 3`**: prompt-lookup drafts, checked by greedy verification
+  three tokens at a time.
+- **`-reuse`**: KV snapshots of the shared few-shot prefix, restored across
+  requests instead of prefilled again.
+
+No MTP head is used, since neither baseline ran speculative decoding. The task is
+S3's (thinking off), on the Jetson. Variants: `full` = both switches,
+`ngram`, `reuse`, `base` = neither.
+
+**The gate, before any full run** (`ae_gate.py`, 2026-10-04). Each switch set
+replays 28 already-answered S3 questions (2 per category) and must return every
+reply byte-for-byte. Eleven sweeps all passed, 28/28:
+
+| flags | E2B request time | E4B request time |
+|---|---|---|
+| none | 576 s, 577 s (rerun) | 1,246 s |
+| `-reuse -ngram -block 2` | 502 s, 502 s (rerun) | 1,034 s |
+| `-reuse -ngram -block 3` | **497 s**, 489 s (rerun) | **1,018 s** |
+| `-reuse -ngram -block 4` | 516 s | 1,031 s |
+
+Block 3 was fastest on both models and is the setting used. The first E2B
+`none` and `block 2` sweeps show as *failed* in the queue only because
+`ae_gate.py` did not yet write its `.done` marker. Their logs record 28/28, and
+their reruns (`-r2`) reproduce them to the second.
+
+**Accuracy: identical to S3 by construction, and verified.** Across all 12 full
+runs (`full` and `ngram`, both models, s1/s2/s3), **every one of the 1,200
+replies is byte-identical to S3's**. So the scores are S3's exactly: E2B 53.0%
+(54/51/54), E4B 65.3% (64/67/65). They are tied with llama.cpp as in §7.4.
+
+**Cost, pooled over s1/s2/s3:**
+
+| Jetson | energy | wall time | J / gen. token | vs S3 | vs llama.cpp S1 |
+|---|---|---|---|---|---|
+| E2B S3 little-gemma | 24.5 Wh | 141 min | 0.45 | — | −4% Wh, −9% time |
+| E2B S9 `ngram` | 20.8 Wh | 124 min | 0.38 | −15% Wh, −12% time | −19% Wh, −20% time |
+| E2B S9 `full` | **20.3 Wh** | **121 min** | **0.37** | **−17% Wh, −14% time** | **−21% Wh, −22% time** |
+| E4B S3 little-gemma | 47.6 Wh | 260 min | 0.84 | — | −13% Wh, −17% time |
+| E4B S9 `ngram` | 38.8 Wh | 214 min | 0.70 | −18% Wh, −18% time | −29% Wh, −32% time |
+| E4B S9 `full` | **37.7 Wh** | **208 min** | **0.68** | **−21% Wh, −20% time** | **−31% Wh, −34% time** |
+
+Mean power is unchanged (10.3–11.0 W), so the whole saving is time. Per 100
+questions, S9 `full` costs **6.8 Wh on E2B and 12.6 Wh on E4B**, against
+the 8.2 and 15.9 Wh bar `ISO-ACCURACY.md` set from S3. The E4B S3 totals
+include s3's 5 retried requests (§7.4). Over s1 + s2 alone, which had none,
+`full` still takes 18% less time than S3 (139 against 169 min).
+
+**Almost all of the gain is `-ngram`.** `-reuse` cut the prompt tokens
+processed per E4B subset from 144k to 38k, but saved only ~1–3% more time. The
+Jetson prefills at hundreds to ~1,700 tok/s, so prefill was never the
+bottleneck. The `-reuse` snapshot costs 39 MiB, and peak memory was otherwise
+unchanged (E4B s1: 5,804 MB `full` against 5,924 MB S3).
+
+**Two variants have no runs:**
+
+- **`reuse`: all six runs blocked.** The queue's fingerprint check gave up after
+  420 s with "no llama-server appeared". The cause is in each run's
+  `server.log`: `lg_openai_shim.py` exited at once with *argument
+  --engine-flags: expected one argument*. With `VARIANT=reuse` the value
+  is the single token `-reuse`. argparse treats a leading-dash value as an
+  option unless it contains a space. The other variants' values (`-ngram
+  -block 3`) contain one, which is why they ran. Passing it as
+  `--engine-flags=-reuse` would fix this. That fix is not made yet.
+- **`base`**: not queued. The gate's no-switch sweeps (28/28 on both models)
+  are its only evidence so far.
+
 ## 8. Capability coverage
 
 Paper 1 claims three capability areas. Only one is covered so far.
 
-| Capability | Benchmark | Pi 5 | Jetson |
-|---|---|---|---|
-| a. General knowledge / reasoning | MMLU-Pro (thinking off and on), GSM8K | done, both models | MMLU-Pro done, both models, thinking off and on |
-| b. Instruction following + tool calling | own 10-case suite + classifier audit; **no standard benchmark run** | partial | not started |
-| c. Safety / security | none chosen | — | — |
+| Capability | Benchmark | Pi 5 | Jetson | iPhone |
+|---|---|---|---|---|
+| a. General knowledge / reasoning | MMLU-Pro, GSM8K | MMLU-Pro done: llama.cpp (S1/S2), TurboQuant (S8), thinking off and on; GSM8K done | MMLU-Pro done: llama.cpp, little-gemma (S3), TurboQuant (S8), thinking off and on; the proposed engine (S9) thinking off | MMLU-Pro done, thinking off |
+| b. Instruction following + tool calling | own 10-case suite + classifier audit; **no standard benchmark run** | partial | not started | not started |
+| c. Safety / security | none chosen | — | — | — |
 
 MMLU-Pro does not touch tool calling, so (b) currently rests on the custom
 suite. IFEval (541 prompts, rule-graded) and BFCL (AST-graded, with an
@@ -450,46 +636,48 @@ scratch files were archived to `findings/early-engine-benchmarks/` first.
 
 ## 10. Status (2026-10-05)
 
-**Written up here:** MMLU-Pro both models · tinyGSM8k E2B (256/1024) and E4B
-(256) · Tier 1–3 own suite · MTP × thinking · quant sweep · live-answer audit ·
-classifier audit · **MMLU-Pro s1/s2/s3 × E2B/E4B on both boards with telemetry,
-thinking off (§7.1) and thinking on (§7.2)**, all 24 runs on matched serving
-flags · **the iPhone arm, s1/s2/s3 × E2B/E4B (§7.3)**, tied with both boards.
+**Written up here:**
+- MMLU-Pro both models · tinyGSM8k E2B (256/1024) and E4B (256) · Tier 1–3
+  own suite · MTP × thinking · quant sweep · live-answer audit · classifier
+  audit.
+- **MMLU-Pro, s1/s2/s3 × E2B/E4B, every condition that has run:**
+  - S1 and S2 on both boards (§7.1, §7.2).
+  - The iPhone (§7.3).
+  - S3 and S3t, little-gemma on the Jetson (§7.4).
+  - S8 TurboQuant on both boards, thinking off and on (§7.5).
+  - S9 `full` and `ngram`, the proposed engine (§7.6).
 
-**Measured, not yet written up.** All are MMLU-Pro s1/s2/s3 × E2B/E4B, with the
-task otherwise unchanged. Scores are per subset, s1/s2/s3.
+All board runs passed the serving-flag fingerprint.
 
-| condition | engine | device | thinking off | thinking on |
-|---|---|---|---|---|
-| S3 | little-gemma | Jetson | E2B 54/51/54 · E4B 64/67/65 | E2B 48/49/51 · E4B 62/63/66 |
-| S8 | llama.cpp + TurboQuant turbo3 KV cache | Pi | E2B 58/50/50 · E4B 61/61/65 | E2B 53/49/52 · E4B 61/62/61 |
-| S8 | llama.cpp + TurboQuant turbo3 KV cache | Jetson | E2B 58/49/49 · E4B 65/61/64 | E2B 52/46/51 · E4B 66/58/60 |
-| S9 `full` | proposed engine (little-gemma + ae.patch, `-reuse -ngram`) | Jetson | E2B 54/51/54 · E4B 64/67/65 | — (not planned) |
-| S9 `ngram` | proposed engine, `-ngram` | Jetson | E2B 54/51/54 · E4B 64/67/65 | — (not planned) |
+Headline, n = 300 per model:
 
-S9 `full` and `ngram` reproduce S3's scores exactly, subset by subset. That is
-what the design requires: every S9 switch is greedy-exact, and `ae_gate.py`
-checks each switch set for byte-identical replies against S3 before a full run
-counts. The S9 gate sweeps
-(`ae-sweep-*`) ran on 2026-10-04. Their cost results (speed, energy) and the
-S3/S8/S9 accuracy comparisons need their own sections.
+| | E2B | E4B | cheapest Jetson Wh per 100 q (E2B / E4B) |
+|---|---|---|---|
+| baseline, Pi / Jetson / iPhone (MLX) | 51.7 / 52.7 / 51.0% | 65.7 / 66.0 / 66.0% | 8.5 / 18.2 |
+| thinking on (320), vs the same engine off | −1.4 to −3.7 | −2.0 to +0.7 | +18–32% cost |
+| little-gemma (S3) | 53.0% | 65.3% | 8.2 / 15.9 |
+| TurboQuant KV (S8) | 52.7 / 52.0% | **62.3 / 63.3%** | 10.5 / 21.9 |
+| proposed engine (S9 `full`) | 53.0% (= S3, byte-identical) | 65.3% (= S3) | **6.8 / 12.6** |
 
 **Open:**
-- **S9 `reuse`: all six runs blocked.** The queue's serving-flag check gave up
-  with "no llama-server appeared within 420s, so the serving flags could not be
-  verified". `full` and `ngram` went through the same check and ran, so the
-  cause is specific to `reuse`'s setup on the Jetson. It has not been
-  diagnosed. S9 `base` is not queued.
+- **S9 `reuse`: all six runs blocked.** The cause is now known (§7.6): the shim
+  rejects `--engine-flags -reuse` as a missing argument. It needs
+  `--engine-flags=-reuse` in `std_mmlupro_lg_jetson.sh`, then a requeue.
+  S9 `base` is not queued.
 - Two Jetson jobs from 2026-09-23 (`mmlupro-e4b-s2-think`, `-s3-think`) still
   sit blocked by a false-positive memory check. Their cells were completed on
-  2026-09-24 by later jobs, so they can be cancelled.
+  2026-09-24 by later jobs, so they can be cancelled. The same goes for the six
+  `reuse` jobs once they are requeued.
 - The S9 code (`job_kinds.json` `mmlupro-ae`, the queue and run scripts) is
   modified on the Jetson but not committed. `ae_gate.py` is committed
   (2026-10-04).
+- The S3/S8/S9 per-question samples live on the boards. Unlike S1/S2's, they
+  are not yet copied into `findings/stdbench/`.
 
 **Not started**, in rough priority order: capability (b) standard benchmark
 (IFEval and BFCL installed but unrun) · capability (c) safety and security (no
-benchmark chosen) · quantization control (Q8_0 through the same harness, ~7h).
+benchmark chosen) · precision control (S7: E4B Q5_K_M, the highest precision
+both boards fit; `docs/proposals/EXPERIMENT-MATRIX.md`).
 
 **No further GSM8K runs.** Its results stay as the methodological appendix on
 generation caps (§1).
