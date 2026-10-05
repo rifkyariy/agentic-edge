@@ -5,6 +5,8 @@ import { useQueue, latestPerRun } from "../lib/queue-context";
 import { when as fmtTime } from "../lib/format";
 import PageHeader from "../components/PageHeader";
 import StatePill from "../components/StatePill";
+import { isFailedJob } from "../lib/plan";
+import { useShowFailed } from "../lib/show-failed";
 import { Check, Hourglass, X } from "lucide-react";
 
 // Batches go out one model at a time: every subset of E2B (s1, s2, s3), then
@@ -258,6 +260,7 @@ function JobForm({ box, onQueued }) {
 }
 
 function QueueList({ box, onChange }) {
+  const [showFailed, setShowFailed] = useShowFailed();
   const cancel = async (id) => {
     await fetch(`/api/queue?box=${box.id}&job=${id}`, { method: "DELETE" });
     onChange();
@@ -269,10 +272,23 @@ function QueueList({ box, onChange }) {
   const superseded = new Set(jobs.filter((x) => !latest.has(x.id)
     && (x.state === "blocked" || x.state === "failed")).map((x) => x.id));
   if (!jobs.length) return <p className="empty">Nothing queued on this board.</p>;
-  const shown = jobs.slice().reverse();
+  // Failed jobs stay in queue.json and on the job page; the list shows them
+  // only with "show failed" on, and says how many it is hiding.
+  const failed = jobs.filter(isFailedJob).length;
+  const shown = jobs.filter((j) => showFailed || !isFailedJob(j)).reverse();
+  const toggle = failed > 0 && (
+    <div className="chips qfailed" role="group" aria-label="failed jobs">
+      <span>failed</span>
+      <button type="button" aria-pressed={!showFailed} onClick={() => setShowFailed(false)}>hidden</button>
+      <button type="button" aria-pressed={showFailed} onClick={() => setShowFailed(true)}>shown {failed}</button>
+    </div>
+  );
+  if (!shown.length) return <>{toggle}<p className="empty">Only failed jobs on this board.</p></>;
   // Every job, newest first, scrolling inside the card so a long history
   // never pushes the other board's card down.
   return (
+    <>
+    {toggle}
     <div className="table-wrap scroll-box queue-scroll" tabIndex={0} role="region" aria-label="jobs">
     <table className="queue-table">
       <colgroup><col /><col className="c-state" /><col className="c-when" /><col className="c-act" /></colgroup>
@@ -296,6 +312,7 @@ function QueueList({ box, onChange }) {
       </tbody>
     </table>
     </div>
+    </>
   );
 }
 

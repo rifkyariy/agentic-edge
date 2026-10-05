@@ -265,7 +265,8 @@ These are not preferences — breaking them invalidates the paper.
   thoughts return inline as with `--reasoning-format none`. Verified
   2026-09-25: prompt token counts match llama.cpp (1,097 = 1,097).
 - **Report every run, including failures and superseded ones.** No quiet
-  replacement of a bad run with a good one.
+  replacement of a bad run with a good one. (The dashboard hides failed runs
+  until "show failed" is on, and says how many; that is a view, not removal.)
 - **Greedy decoding**, so repeats of the same questions measure only ~1 point of
   implementation noise. Uncertainty comes from question sampling: ±9.7 at
   n=100, ±5.6 pooled at n=300. More questions beat more repeats.

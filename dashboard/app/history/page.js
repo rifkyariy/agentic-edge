@@ -5,10 +5,13 @@ import RunDetail from "../RunDetail";
 import { fmt, durMinutes as dur } from "../lib/format";
 import PageHeader from "../components/PageHeader";
 import StatePill from "../components/StatePill";
+import { isFailedRun } from "../lib/plan";
+import { useShowFailed } from "../lib/show-failed";
 
 // What each status means, in the words the table shows. AGENTS §5: every run
-// is reported, failures and superseded ones included, so none are hidden by
-// default — the filters narrow, they never drop a run silently.
+// is reported, failures and superseded ones included. Failed runs are hidden
+// until "show failed" is on, and the switch says how many it hides, so none
+// is dropped silently; picking the "failed" status shows them as well.
 const STATUS = {
   done: "complete",
   running: "running",
@@ -40,6 +43,7 @@ export default function HistoryPage() {
   const [engine, setEngine] = useState("all");
   const [q, setQ] = useState("");
   const [detail, setDetail] = useState(null);   // {box, run}
+  const [showFailed, setShowFailed] = useShowFailed();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,8 +59,10 @@ export default function HistoryPage() {
   const rows = useMemo(() => boxes.flatMap((b) =>
     (b.runs || []).map((r) => ({ ...r, box: b }))), [boxes]);
 
+  const failedCount = rows.filter(isFailedRun).length;
   const shown = rows.filter((r) =>
-    (board === "all" || r.box.id === board)
+    (showFailed || status === "failed" || !isFailedRun(r))
+    && (board === "all" || r.box.id === board)
     && (status === "all" || r.status === status)
     && (thinking === "all" || r.thinking === thinking)
     && (engine === "all" || r.engine === engine)
@@ -69,7 +75,7 @@ export default function HistoryPage() {
 
   return (
     <main>
-      <PageHeader title="History" sub="Every run on disk, failed and superseded included. Click one to open it." />
+      <PageHeader title="History" sub="Every run on disk, superseded included; failed runs on request. Click one to open it." />
 
       <section className="card">
         <div className="filters">
@@ -80,6 +86,11 @@ export default function HistoryPage() {
           <Chips label="engine" value={engine} onChange={setEngine}
                  options={[["all", "any"], ["llama.cpp", "llama.cpp"], ["little-gemma", "little-gemma"], ["turboquant", "turboquant"]]} />
           <Chips label="status" value={status} onChange={setStatus} options={statusOptions} />
+          {failedCount > 0 && (
+            <Chips label="failed" value={showFailed ? "show" : "hide"}
+                   onChange={(v) => setShowFailed(v === "show")}
+                   options={[["hide", "hidden"], ["show", `shown ${failedCount}`]]} />
+          )}
           <input className="search" value={q} placeholder="search run name…"
                  onChange={(e) => setQ(e.target.value)} aria-label="search run name" />
           <button type="button" className="refresh" onClick={load} disabled={loading}>
@@ -93,7 +104,8 @@ export default function HistoryPage() {
         ))}
 
         {loading && !rows.length && <p className="empty">Reading both boards&hellip;</p>}
-        {!loading && !shown.length && <p className="empty">No runs match these filters.</p>}
+        {!loading && !shown.length && <p className="empty">No runs match these filters
+          {!showFailed && failedCount ? ` (${failedCount} failed hidden)` : ""}.</p>}
 
         {shown.length > 0 && (
           <div className="table-wrap scroll-box history-scroll" tabIndex={0} role="region" aria-label="run history">

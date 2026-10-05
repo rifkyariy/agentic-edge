@@ -1,7 +1,7 @@
 // Run with: node --test dashboard/app/lib/plan.test.mjs
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cell, isForeign, parseRun, PLAN, withoutForeignJobs } from "./plan.js";
+import { cell, isFailedJob, isFailedRun, isForeign, parseRun, PLAN, withoutForeignJobs } from "./plan.js";
 
 const doneBox = (run, at = "2026-09-21 10:00") => ({
   data: { procs: {}, completed: [{ task: "mmlu_pro", run, score: 66, stderr: 4.7, at }] },
@@ -173,4 +173,13 @@ test("the queue feed drops other projects' jobs and their events", () => {
   assert.deepEqual(out.jobs.map((j) => j.id), ["a"]);
   assert.deepEqual(out.events.map((e) => e.job), ["a"]);
   assert.equal(withoutForeignJobs({ ok: false, error: "x" }).error, "x");
+});
+
+test("failed means moved to failed/ or a failed queue job, not unfinished", () => {
+  assert.ok(isFailedRun({ status: "failed", place: "failed" }));
+  assert.ok(isFailedRun({ status: "incomplete", job: { id: "x", state: "failed" } }));
+  assert.ok(!isFailedRun({ status: "incomplete", job: { id: "x", state: "blocked" } }));
+  assert.ok(!isFailedRun({ status: "superseded", place: "superseded" }));
+  assert.ok(!isFailedRun({ status: "done" }));
+  assert.ok(isFailedJob({ state: "failed" }) && !isFailedJob({ state: "blocked" }));
 });

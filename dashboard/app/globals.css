@@ -434,6 +434,7 @@ table.score tr.tie td,table.score tr.tie th{background:color-mix(in srgb,var(--n
 .qbox-jetson{border-top-color:var(--jetson)}
 .qsec{font:600 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);
       margin:4px 0 -6px;padding-top:12px;border-top:1px solid var(--line)}
+.qfailed{justify-content:flex-end}
 .empty{font-size:13px;color:var(--ink-3);margin:0;padding:14px;text-align:center;
        border:1px dashed var(--line-2);border-radius:10px}
 

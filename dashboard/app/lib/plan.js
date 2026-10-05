@@ -64,6 +64,13 @@ export function withoutForeignJobs(box) {
              ? { events: box.events.filter((e) => !drop.has(e.job)) } : {}) };
 }
 
+// A failed run: one moved to stdbench/failed/, or one whose queue job ended
+// failed. Hidden unless "show failed" is on (lib/show-failed.js); a run that
+// merely did not finish, or is blocked, is not failed and stays listed.
+export const isFailedJob = (j) => j?.state === "failed";
+export const isFailedRun = (r) => r?.status === "failed" || r?.place === "failed"
+  || isFailedJob(r?.job);
+
 const matches = (name, model, subset, thinking = "off", engine = "llama.cpp") => {
   const r = parseRun(name);
   return Boolean(r) && r.engine === engine && r.model === model
