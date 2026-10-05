@@ -1,10 +1,13 @@
-# Results so far — Pi 5, Gemma 4 E2B/E4B
+# Results so far — Gemma 4 E2B/E4B on Pi 5, Jetson Orin Nano and iPhone
 
-Everything measured on `MITLAB-EDGE` (Raspberry Pi 5, 8GB, 4× Cortex-A76, no GPU,
-governor `ondemand`, active cooler, no thermal throttling observed:
-`throttled=0x0` throughout). Models are Unsloth Q4_K_XL **QAT** GGUFs unless a
-row says otherwise. Raw run files: `benchmark/results/` (own suite) and
-`findings/stdbench/` (lm-eval).
+Three devices, one task set. **Raspberry Pi 5** (`MITLAB-EDGE`, 8 GB, 4× Cortex-A76,
+no GPU, governor `ondemand`, active cooler, no thermal throttling observed:
+`throttled=0x0` throughout), **Jetson Orin Nano** (`MITLAB-JETSON`, CUDA, 15 W
+mode) and, since 2026-10-02, an **iPhone 15 Pro** (MLX, on-device app). The boards
+use Unsloth Q4_K_XL **QAT** GGUFs unless a row says otherwise. The iPhone uses MLX
+4-bit builds of the same QAT models (§7.3). Sections 1–6 are Pi-only, from
+before the Jetson joined. Raw run files: `benchmark/results/` (own suite),
+`findings/stdbench/` (lm-eval) and `findings/phone/` (iPhone uploads).
 
 Paper 1 scope is **text + reasoning parameters only** — no voice, no multimodal.
 
@@ -445,22 +448,48 @@ Deleted, 21GB: `~/.litert-lm` and `~/litert-venv` (condition C dropped),
 `~/.cache/pip`, an unrelated Qwen3-4B GGUF. The raw Sep-14 engine comparison
 scratch files were archived to `findings/early-engine-benchmarks/` first.
 
-## 10. Status (2026-09-26)
+## 10. Status (2026-10-05)
 
-Done: MMLU-Pro both models · tinyGSM8k E2B (256/1024) and E4B (256) · Tier 1–3
-own suite · MTP × thinking · quant sweep · live-answer audit · classifier audit ·
-**MMLU-Pro s1/s2/s3 × E2B/E4B on both boards with telemetry, thinking off
-(§7.1) and thinking on (§7.2)**, all 24 runs on matched serving flags.
+**Written up here:** MMLU-Pro both models · tinyGSM8k E2B (256/1024) and E4B
+(256) · Tier 1–3 own suite · MTP × thinking · quant sweep · live-answer audit ·
+classifier audit · **MMLU-Pro s1/s2/s3 × E2B/E4B on both boards with telemetry,
+thinking off (§7.1) and thinking on (§7.2)**, all 24 runs on matched serving
+flags · **the iPhone arm, s1/s2/s3 × E2B/E4B (§7.3)**, tied with both boards.
 
-Also done: **the iPhone arm, MLX, s1/s2/s3 × E2B/E4B (§7.3)**, tied with both
-boards. Added 2026-10-05; the rest of this section still dates from 2026-09-26.
+**Measured, not yet written up.** All are MMLU-Pro s1/s2/s3 × E2B/E4B, with the
+task otherwise unchanged. Scores are per subset, s1/s2/s3.
 
-In progress: little-gemma (S3) on the Jetson, thinking off, E2B s1 done and
-s2/s3 queued. E4B and the thinking-on rows follow. Not reported here yet.
+| condition | engine | device | thinking off | thinking on |
+|---|---|---|---|---|
+| S3 | little-gemma | Jetson | E2B 54/51/54 · E4B 64/67/65 | E2B 48/49/51 · E4B 62/63/66 |
+| S8 | llama.cpp + TurboQuant turbo3 KV cache | Pi | E2B 58/50/50 · E4B 61/61/65 | E2B 53/49/52 · E4B 61/62/61 |
+| S8 | llama.cpp + TurboQuant turbo3 KV cache | Jetson | E2B 58/49/49 · E4B 65/61/64 | E2B 52/46/51 · E4B 66/58/60 |
+| S9 `full` | proposed engine (little-gemma + ae.patch, `-reuse -ngram`) | Jetson | E2B 54/51/54 · E4B 64/67/65 | — (not planned) |
+| S9 `ngram` | proposed engine, `-ngram` | Jetson | E2B 54/51/54 · E4B 64/67/65 | — (not planned) |
 
-Not done, in rough priority order: capability (b) standard benchmark, IFEval
-and BFCL installed but unrun · capability (c) safety and security, no benchmark
-chosen · quantization control, Q8_0 through the same harness (~7h).
+S9 `full` and `ngram` reproduce S3's scores exactly, subset by subset. That is
+what the design requires: every S9 switch is greedy-exact, and `ae_gate.py`
+checks each switch set for byte-identical replies against S3 before a full run
+counts. The S9 gate sweeps
+(`ae-sweep-*`) ran on 2026-10-04. Their cost results (speed, energy) and the
+S3/S8/S9 accuracy comparisons need their own sections.
+
+**Open:**
+- **S9 `reuse`: all six runs blocked.** The queue's serving-flag check gave up
+  with "no llama-server appeared within 420s, so the serving flags could not be
+  verified". `full` and `ngram` went through the same check and ran, so the
+  cause is specific to `reuse`'s setup on the Jetson. It has not been
+  diagnosed. S9 `base` is not queued.
+- Two Jetson jobs from 2026-09-23 (`mmlupro-e4b-s2-think`, `-s3-think`) still
+  sit blocked by a false-positive memory check. Their cells were completed on
+  2026-09-24 by later jobs, so they can be cancelled.
+- The S9 code (`job_kinds.json` `mmlupro-ae`, the queue and run scripts) is
+  modified on the Jetson but not committed. `ae_gate.py` is committed
+  (2026-10-04).
+
+**Not started**, in rough priority order: capability (b) standard benchmark
+(IFEval and BFCL installed but unrun) · capability (c) safety and security (no
+benchmark chosen) · quantization control (Q8_0 through the same harness, ~7h).
 
 **No further GSM8K runs.** Its results stay as the methodological appendix on
 generation caps (§1).
