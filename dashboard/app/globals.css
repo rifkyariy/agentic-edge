@@ -3,7 +3,9 @@
   --ink:#15171a; --ink-2:#55595f; --ink-3:#8b8f96;
   --line:#e5e5df; --line-2:#d2d2ca;
   --power:#eb6834; --cpu:#2a78d6; --temp:#e34948;
-  --pi:#2a78d6; --jetson:#c2517f; --iphone:#1d9e75;
+  /* device identity: checked with the dataviz palette validator, all pairs,
+     light and dark (colour-blind separation >= 10, normal vision >= 15) */
+  --pi:#2a78d6; --jetson:#c2517f; --iphone:#008300;
   --better:#127d5a; --worse:#b3261e; --neutral:#8b8f96;
   --ok:#1baf7a; --danger:#e34948; --warn:#eda100;
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -15,7 +17,7 @@
   --ink:#f1f2f0; --ink-2:#aab0b8; --ink-3:#767c85;
   --line:#25292e; --line-2:#333941;
   --power:#f07a4a; --cpu:#4c94e8; --temp:#ec6d6d;
-  --pi:#4c94e8; --jetson:#dd7aa2; --iphone:#5dcaa5;
+  --pi:#4c94e8; --jetson:#d55181; --iphone:#008300;
   --better:#35c98f; --worse:#f2665c; --neutral:#767c85;
   --ok:#25c78a; --danger:#ec6d6d; --warn:#d99a10;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -18px rgba(0,0,0,.8);
@@ -823,3 +825,47 @@ details.fold > summary h2::before{width:12px;height:12px;margin-right:2px;color:
   .pc-model{display:inline;width:86px;font:600 10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
   .pcmp > summary{grid-template-columns:1fr}
 }
+
+/* time table: filters above, devices across, configurations down */
+.tt-filters{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end;
+            padding:12px 14px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line)}
+.tt-filter{display:flex;flex-direction:column;gap:5px}
+.tt-filter > span{font:600 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.tt-filter .chips button{padding:5px 11px;font-size:12px}
+.tt-reset{display:inline-flex;align-items:center;gap:5px;margin-left:auto;background:none;border:0;
+          cursor:pointer;font:500 12px var(--mono);color:var(--ink-3);padding:6px 4px}
+.tt-reset:hover{color:var(--ink)}
+table.tt{width:100%;border-collapse:collapse}
+table.tt th,table.tt td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+table.tt thead th{font:600 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);
+                  border-bottom:2px solid var(--line-2);white-space:nowrap}
+table.tt tbody th{font-size:13.5px;font-weight:600;width:70px}
+table.tt tr.tt-first:not(:first-child) th,table.tt tr.tt-first:not(:first-child) td{border-top:2px solid var(--line-2)}
+table.tt td{font-size:13px;color:var(--ink-2);white-space:nowrap}
+table.tt .tt-think{font:12px var(--mono);color:var(--ink-3)}
+table.tt .num{text-align:right}
+table.tt td.num b{display:inline-flex;align-items:center;gap:4px;font:600 14px var(--mono);
+                  color:var(--ink-2);font-variant-numeric:tabular-nums}
+table.tt td.num b i{font-style:normal;font-weight:400;font-size:11px;color:var(--ink-3);margin-left:2px}
+table.tt td.num em{display:block;font:10.5px var(--mono);font-style:normal;color:var(--ink-3);margin-top:2px}
+table.tt td.num em.tt-few{color:var(--warn)}
+table.tt td.tt-best{background:color-mix(in srgb,var(--better) 8%,transparent)}
+table.tt td.tt-best b{color:var(--ink)}
+table.tt td.tt-best .ic{color:var(--better)}
+table.tt td.tt-none{color:var(--ink-3)}
+table.tt tbody tr:hover td,table.tt tbody tr:hover th{background:color-mix(in srgb,var(--ink) 3%,transparent)}
+.tt-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:14px 22px}
+.tt-chart{margin:0;min-width:0}
+.tt-chart figcaption{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 6px}
+.tt-chart figcaption b{font-size:14px;font-weight:600}
+.tt-chart figcaption span{font:11px var(--mono);color:var(--ink-3)}
+.tt-tick{font:12px var(--sans);fill:var(--ink-2)}
+.tt-tick.sub{font:10.5px var(--mono);fill:var(--ink-3)}
+.tt-barlab{font:600 11.5px var(--mono);fill:var(--ink-2)}
+.tt-barlab.best{fill:var(--ink)}
+.tt-barlab .tt-few{fill:var(--warn);font-weight:500}
+.tt-tip-head{display:block;font:600 12px var(--sans);color:var(--ink);margin-bottom:5px}
+.tt-tip-row{display:grid;grid-template-columns:10px 72px auto auto;gap:8px;align-items:center;color:var(--ink-2);line-height:1.7}
+.tt-tip-row i{width:10px;height:10px;border-radius:3px}
+.tt-tip-row b{color:var(--ink);text-align:right}
+.tt-tip-row em{font-style:normal;color:var(--ink-3)}

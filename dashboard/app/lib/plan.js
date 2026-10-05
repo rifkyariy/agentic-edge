@@ -28,16 +28,23 @@ export const BATCH_START = "2026-09-20 23:00";
 // before the model, or ae-<variant>- for the proposed engine (S9). Anything else — a smoke test, a .bak — must not be matched
 // into a cell, so the pattern stays anchored.
 const RUN_RE = /^mmlupro100-(lg-|tq-|mlx-|ae-(?:base|reuse|ngram|full)-)?(e2b|e4b)(?:-(s\d))?(-think)?$/i;
-const matches = (name, model, subset, thinking = "off", engine = "llama.cpp") => {
+export function parseRun(name) {
   const m = RUN_RE.exec((name || "").trim());
-  if (!m) return false;
+  if (!m) return null;
   const pre = (m[1] || "").toLowerCase();
-  const eng = pre.startsWith("ae-") ? pre.slice(0, -1)
-    : { "lg-": "little-gemma", "tq-": "turboquant", "mlx-": "mlx" }[pre] || "llama.cpp";
-  return eng === engine
-      && m[2].toLowerCase() === model
-      && (m[3] || "s1").toLowerCase() === subset
-      && (m[4] ? "on" : "off") === thinking;
+  return {
+    engine: pre.startsWith("ae-") ? pre.slice(0, -1)
+      : { "lg-": "little-gemma", "tq-": "turboquant", "mlx-": "mlx" }[pre] || "llama.cpp",
+    model: m[2].toLowerCase(),
+    subset: (m[3] || "s1").toLowerCase(),
+    explicitSubset: Boolean(m[3]),
+    thinking: m[4] ? "on" : "off",
+  };
+}
+const matches = (name, model, subset, thinking = "off", engine = "llama.cpp") => {
+  const r = parseRun(name);
+  return Boolean(r) && r.engine === engine && r.model === model
+      && r.subset === subset && r.thinking === thinking;
 };
 
 // States in which the queue, not the log, is the authority on a cell.

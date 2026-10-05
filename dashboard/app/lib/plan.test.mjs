@@ -1,7 +1,7 @@
 // Run with: node --test dashboard/app/lib/plan.test.mjs
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cell, PLAN } from "./plan.js";
+import { cell, parseRun, PLAN } from "./plan.js";
 
 const doneBox = (run, at = "2026-09-21 10:00") => ({
   data: { procs: {}, completed: [{ task: "mmlu_pro", run, score: 66, stderr: 4.7, at }] },
@@ -144,4 +144,14 @@ test("a proposed-engine (ae) run fills only its own variant's cell", () => {
   assert.equal(cell(box, "e2b", "s2", "off", null, "little-gemma").status, "pending");
   assert.equal(cell(box, "e2b", "s2", "off").status, "pending");
   assert.deepEqual(PLAN.engines.find((e) => e.id === "ae-full").boards, ["jetson"]);
+});
+
+test("parseRun reads every engine prefix, and refuses tagged runs", () => {
+  assert.deepEqual(parseRun("mmlupro100-tq-e4b-s2-think"),
+    { engine: "turboquant", model: "e4b", subset: "s2", explicitSubset: true, thinking: "on" });
+  assert.equal(parseRun("mmlupro100-ae-ngram-e2b-s3").engine, "ae-ngram");
+  assert.equal(parseRun("mmlupro100-e2b").subset, "s1");
+  assert.equal(parseRun("mmlupro100-e2b").explicitSubset, false);
+  assert.equal(parseRun("mmlupro100-e2b-s3-letter-r6"), null);
+  assert.equal(parseRun("failed/mmlupro100-e2b-s1"), null);
 });

@@ -7,6 +7,7 @@ import { fmt } from "../lib/format";
 import PageHeader from "../components/PageHeader";
 import { comparisons } from "../lib/paired";
 import Paired from "./Paired";
+import TimeTable from "./TimeTable";
 
 const MODELS = [["e2b", "Gemma 4 E2B"], ["e4b", "Gemma 4 E4B"]];
 const DEV = {
@@ -329,6 +330,8 @@ export default function Compare() {
       </section>
 
       <Paired data={pairedData} err={pairedErr} />
+
+      <TimeTable />
 
       {/* Totals, because per-token rates hide what a campaign actually costs. */}
       <section className="card">
