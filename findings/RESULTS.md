@@ -365,6 +365,56 @@ in §7.1 carries over unchanged. Peak power rose ~1-1.5 W on the Jetson (to
 12.6 W). No throttling was recorded on either board. Maximum SoC temperature
 was 76.5 °C on the Pi (E4B s1) and 60.2 °C on the Jetson.
 
+## 7.3 The iPhone arm, MLX (2026-10-02 – 05)
+
+The baseline task on a phone: the same s1/s2/s3 questions with byte-identical
+5-shot prompts, greedy, thinking off and a 2,048-token answer cap, run on-device
+by the GemmaBench app (`benchmark/apps/ios`) on an **iPhone 15 Pro** (A17 Pro,
+8 GB, iOS 26.6). The phone has no ssh, so the app uploads each run to the
+dashboard, which serves it as a third box. All ten uploads are archived in
+`findings/phone/`, with a per-run table. That includes a superseded complete
+E2B s1 run (also 51/100) and three runs stopped on the phone, kept as their
+last live snapshot. The numbers below use the current run per cell.
+
+**Not the same weights as the boards.** The iPhone runs MLX, not llama.cpp,
+with MLX 4-bit builds of the same QAT models: E2B `gemma-4-E2B-it-qat-4bit`,
+E4B `mlx-community/unsloth-gemma-4-E4B-it-qat-oQ4`. The boards use the Q4_K_XL
+GGUFs. So the prompts and questions are the same, but the engine and the
+quantisation both differ. This is a cross-platform comparison, not a
+device-only one like §7.1.
+
+| | iPhone (s1/s2/s3) | vs Pi 5 | vs Jetson |
+|---|---|---|---|
+| E2B | **51.0%** (51/47/55) | −0.7 · 130 / 122 / Pi 25 / iPhone 23 · p = **0.89** | −1.7 · 133 / 122 / Orin 25 / iPhone 20 · p = **0.55** |
+| E4B | **66.0%** (65/64/69) | +0.3 · 180 / 85 / Pi 17 / iPhone 18 · p = **1.00** | ±0.0 · 181 / 85 / Orin 17 / iPhone 17 · p = **1.00** |
+| pooled n=600 | 58.5% | −0.2 · 310 / 207 / 42 / 41 · p = **1.00** | −0.8 · 314 / 207 / 42 / 37 · p = **0.65** |
+
+Each cell: Δ (iPhone − board), then both right / both wrong / board only /
+iPhone only, then exact McNemar, paired over the same question ids. The
+per-question data is what `/compare` reads (`run_detail.py --paired` on the
+boards, the uploads for the iPhone). As a check, the same code reproduces §7.1's
+Pi-vs-Jetson cells exactly (136 / 123 / 19 / 22, p = 0.76).
+
+**The phone is as accurate as either board on both models.** It disagrees with
+a board on about as many questions as the boards disagree with each other: 48
+and 45 on E2B against 41 Pi-vs-Jetson, and 35 and 34 on E4B against 25. Those
+disagreements cancel out. Just as between the two boards, E4B is the more
+stable model across backends.
+
+Device cost is **not comparable to §7** and is only indicative:
+
+- **Speed.** Decode was ~14 tok/s on E2B and ~9 tok/s on E4B. That puts the
+  phone between the Pi and the Jetson, but it is the *throttled* speed: iOS
+  thermal state reached 3 (critical) on five of the six current runs, and the
+  phone spent 69–78 min of each E2B run and 124–137 min of each E4B run at
+  state ≥ 2 (serious). A run took 84–90 min (E2B) and 136–143 min (E4B).
+- **Energy.** 6.4–7.0 Wh per E2B run and 10.8–11.4 Wh per E4B run, ~4.5–4.9 W
+  mean, 0.35 and 0.59 J/token. These are **whole-phone battery estimates**
+  (battery % × capacity, in 1 % steps, screen included). They are not board DC
+  draw, so they must not be set against the PMIC / INA3221 figures as equals.
+- iOS gives apps no SoC temperature, power rail or GPU utilisation readings.
+  Each `n/a` carries its reason in the file's `na_reasons`.
+
 ## 8. Capability coverage
 
 Paper 1 claims three capability areas. Only one is covered so far.
@@ -401,6 +451,9 @@ Done: MMLU-Pro both models · tinyGSM8k E2B (256/1024) and E4B (256) · Tier 1�
 own suite · MTP × thinking · quant sweep · live-answer audit · classifier audit ·
 **MMLU-Pro s1/s2/s3 × E2B/E4B on both boards with telemetry, thinking off
 (§7.1) and thinking on (§7.2)**, all 24 runs on matched serving flags.
+
+Also done: **the iPhone arm, MLX, s1/s2/s3 × E2B/E4B (§7.3)**, tied with both
+boards. Added 2026-10-05; the rest of this section still dates from 2026-09-26.
 
 In progress: little-gemma (S3) on the Jetson, thinking off, E2B s1 done and
 s2/s3 queued. E4B and the thinking-on rows follow. Not reported here yet.
