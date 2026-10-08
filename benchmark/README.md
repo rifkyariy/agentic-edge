@@ -13,7 +13,7 @@ Two halves:
 | **standard benchmarks + telemetry** | `std_mmlupro.sh`, `run_measured.sh`, `telemetry.py` | `~/Research/stdbench/`, `~/Research/measured/` |
 
 The protocol, the statistical design, and the revisions that results forced are
-in [EXPERIMENT_PLAN.md](EXPERIMENT_PLAN.md). Measured results are in
+in [docs/experiment-plan.md](../docs/experiment-plan.md). Measured results are in
 [../findings/RESULTS.md](../findings/RESULTS.md).
 
 **Zero setup on a new device.** Stdlib only, no `pip install`. Clone the
@@ -46,7 +46,7 @@ edits, no per-run config duplication.
 
 **The protocol** — what to build first, what to run in what order on which
 device, and what each table proves — is in
-[EXPERIMENT_PLAN.md](EXPERIMENT_PLAN.md).
+[docs/experiment-plan.md](../docs/experiment-plan.md).
 
 ## What this answers
 
@@ -65,7 +65,7 @@ device, and what each table proves — is in
 |---|---|---|---|
 | `llama_cpp` | any llama.cpp-compatible `/v1/chat/completions` server | **server-launch flags** (`--spec-type draft-mtp`, `-rea on`) — `cfg["mtp"]`/`cfg["thinking"]` are labels for the report; start the server to match before running | none (bare model) |
 | `little_gemma` | bare CLI (`lg "<prompt>"`), no server | not supported — always the floor case | none |
-| `proposed` | this repo's own [`voice-agent`](../voice-agent/), full pipeline | **toggled live** via `POST /option` before the run starts (`configure_proposed()` in `adapters.py`) — no manual step | intent classification + `match_result`/`f1_result`/`currency_rate`/`weather_forecast`/`web_search` |
+| `proposed` | this project's own voice-agent (the [`voice-agent` branch](https://github.com/rifkyariy/agentic-edge/tree/voice-agent), deployed to the Pi as `/opt/voice-agent`), full pipeline | **toggled live** via `POST /option` before the run starts (`configure_proposed()` in `adapters.py`) — no manual step | intent classification + `match_result`/`f1_result`/`currency_rate`/`weather_forecast`/`web_search` |
 
 ## Conditions
 
@@ -77,7 +77,7 @@ device, and what each table proves — is in
 | `E` | **proposed** | yes | classify → pin → orchestrator-side fallback execution |
 | `B-mtp`, `E-think`, … | as above | | with MTP and/or thinking on (Tier 2) |
 
-**D vs E was the original claim** — see EXPERIMENT_PLAN §7.2 for how results revised it.
+**D vs E was the original claim** — see [experiment-plan §7.2](../docs/experiment-plan.md) for how results revised it.
 
 **Condition C (LiteRT-LM) was dropped** on 2026-09-20 and its runtime removed from the Pi. Its runs remain in `results/` unreported.
 
@@ -95,7 +95,7 @@ false — confirm on the box before claiming a number either way.
 ## Test cases (`cases.json`)
 
 Ten cases across `knowledge`, `thinking` (a deterministic arithmetic problem
-— see `gemma4-pi5-benchmarks.md` for why this one specifically separates
+— see [`findings/early-engine-benchmarks/`](../findings/early-engine-benchmarks/README.md) for why this one specifically separates
 thinking on/off), `creative`, and five tool-requiring categories
 (`weather`, `currency`, `match_result`, `fixture`, `race_result`, `news`).
 Two kinds of automatic scoring, both optional per case:

@@ -1,7 +1,7 @@
 # S4 letter-only: the result
 
 **E2B, Pi 5, s1+s2+s3, n=300.** The probe behind
-[`2026-09-27-RECOMMENDATION.md`](2026-09-27-RECOMMENDATION.md): can Gemma pick
+[`2026-09-27-RECOMMENDATION.md`](../../docs/proposals/2026-09-27-RECOMMENDATION.md): can Gemma pick
 the option without reasoning its way there?
 
 ## Headline
@@ -80,7 +80,7 @@ table *if* a gate can be built. Nothing here shows one can.
 ## What it cost to learn
 
 10.7 minutes of Pi time, after two traps that each nearly wasted hours — see
-[`02f5698`](../../commit/02f5698) for `--samples` silently running 5,980
+commit `02f5698` for `--samples` silently running 5,980
 questions instead of 14, and `--system_instruction` being prepended to a
 "think step by step" description rather than replacing it.
 

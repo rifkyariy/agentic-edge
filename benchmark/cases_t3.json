@@ -10,7 +10,7 @@
     "category": "thinking",
     "prompt": "You buy seven pens at three dollars each and pay with a fifty dollar bill. How much change do you get? Reply with just the number.",
     "expected_substring": "29",
-    "notes": "The exact case from gemma4-pi5-benchmarks.md: thinking off answered 25 (wrong), thinking on answered 29 (correct)."
+    "notes": "The exact case from findings/early-engine-benchmarks/README.md: thinking off answered 25 (wrong), thinking on answered 29 (correct)."
   },
   {
     "id": "weather-now",

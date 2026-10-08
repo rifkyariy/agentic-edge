@@ -49,7 +49,7 @@ accuracy argument, and all three share the same implementation.
 |---|---|---|
 | [`2026-09-27-prefill-cascade.md`](2026-09-27-prefill-cascade.md) | the primitive, (a) vs (b), and Use 1 | "Flow A / Flow B" |
 | [`2026-09-27-quality-flows.md`](2026-09-27-quality-flows.md) | Uses 2 and 3 | "Flow 1 / Flow 2" |
-| [`EXPERIMENT-MATRIX.md`](EXPERIMENT-MATRIX.md) | every condition, done and proposed, with costs | — |
+| [`../experiment-matrix.md`](../experiment-matrix.md) | every condition, done and proposed, with costs | — |
 
 ## Why this matters practically
 
