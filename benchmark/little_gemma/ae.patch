@@ -1,0 +1,282 @@
+diff --git a/src/cpu/model-cpu.c b/src/cpu/model-cpu.c
+index bdaa924..9c36068 100644
+--- a/src/cpu/model-cpu.c
++++ b/src/cpu/model-cpu.c
+@@ -15,17 +15,28 @@
+ // out[i] = x[i] / rms(x) * w[i]. Safe in place (out == x).
+ const int model_kv_host = 1;     // this backend's kvcache rows are host memory
+ 
++// agentic-edge: buffers allocated once at PX_ROWS and reused across saves (see
++// the CUDA backend's copy of this function).
++#define PX_ROWS 4096
+ void kvcache_save_prefix(struct kvcache *kv, int n) {
+-    kv->px_k = calloc((size_t)kv->n_layer, sizeof(void *));
+-    kv->px_v = calloc((size_t)kv->n_layer, sizeof(void *));
+-    if (!kv->px_k || !kv->px_v) return;
++    if (n > PX_ROWS) { fprintf(stderr, "kvcache_save_prefix: %d rows > %d\n", n, PX_ROWS); exit(1); }
++    if (!kv->px_k) {
++        kv->px_k = calloc((size_t)kv->n_layer, sizeof(void *));
++        kv->px_v = calloc((size_t)kv->n_layer, sizeof(void *));
++        if (!kv->px_k || !kv->px_v) { fprintf(stderr, "kvcache_save_prefix: out of memory\n"); exit(1); }
++        for (int L = 0; L < kv->n_layer; L++) {
++            if (!kv->k[L]) continue;                   // reuse layer: nothing stored
++            int cap = PX_ROWS < kv->seq[L] ? PX_ROWS : kv->seq[L];
++            size_t bytes = (size_t)cap * kv->kv_dim[L] * (kv->f16[L] ? 2 : 4);
++            kv->px_k[L] = malloc(bytes);
++            kv->px_v[L] = malloc(bytes);
++            if (!kv->px_k[L] || !kv->px_v[L]) { fprintf(stderr, "kvcache_save_prefix: out of memory\n"); exit(1); }
++        }
++    }
+     for (int L = 0; L < kv->n_layer; L++) {
+         if (!kv->k[L]) continue;                       // reuse layer: nothing stored
+         int rows = n < kv->seq[L] ? n : kv->seq[L];
+         size_t bytes = (size_t)rows * kv->kv_dim[L] * (kv->f16[L] ? 2 : 4);
+-        kv->px_k[L] = malloc(bytes);
+-        kv->px_v[L] = malloc(bytes);
+-        if (!kv->px_k[L] || !kv->px_v[L]) return;
+         memcpy(kv->px_k[L], kv->k[L], bytes);
+         memcpy(kv->px_v[L], kv->v[L], bytes);
+     }
+diff --git a/src/cuda/model-cuda.cuh b/src/cuda/model-cuda.cuh
+index 531e30a..d7ef15d 100644
+--- a/src/cuda/model-cuda.cuh
++++ b/src/cuda/model-cuda.cuh
+@@ -1092,16 +1092,33 @@ extern "C" void kvcache_free(struct kvcache *kv) {
+ // System-prefix save/restore (see model.h): device-to-device copies of the
+ // first min(n, seq) rows of every owning layer. Restore rides the per-thread
+ // stream, so it is ordered before the session's first prefill launch.
++// agentic-edge: the save buffers are allocated ONCE, sized for the longest
++// prefix any caller saves (-sys and -raw prompts are both < 4096 tokens), and
++// reused: -reuse saves a new prefix whenever the shared prompt prefix moves,
++// where upstream allocated fresh buffers per call (a leak at one call per
++// question).
++#define PX_ROWS 4096
+ extern "C" void kvcache_save_prefix(struct kvcache *kv, int n) {
+-    kv->px_k = (void **)calloc((size_t)kv->n_layer, sizeof(void *));
+-    kv->px_v = (void **)calloc((size_t)kv->n_layer, sizeof(void *));
+-    if (!kv->px_k || !kv->px_v) return;
++    if (n > PX_ROWS) { fprintf(stderr, "kvcache_save_prefix: %d rows > %d\n", n, PX_ROWS); exit(1); }
++    if (!kv->px_k) {
++        kv->px_k = (void **)calloc((size_t)kv->n_layer, sizeof(void *));
++        kv->px_v = (void **)calloc((size_t)kv->n_layer, sizeof(void *));
++        if (!kv->px_k || !kv->px_v) { fprintf(stderr, "kvcache_save_prefix: out of memory\n"); exit(1); }
++        size_t total = 0;
++        for (int L = 0; L < kv->n_layer; L++) {
++            if (!kv->k[L]) continue;
++            int cap = PX_ROWS < kv->seq[L] ? PX_ROWS : kv->seq[L];
++            size_t bytes = (size_t)cap * kv->kv_dim[L] * (kv->f16[L] ? 2 : 4);
++            CUDA_CHECK(cudaMalloc(&kv->px_k[L], bytes));
++            CUDA_CHECK(cudaMalloc(&kv->px_v[L], bytes));
++            total += 2 * bytes;
++        }
++        fprintf(stderr, "kv prefix snapshot: %.1f MiB\n", total / 1048576.0);
++    }
+     for (int L = 0; L < kv->n_layer; L++) {
+         if (!kv->k[L]) continue;
+         int rows = n < kv->seq[L] ? n : kv->seq[L];
+         size_t bytes = (size_t)rows * kv->kv_dim[L] * (kv->f16[L] ? 2 : 4);
+-        CUDA_CHECK(cudaMalloc(&kv->px_k[L], bytes));
+-        CUDA_CHECK(cudaMalloc(&kv->px_v[L], bytes));
+         CUDA_CHECK(cudaMemcpy(kv->px_k[L], kv->k[L], bytes, cudaMemcpyDeviceToDevice));
+         CUDA_CHECK(cudaMemcpy(kv->px_v[L], kv->v[L], bytes, cudaMemcpyDeviceToDevice));
+     }
+diff --git a/src/run.c b/src/run.c
+index 912b295..698689f 100644
+--- a/src/run.c
++++ b/src/run.c
+@@ -165,6 +165,51 @@ static void print_piece(const char *s) {
+ // and the context budget is checked in tokens, not characters.
+ static int g_raw = 0;
+ 
++// agentic-edge -ngram: prompt-lookup drafting. A reply restates its own prompt
++// and itself (option text, the question's terms, the few-shot answers' fixed
++// phrasing), so the tokens that followed the last earlier occurrence of the
++// current 3-gram (else 2-gram) are a free draft. They go through the same
++// greedy verify as MTP drafts, so the output stays byte-identical to plain
++// decoding; a step with no match decodes plainly (or drafts with -mtp).
++// Replaying the recorded S3 replies offline: E2B ~1.4 tokens per verify at
++// block 3, drafting on ~45% of steps.
++static int g_ngram = 0;
++
++// Fill d[0..k) with the tokens that followed the most recent earlier match of
++// h's last 3 (else 2) tokens; returns how many (0 = no match).
++// ponytail: backward linear scan, O(context) per step (~8k compares against a
++// 30-80 ms forward); a hash of n-gram -> last position if it ever shows up.
++static int ngram_draft(const int *h, int n, int *d, int k) {
++    for (int w = 3; w >= 2; w--) {
++        if (n <= w) continue;
++        for (int s = n - w - 1; s >= 0; s--) {
++            if (memcmp(h + s, h + n - w, (size_t)w * sizeof *h)) continue;
++            int m = n - (s + w) < k ? n - (s + w) : k;
++            memcpy(d, h + s + w, (size_t)m * sizeof *d);
++            return m;
++        }
++    }
++    return 0;
++}
++
++// agentic-edge -reuse (needs -raw): keep the KV of a shared prompt prefix
++// across connections, as llama-server's slot does. Consecutive MMLU-Pro
++// requests share the system turn and five few-shot pairs (~1-2k tokens) and
++// differ from the last user turn on; S3 re-prefilled all of it per question
++// (433k prompt tokens where llama.cpp processed 114k). The sliding-window
++// rings wrap during a reply, so the prefix is SAVED (kvcache_save_prefix) and
++// restored, not assumed intact. One snapshot: a prompt that misses it saves
++// its own prefix up to its final user turn (the system turn + few-shot pairs),
++// so the next question of the same subject restores it — from a subject's
++// 2nd question on, as llama-server's slot reuses its previous request.
++static int g_reuse = 0;
++
++static int lcp(const int *a, int na, const int *b, int nb) {
++    int i = 0;
++    while (i < na && i < nb && a[i] == b[i]) i++;
++    return i;
++}
++
+ static int send_all(sock_t s, const char *buf, int n) {
+     while (n > 0) {
+         int k = (int)send(s, buf, n, 0);
+@@ -287,6 +332,12 @@ static void serve(const struct gguf_context *ctx, const char *path, const char *
+     // -think is a clean no-op on them instead of confusing them with a stray marker.
+     int ch_open  = tokenizer_token_id(tk, "<|channel>");
+     int ch_close = tokenizer_token_id(tk, "<channel|>");
++    int turn_open = tokenizer_token_id(tk, "<|turn>");   // -reuse snapshots end at a turn boundary
++    static int hist[SERVE_SEQ];                           // -ngram: this turn's prompt + reply so far
++    static int snap[4096];                                // -reuse: the tokens the snapshot holds
++    int hn = 0, snap_n = 0;
++    if (g_ngram) fprintf(stderr, "ngram: prompt-lookup drafts armed, block N=%d\n", g_mtp_n);
++    if (g_reuse) fprintf(stderr, "reuse: shared-prefix kv snapshots armed\n");
+ 
+     // The draft head (-mtp): block-2 speculative decode, same as generate().
+     // A failed open falls back to plain greedy (NULL) — log either way so the
+@@ -531,6 +582,26 @@ static void serve(const struct gguf_context *ctx, const char *path, const char *
+                 fprintf(stderr, "context full (%d prompt tokens)\n", n);
+                 break;
+             }
++            int reused = 0;
++            if (g_reuse && !pend && pos == 0) {          // -raw, first turn: promptv[i] sits at position i
++                int l = lcp(promptv, n - 1, snap, snap_n);
++                if (snap_n && l == snap_n) {             // the snapshot is a prefix of this prompt
++                    kvcache_restore_prefix(&kv, snap_n);
++                    pos = reused = snap_n;
++                } else {                                 // miss: snapshot up to this prompt's final user turn
++                    int q = n - 1;                       // (the 2nd <|turn> from the end; the last opens the model's)
++                    for (int k = 0; q > 0; q--)
++                        if (promptv[q] == turn_open && ++k == 2) break;
++                    if (q >= 64) {                       // below that a copy is not worth its bytes
++                        model_prefill_mixed(&m, &kv, NULL, promptv, q, 0);
++                        kvcache_save_prefix(&kv, q);
++                        memcpy(snap, promptv, (size_t)q * sizeof *snap);
++                        snap_n = pos = q;
++                        total += q;
++                    }
++                }
++                skip = pos;                              // the prefill below starts where the cache ends
++            }
+             if (pend) {                                  // pack the held span with the tail:
+                 int *ids = realloc(pend, ((size_t)pend_n + n) * sizeof *ids);
+                 if (!ids) { free(pend); free(prow); fprintf(stderr, "turn buffer: out of memory\n"); break; }
+@@ -546,9 +617,13 @@ static void serve(const struct gguf_context *ctx, const char *path, const char *
+             best = model_forward_next(&m, &kv, promptv[n - 1], pos++);
+             double t1 = now_sec();                       // prefill done (incl. the first pick)
+             tp += t1 - t0;
++            memcpy(hist, promptv, (size_t)n * sizeof *hist);   // n < 4096: room for the reply behind it
++            hn = n;
+             int g = 0, fail = 0, barged = 0;              // g = tokens streamed this turn
+             double t_draft = 0, t_verify = 0;
+             int n_draft = 0, n_accept = 0;
++            int ng_rounds = 0, ng_gain = 0;              // -ngram: lookup verifies, tokens they added
++            double ng_time = 0;
+             struct question_turn question = {0, think == 0 && saw_think};
+             int in_think = 0, think_n = 0;                // -think N>0: reasoning-span state
+             for (;;) {                                   // stream raw token text, turn end included
+@@ -562,6 +637,7 @@ static void serve(const struct gguf_context *ctx, const char *path, const char *
+                 }
+                 if (sig || send_piece(c, tokenizer_token_text(tk, best)) != 0) { fail = 1; break; }
+                 g++;
++                if (hn < SERVE_SEQ) hist[hn++] = best;
+                 if (best == ch_open) saw_think = 1;       // this model uses the channel: seed is safe from next turn
+                 if (think > 0) {                          // budget cap: track the reasoning span (thinking is turn-initial)
+                     if (best == ch_open) in_think = 1;
+@@ -585,7 +661,11 @@ static void serve(const struct gguf_context *ctx, const char *path, const char *
+                 }
+                 // Plain decode while reasoning under a budget: it lets us inject the
+                 // <channel|> cleanly (MTP drafts a whole block, awkward to truncate).
+-                if (!t || in_think || pos + g_mtp_n - 1 >= SERVE_SEQ) {
++                int toks[LG_MTP_N_MAX], out[LG_MTP_N_MAX];
++                int nd = 0;                              // -ngram: a lookup draft, when the context has one
++                if (g_ngram && !in_think && pos + g_mtp_n - 1 < SERVE_SEQ)
++                    nd = ngram_draft(hist, hn, toks + 1, g_mtp_n - 1);
++                if ((!t && !nd) || in_think || pos + g_mtp_n - 1 >= SERVE_SEQ) {
+                     best = model_forward_next(&m, &kv, best, pos++);
+                     if (in_think && think_n >= think && best != ch_close) best = ch_close;   // budget spent: end the thought
+                     continue;
+@@ -593,9 +673,18 @@ static void serve(const struct gguf_context *ctx, const char *path, const char *
+                 // block-g_mtp_n speculation: draft g_mtp_n-1 tokens (chained), verify
+                 // the batch in one weight pass — up to g_mtp_n tokens for one pass's
+                 // weight traffic. Greedy verify keeps the streamed text byte-identical.
+-                int toks[LG_MTP_N_MAX], out[LG_MTP_N_MAX];
+                 int block_pos = pos;
+-                int adv = mtp_step(t, &m, &kv, best, pos, toks, out, &t_draft, &t_verify, &n_draft, &n_accept);
++                int adv;
++                if (nd) {                                // lookup draft first: free to make, often longer
++                    double s1 = now_sec();
++                    toks[0] = best;
++                    for (int j = nd + 1; j < g_mtp_n; j++) toks[j] = toks[j - 1];   // pad; the verify rejects it
++                    adv = model_forward_spec(&m, &kv, toks, pos, out);
++                    ng_time += now_sec() - s1;
++                    ng_rounds++;
++                    ng_gain += adv - 1;
++                } else
++                    adv = mtp_step(t, &m, &kv, best, pos, toks, out, &t_draft, &t_verify, &n_draft, &n_accept);
+                 int brk = 0;
+                 for (int e = 1; e < adv && !brk; e++) {  // stream the confirmed drafts toks[1..adv-1]
+                     // Verification already cached the whole block, but a turn
+@@ -613,6 +702,7 @@ static void serve(const struct gguf_context *ctx, const char *path, const char *
+                     }
+                     if (es || send_piece(c, tokenizer_token_text(tk, toks[e])) != 0) { fail = 1; brk = 1; break; }
+                     g++;
++                    if (hn < SERVE_SEQ) hist[hn++] = toks[e];
+                     if (toks[e] == eot || toks[e] == eos || pos + 1 >= SERVE_SEQ) { brk = 1; break; }
+                     if (question_turn && question_turn_feed(&question, tokenizer_token_text(tk, toks[e]),
+                                                             tokenizer_is_special(tk, toks[e]))) {
+@@ -638,6 +728,10 @@ static void serve(const struct gguf_context *ctx, const char *path, const char *
+                     g, dt, g / (dt > 0 ? dt : 1e-9),
+                     t1 - t0);
+             if (barged) fprintf(stderr, "turn barged at %d tokens\n", g);
++            if (reused) fprintf(stderr, "reuse:  %d prompt tokens from the snapshot\n", reused);
++            if (ng_rounds)
++                fprintf(stderr, "ngram:  %d rounds, +%d tokens (%.2f per round), verify %.2fs (%.1fms ea)\n",
++                        ng_rounds, ng_gain, (double)ng_gain / ng_rounds, ng_time, 1e3 * ng_time / ng_rounds);
+             if (t && n_draft)
+                 fprintf(stderr, "mtp:    accepted %d/%d drafts (%.1f%%) — %d rounds: draft %.2fs (%.1fms ea), verify %.2fs (%.1fms ea)\n",
+                         n_accept, n_draft, 100.0 * n_accept / n_draft,
+@@ -865,6 +959,13 @@ int main(int argc, char **argv) {
+         else if (!strcmp(argv[i], "-sys") && i + 1 < argc) syspath = argv[++i];
+         else if (!strcmp(argv[i], "-end-on-question")) question_turn = 1;
+         else if (!strcmp(argv[i], "-raw")) g_raw = 1;
++        else if (!strcmp(argv[i], "-ngram")) g_ngram = 1;
++        else if (!strcmp(argv[i], "-reuse")) g_reuse = 1;
++        else if (!strcmp(argv[i], "-block") && i + 1 < argc) {   // the LG_MTP_N knob, on the command line
++            int v = atoi(argv[++i]);                              // so the run's fingerprint records it
++            if (v >= 2 && v <= LG_MTP_N_MAX) g_mtp_n = v;
++            else { fprintf(stderr, "-block %d: need 2..%d\n", v, LG_MTP_N_MAX); return 1; }
++        }
+         else if (!strcmp(argv[i], "-think") && i + 1 < argc) think = atoi(argv[++i]);
+         else if (!strcmp(argv[i], "-temp") && i + 1 < argc) temp = (float)atof(argv[++i]);
+         else if (!strcmp(argv[i], "-topk") && i + 1 < argc) topk = atoi(argv[++i]);
+@@ -872,9 +973,14 @@ int main(int argc, char **argv) {
+         else if (!strcmp(argv[i], "-seed") && i + 1 < argc) seed = strtoull(argv[++i], NULL, 10);
+     }
+     if (cpath) { client(cpath); return 0; }              // client mode needs no model
++    if (g_reuse && (!g_raw || syspath)) {                // the snapshot is -sys's buffer, keyed on raw prompts
++        fprintf(stderr, "-reuse needs -raw and no -sys\n");
++        return 1;
++    }
+     if (!model) {
+         printf("Usage: %s -m <model.gguf> [-mm <mmproj.gguf>] [-mtp <assistant.gguf>] [-sys <skills.txt>]\n"
+                "          [-end-on-question] [-raw] [-think N] [-temp T [-topk K] [-topp P] [-seed N]] [-p \"prompt\" | -s <socket>]\n"
++               "          [-ngram] [-reuse] [-block N]   (agentic-edge: prompt-lookup drafts, prefix KV reuse, verify width)\n"
+                "          (-think: reasoning-channel token budget; 0 = none, N = up to N, omitted = unlimited)\n"
+                "       %s -c <socket>\n", argv[0], argv[0]);
+         return 1;
