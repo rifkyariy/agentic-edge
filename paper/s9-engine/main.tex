@@ -644,6 +644,7 @@ E2B MMLU-Pro, no thinking & \lgm{} (Orin Nano) & 1.41 & 1.48 \\
 E2B MMLU-Pro, no thinking & \lc{} (Pi) & 1.41--1.44 & 1.47--1.51 \\
 E2B MMLU-Pro, thinking & \lc{} (Pi) & 1.40--1.43 & 1.48--1.50 \\
 E4B MMLU-Pro, no thinking & \lc{} (Pi) & 1.35--1.37 & 1.41--1.43 \\
+E4B MMLU-Pro, thinking & \lc{} (Pi) & 1.35--1.37 & 1.41--1.43 \\
 E2B GSM8K (100 replies)    & \lc{} (Pi) & 1.34 & 1.39 \\
 \bottomrule
 \multicolumn{4}{@{}l}{\footnotesize Ranges span the three MMLU-Pro subsets ($n{=}100$ each).}
@@ -653,8 +654,9 @@ E2B GSM8K (100 replies)    & \lc{} (Pi) & 1.34 & 1.39 \\
 The same replay on other recorded replies (Table~\ref{tab:replay}) shows the
 effect is not an artefact of one engine, mode or task: \lc{}'s replies to the
 same questions copy their context as much as \lgm{}'s do; replies with the
-thinking channel on, which are 25\,\% longer, copy just as much; E4B copies
-somewhat less than E2B, consistent with its smaller measured gain; and GSM8K
+thinking channel on, which are 25\,\% longer, copy just as much on both
+models; E4B copies somewhat less than E2B, consistent with its smaller measured
+gain; and GSM8K
 arithmetic chains of thought, a different task and prompt format, still yield
 1.34 tokens per decode step at width~3.
 
@@ -691,35 +693,17 @@ Prefix restores                & header$^\star$ & -- & 0 \\
 \end{tabular}
 \end{table}
 
-MMLU-Pro's long chains of thought are a favourable case for copying from the
-context. Agents mostly emit tool calls and follow instructions, so we repeat
-the two checks that need little device time on prompts of that shape
-(Table~\ref{tab:agentic}): 200 BFCL~\cite{bfcl} function-calling prompts (the
-first 100 of \texttt{simple\_python} and of \texttt{multiple}, with BFCL's own
-prompt-mode system prompt) and the first 100 IFEval~\cite{ifeval} prompts.
-
-\textbf{Acceptance, replayed.} Tool calls copy less than chains of thought:
-Gemma's own BFCL replies give 1.24 tokens per decode step at width~3, close to
-BFCL's reference answers (1.22). Function names and argument values come from
-the prompt, the call syntax around them does not, and a reply is only
-$\sim$24 tokens. Free-form instruction following copies least, 1.10 tokens per
-decode step, which the cost curve of Table~\ref{tab:sweep} turns into a
-predicted decode gain of only $\approx$2\,\%.
-
-\textbf{BFCL, measured.} Running the 200 prompts through \lgm{} and \sys{}
-back to back confirms both halves of the claim on a second task. Exactness
-holds: all 200 \sys{} replies equal \lgm{}'s. The live acceptance matches the
-replay to three decimals (0.749 vs.\ 0.748 accepted tokens per drafted step).
-Decode is 12\,\% faster, but prefill is a third of each request here, so a
-request finishes 6\,\% sooner. Prefix reuse never fired: \sys{} snapshots up to
-the start of the final user turn, and in BFCL that span already holds each
-question's own function schemas, so consecutive prompts never share it, whereas
-\lc{}'s longest-common-prefix cache reuses the 131-token header they do share.
-(Short replies also agree far more across engines: 189 of 200 \lc{} replies
-equal \lgm{}'s, against about 10\,\% on MMLU-Pro.)
-
-The speedup is therefore workload-dependent while exactness is not: large for
-long reasoning, moderate for tool calls, negligible for free-form text.
+MMLU-Pro's long chains of thought favour copying from the context, so we also
+tested agent-shaped prompts (Table~\ref{tab:agentic}): 200 BFCL~\cite{bfcl}
+tool-calling prompts and 100 IFEval~\cite{ifeval} instructions. Exactness
+holds: all 200 \sys{} tool calls equal \lgm{}'s. The speedup shrinks with how
+much the output copies: tool calls reach 1.24 tokens per decode step (decode
++12\,\%, each request 6\,\% sooner, as prefill is a third of the time) and
+free-form instructions only 1.10 ($\approx$+2\,\% predicted). The replay
+predicted the live acceptance on BFCL to three decimals (0.748 vs.\ 0.749).
+Prefix reuse never fired here: per-request tool schemas precede the final user
+turn, so \sys{}'s snapshot never matches, while \lc{} reuses the shared
+header (Sec.~\ref{sec:limits}).
 
 % ===========================================================================
 \section{Other Edge Devices}\label{sec:devices}
