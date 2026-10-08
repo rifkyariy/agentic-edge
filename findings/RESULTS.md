@@ -555,10 +555,20 @@ reply byte-for-byte. Eleven sweeps all passed, 28/28:
 |---|---|---|
 | none | 576 s, 577 s (rerun) | 1,246 s |
 | `-reuse -ngram -block 2` | 502 s, 502 s (rerun) | 1,034 s |
-| `-reuse -ngram -block 3` | **497 s**, 489 s (rerun) | **1,018 s** |
+| `-reuse -ngram -block 3` | **497 s**, 489 s† | **1,018 s** |
 | `-reuse -ngram -block 4` | 516 s | 1,031 s |
 
-Block 3 was fastest on both models and is the setting used. The first E2B
+† Not a rerun. 489 s is `ae-gate-reuse2-e2b` (2026-10-04 22:2x), the gate for
+the *revised* `-reuse` rule, which snapshots from a subject's 2nd question
+instead of its 3rd. It restored 14 prefixes and prefilled 22.9k prompt tokens
+against the sweep's 40.4k, so it is faster for a different reason; its decode
+was 29.87 against 29.93 tok/s. The true reruns (`none`, `block 2`) reproduce
+within 1 s.
+
+Block 3 was fastest on both models and is the setting used. Its margin over
+block 2 (1.0% on E2B, 0.8% on E4B) is above the reruns' spread but comes from
+one 28-question sweep per width, so block 3 is a reasonable default rather than
+a proven optimum; block 4 is clearly costlier per verify. The first E2B
 `none` and `block 2` sweeps show as *failed* in the queue only because
 `ae_gate.py` did not yet write its `.done` marker. Their logs record 28/28, and
 their reruns (`-r2`) reproduce them to the second.
@@ -625,6 +635,25 @@ after the first run and under the locked clocks. All 100 replies are
 byte-identical to the first run's.
 
 ## 7.7 The Jetson's clocks were locked between 2026-10-05 and 10-07
+
+**First, a different fault on 2026-10-04 (no reported run affected).** The
+board rebooted at 17:22 and `nvpmodel.service` failed (exit 234). `nvpmodel -q`
+still said 15W, because it reads `/var/lib/nvpmodel/status`, last written on
+the previous boot (Oct 2). The 15W caps were never applied: GPU devfreq max
+1,020 MHz under the `performance` governor (15W declares 612), CPU max 1,728 MHz
+(15W: 1,497.6). Plain little-gemma E2B decode came out ~41 tok/s against S3's
+25.6. Only the first two S9 gates ran in this state, outside the queue: the
+switch-off gate (14 questions, 14/14 byte-identical) and the first combined gate
+(`-reuse -ngram -mtp … -block 4`, 42 questions, 42/42). Byte identity does not
+depend on clocks, so those verdicts stand; their timings were discarded, and
+their logs were in `/tmp`, lost at the next reboot (verdicts and stats are
+recorded in `docs/proposals/S9-ENGINE.md`). `sudo nvpmodel -m 0` and a reboot
+(19:33) restored 612 / 1,497.6 MHz, matching every earlier run's telemetry;
+everything queued from 19:50 on ran at those caps. The queue's `clocks`
+precheck (`jobqueue/prechecks.py`, branch `copr-engine`) now refuses a job when
+the kernel's *maximum* caps differ from the mode's declared ones. It cannot see
+the lock below, which raises the *minimum*.
+
 
 Every Jetson run up to 2026-10-05 ~10:00 ran with the clocks scaling freely:
 CPU averaging 830–910 MHz, GPU averaging 580–605 MHz, idle draw 4.5–4.6 W.
