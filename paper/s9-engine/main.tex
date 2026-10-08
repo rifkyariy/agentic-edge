@@ -23,7 +23,7 @@
 
 \begin{document}
 
-\title{Never Compute Twice: Exact-Output Speedups\\for Gemma~4 on Edge Devices}
+\title{Never Compute Twice: Exact-Output Speedups\\for Gemma~4 on an Edge GPU}
 
 \author{\IEEEauthorblockN{Rifky Ari Yunanto}
 \IEEEauthorblockA{\textit{National Taiwan University of Science and Technology}\\
@@ -432,7 +432,8 @@ within one clock state).}
 & \lc{} & \lc{}+$n$-gram & \lgm{} & \ours & \lc{} & \lc{}+$n$-gram & \lgm{} & \ours \\
 \midrule
 Accuracy (\%)$^c$              & \EtwoAccL & \EtwoAccN & \EtwoAccG & \EtwoAccA & \EfourAccL & \EfourAccN & \EfourAccG & \EfourAccA \\
-Replies identical to \lgm{}    & 32/300 & \EtwoIdN & -- & \textbf{\EtwoIdent} & 28/300 & \EfourIdN & -- & \textbf{\EfourIdent} \\
+Identical to \lgm{}$^b$         & 32/300 & 34/300 & ref. & \textbf{\EtwoIdent} & 28/300 & 20/300 & ref. & \textbf{\EfourIdent} \\
+Exact: identical without drafting$^d$ & ref. & 29/300 & ref. & \textbf{\EtwoIdent} & ref. & 20/300 & ref. & \textbf{\EfourIdent} \\
 Decode (tok/s)                 & \EtwoDecL & \EtwoDecN & \EtwoDecG & \textbf{\EtwoDecA} & \EfourDecL & \EfourDecN & \EfourDecG & \textbf{\EfourDecA} \\
 Prompt tokens processed / q    & \textbf{\EtwoPrmL} & \textbf{\EtwoPrmN} & \EtwoPrmG & \EtwoPrmA & \textbf{\EfourPrmL} & \textbf{\EfourPrmN} & \EfourPrmG & \EfourPrmA \\
 Wall time / question (s)       & \EtwoWallL & \EtwoWallN & \EtwoWallG & \textbf{\EtwoWallA} & \EfourWallL & \EfourWallN & \EfourWallG$^a$ & \textbf{\EfourWallA} \\
@@ -441,7 +442,8 @@ Energy / gen.\ token (J)       & \EtwoJL & \EtwoJN & \EtwoJG & \textbf{\EtwoJA} 
 \quad above idle (J)           & \EtwoJiL & \EtwoJiN & \EtwoJiG & \textbf{\EtwoJiA} & \EfourJiL & \EfourJiN & \EfourJiG & \textbf{\EfourJiA} \\
 \bottomrule
 \multicolumn{9}{@{}l}{\footnotesize $^a$ One subset re-sent 5 prompts (105 requests); per-question figures divide by its 100 questions.}\\
-\multicolumn{9}{@{}l}{\footnotesize $^b$ Identical to \lc{} without drafting, not to \lgm{}.
+\multicolumn{9}{@{}l}{\footnotesize $^b$ Byte-identical replies to \lgm{}'s, over the same 300 questions; ref.: the reference itself.}\\
+\multicolumn{9}{@{}l}{\footnotesize $^d$ Byte-identical to the same engine without drafting (\sys{}: to \lgm{}); the exactness test.
 $^c$ Not bolded: all engines are statistically tied (Sec.~\ref{sec:results}).}
 \end{tabular}
 \end{table*}
@@ -473,7 +475,8 @@ E4B against \lc{} because \lgm{}'s own decode advantage is larger there.
 \begin{table}[t]
 \caption{\lc{}'s own $n$-gram drafting (\texttt{--spec-type ngram-simple})
 against \sys{}, E2B, subset s1 ($n{=}100$). ``Exact'': replies identical to the
-same engine without drafting. Bold: best per column---for energy, among the
+same engine without drafting (ref.: that engine itself; for \sys{}, \lgm{}).
+Bold: best per column---for energy, among the
 rows sharing a clock state; accuracy not bolded (all tied).}
 \label{tab:lcngram}
 \centering\footnotesize
@@ -483,7 +486,7 @@ rows sharing a clock state; accuracy not bolded (all tied).}
 & Exact & Acc. & Decode & Wall & J/tok & above \\
 & & (\%) & tok/s & s/q & & idle \\
 \midrule
-\lc{}, no drafting$^\ddagger$ & --      & 56 & 23.04 & 27.9 & 0.466 & 0.259 \\
+\lc{}, no drafting$^\ddagger$ & ref.    & 56 & 23.04 & 27.9 & 0.466 & 0.259 \\
 \lc{} $n$-gram, width 3$^\S$ & n/a & 56 & 23.80 & 27.4 & 0.491 & 0.266 \\
 \lc{} $n$-gram, width 4 & 8/100   & 56 & 26.97 & 26.1 & 0.424 & 0.225 \\
 \lc{} $n$-gram, stock & 9/100   & 53 & 25.15 & 26.8 & 0.458 & 0.249 \\
@@ -492,7 +495,8 @@ rows sharing a clock state; accuracy not bolded (all tied).}
 \bottomrule
 \multicolumn{7}{@{}l}{\footnotesize $^\ddagger$ Sep~22 and Oct~4, free-scaling clocks; all other rows}\\
 \multicolumn{7}{@{}l}{\footnotesize \phantom{$^\ddagger$} Oct~7, locked clocks (Sec.~\ref{sec:method}): compare energy within a group.}\\
-\multicolumn{7}{@{}l}{\footnotesize $^\S$ Never drafted (no draft logged in any request): a plain rerun.}\\
+\multicolumn{7}{@{}l}{\footnotesize $^\S$ Never drafted (no draft logged in any request): a plain}\\
+\multicolumn{7}{@{}l}{\footnotesize \phantom{$^\S$} rerun, so exactness is not applicable (n/a).}\\
 \end{tabular}
 \end{table}
 
@@ -638,7 +642,7 @@ E2B MMLU-Pro, no thinking & \lgm{} (Orin Nano) & 1.41 & 1.48 \\
 E2B MMLU-Pro, no thinking & \lc{} (Pi) & 1.41--1.44 & 1.47--1.51 \\
 E2B MMLU-Pro, thinking & \lc{} (Pi) & 1.40--1.43 & 1.48--1.50 \\
 E4B MMLU-Pro, no thinking & \lc{} (Pi) & 1.35--1.37 & 1.41--1.43 \\
-E2B GSM8K (200 replies)    & \lc{} (Pi) & 1.34 & 1.39 \\
+E2B GSM8K (100 replies)    & \lc{} (Pi) & 1.34 & 1.39 \\
 \bottomrule
 \multicolumn{4}{@{}l}{\footnotesize Ranges span the three MMLU-Pro subsets ($n{=}100$ each).}
 \end{tabular}}

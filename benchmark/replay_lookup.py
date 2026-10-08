@@ -78,9 +78,14 @@ def samples(run_dir):
     files = sorted(glob.glob(os.path.join(run_dir, "samples_*.jsonl")) +
                    glob.glob(os.path.join(run_dir, "*", "samples_*.jsonl")))
     for f in files:
-        with open(f) as fh:
+        seen = set()     # lm-eval logs a sample once per filter (GSM8K: strict + flexible);
+        with open(f) as fh:   # the reply is the same, so count each document once
             for line in fh:
-                yield json.loads(line)
+                s = json.loads(line)
+                if s["doc_id"] in seen:
+                    continue
+                seen.add(s["doc_id"])
+                yield s
 
 
 def main():

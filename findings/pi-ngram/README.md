@@ -11,7 +11,9 @@ drafter on the Pi; it measures the two inputs a prediction needs.
   batches of 2 and 3 cost 1.30x and 1.58x. Why 4 is cheap is not verified.
 - `replay-lookup.json`: queue job `replay-lookup-pi` (2026-10-05),
   `benchmark/replay_lookup.py` over the Pi's recorded llama.cpp replies (E2B
-  and E4B MMLU-Pro, thinking on and off) and tinyGSM8k (E2B). Per width:
+  and E4B MMLU-Pro, thinking on and off) and tinyGSM8k (E2B; 100 replies, which lm-eval logs twice, once per answer
+  filter: the json's `replies: 200` counts both copies, and since every reply is
+  doubled the ratios are unchanged; `replay_lookup.py` now counts each once). Per width:
   tokens per decode step, the share of steps with a lookup match, and accepted
   tokens per drafted step.
 
