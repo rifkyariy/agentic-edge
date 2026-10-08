@@ -18,6 +18,7 @@ subsets, n=300 per model).
 | **S5** | cascade | llama.cpp¹ | gated | ⬜ 0/6 | ⬜ 0/6 | 12 |
 | **S6** | encoder router | + ModernBERT | gated | ⬜ conditional | ⬜ conditional | 12 |
 | **S7** | precision control | llama.cpp Q5_K_M | off | ⬜ 0/3 | ⬜ 0/3 | 6 (E4B only) |
+| **S9** | proposed engine | little-gemma + ae.patch | off | — | ⬜ 0/6, gate passed, clocks on hold | 6 per variant ([S9-ENGINE.md](S9-ENGINE.md)) |
 
 ¹ S5 needs logits at the final position, which neither engine exposes today, so
 it costs an engine patch either way. It has to be **llama.cpp**: S5 is
