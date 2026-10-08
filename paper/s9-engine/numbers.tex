@@ -1,0 +1,61 @@
+% Every measured number the paper quotes, in one place. Sources:
+%   Jetson: ~/research/measured/<run>/summary.json, pooled over s1-s3
+%           (sum tokens / sum time; energy = work-window board DC energy / generated tokens)
+%   Pi 5:   ~/Research/measured, pooled over the two subsets with token logs (n=200)
+%   gate/diff: benchmark/ae_gate.py
+% \pend marks a cell whose run has not finished; nothing in red may be submitted.
+\newcommand{\pend}[1]{\textcolor{red}{#1}}
+
+% ---- Jetson Orin Nano 8GB, 15 W, E2B (n=300 each; complete) ----
+\newcommand{\EtwoAccL}{52.7}   \newcommand{\EtwoAccG}{53.0}   \newcommand{\EtwoAccA}{53.0}
+\newcommand{\EtwoDecL}{23.00}  \newcommand{\EtwoDecG}{25.58}  \newcommand{\EtwoDecA}{29.52}
+\newcommand{\EtwoPrmL}{381}    \newcommand{\EtwoPrmG}{1{,}444} \newcommand{\EtwoPrmA}{385}
+\newcommand{\EtwoWallL}{31.0}  \newcommand{\EtwoWallG}{28.3}  \newcommand{\EtwoWallA}{24.1}
+\newcommand{\EtwoJL}{0.465}    \newcommand{\EtwoJG}{0.446}    \newcommand{\EtwoJA}{0.370}
+\newcommand{\EtwoJiL}{0.258}   \newcommand{\EtwoJiG}{0.254}   \newcommand{\EtwoJiA}{0.207}
+\newcommand{\EtwoWL}{10.26}    \newcommand{\EtwoWG}{10.86}    \newcommand{\EtwoWA}{10.58}
+\newcommand{\EtwoIdent}{300/300}
+
+% ---- Jetson, E4B (complete 2026-10-05) ----
+\newcommand{\EfourAccL}{66.0}  \newcommand{\EfourAccG}{65.3}  \newcommand{\EfourAccA}{65.3}
+\newcommand{\EfourDecL}{11.62} \newcommand{\EfourDecG}{15.05} \newcommand{\EfourDecA}{17.67}
+\newcommand{\EfourPrmL}{381}   \newcommand{\EfourPrmG}{1{,}446} \newcommand{\EfourPrmA}{385}
+\newcommand{\EfourWallL}{62.6} \newcommand{\EfourWallG}{51.9} \newcommand{\EfourWallA}{41.6}
+\newcommand{\EfourJL}{0.965}   \newcommand{\EfourJG}{0.838}   \newcommand{\EfourJA}{0.676}
+\newcommand{\EfourJiL}{0.552}  \newcommand{\EfourJiG}{0.490}  \newcommand{\EfourJiA}{0.396}
+\newcommand{\EfourWL}{10.77}   \newcommand{\EfourWG}{11.62}   \newcommand{\EfourWA}{11.39}
+\newcommand{\EfourIdent}{300/300}
+
+% ---- headline ratios (S9 vs llama.cpp / vs little-gemma) ----
+\newcommand{\EtwoSpL}{1.28}    \newcommand{\EtwoSpG}{1.15}
+\newcommand{\EfourSpL}{1.52} \newcommand{\EfourSpG}{1.17}
+\newcommand{\EtwoJsav}{20}     \newcommand{\EfourJsav}{30}   % % less J/token than llama.cpp
+
+% ---- Raspberry Pi 5 (llama.cpp, CPU, 3 threads; n=300 accuracy, n=200 rates) ----
+\newcommand{\PiEtwoAcc}{51.7}  \newcommand{\PiEtwoDec}{6.87}  \newcommand{\PiEtwoJ}{1.130}  \newcommand{\PiEtwoW}{6.90}
+\newcommand{\PiEfourAcc}{65.7} \newcommand{\PiEfourDec}{3.37} \newcommand{\PiEfourJ}{2.223} \newcommand{\PiEfourW}{6.75}
+
+% ---- ablation (mmlupro-ae variants ngram / reuse, s1-s3, n=300; ngram ran 2026-10-05; reuse-only re-run 2026-10-07/08 after the flags bug) ----
+% base row = little-gemma (S3): the AE binary with every switch off is byte-identical to it
+\newcommand{\AbNgDecEtwo}{29.51} \newcommand{\AbNgPrmEtwo}{1{,}444} \newcommand{\AbNgWallEtwo}{24.8} \newcommand{\AbNgJEtwo}{0.378}
+\newcommand{\AbRuDecEtwo}{25.81} \newcommand{\AbRuPrmEtwo}{385} \newcommand{\AbRuWallEtwo}{27.2} \newcommand{\AbRuJEtwo}{0.464$^c$}
+\newcommand{\AbNgDecEfour}{17.82} \newcommand{\AbNgPrmEfour}{1{,}444} \newcommand{\AbNgWallEfour}{42.7} \newcommand{\AbNgJEfour}{0.696}
+\newcommand{\AbRuDecEfour}{15.47} \newcommand{\AbRuPrmEfour}{385} \newcommand{\AbRuWallEfour}{47.6} \newcommand{\AbRuJEfour}{0.853$^c$}
+
+% ---- where the time goes (pooled n=300, E2B) ----
+\newcommand{\PrefShareL}{2.7}   % % of request time in prefill, llama.cpp
+\newcommand{\PrefShareG}{3.2}   % little-gemma
+\newcommand{\GenTokL}{198{,}706} \newcommand{\GenTokG}{197{,}977}
+
+% ---- iPhone 15 Pro (MLX, GemmaBench; findings/phone, current run per cell; n=300) ----
+% decode pooled sum(gt)/sum(gms); energy = whole-phone battery % x capacity estimate / generated tokens
+\newcommand{\PhEtwoAcc}{51.0}  \newcommand{\PhEtwoDec}{14.50} \newcommand{\PhEtwoJ}{0.354}
+\newcommand{\PhEfourAcc}{66.0} \newcommand{\PhEfourDec}{9.18}  \newcommand{\PhEfourJ}{0.593}
+
+% ---- request-window energy (power integrated over request windows only; J/gen token, pooled s1-s3) ----
+\newcommand{\RwEtwoL}{0.458} \newcommand{\RwEtwoG}{0.438} \newcommand{\RwEtwoA}{0.363}
+\newcommand{\RwEfourL}{0.948} \newcommand{\RwEfourG}{0.824} \newcommand{\RwEfourA}{0.664}
+
+% ---- llama.cpp + its own n-gram drafting, width 4 (n3m3), n=300, run 2026-10-07/08 ----
+\newcommand{\EtwoAccN}{53.3} \newcommand{\EtwoIdN}{29/300$^f$} \newcommand{\EtwoDecN}{26.63} \newcommand{\EtwoPrmN}{381} \newcommand{\EtwoWallN}{27.9} \newcommand{\EtwoWN}{10.84} \newcommand{\EtwoJN}{0.429} \newcommand{\EtwoJiN}{0.228}
+\newcommand{\EfourAccN}{65.0} \newcommand{\EfourIdN}{20/300$^f$} \newcommand{\EfourDecN}{13.83} \newcommand{\EfourPrmN}{381} \newcommand{\EfourWallN}{54.3} \newcommand{\EfourWN}{11.53} \newcommand{\EfourJN}{0.871} \newcommand{\EfourJiN}{0.487}
