@@ -413,6 +413,49 @@ energy only within one clock state. The repeat itself reproduced all 100
 replies byte for byte and decode within 0.8\,\% (29.78 vs.\
 29.54\,tok/s).
 
+\begin{table}[t]
+\caption{Compute budget of every run in this paper, failed ones included.
+Board DC energy over each run's working window; time is wall clock.}
+\label{tab:budget}
+\centering\footnotesize
+\setlength{\tabcolsep}{2.4pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+& Runs & Prompts & Hours & Wh \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{Jetson Orin Nano 8\,GB, 15\,W}} \\
+Baselines (\lc{}, \lgm{})               & 12 & 1{,}205 & 14.5 & 152.2 \\
+\rowcolor{oursbg}\ours{} (grid + repeat) &  7 &     700 &  6.2 &  65.3 \\
+Ablation (lookup only, reuse only)       & 12 & 1{,}200 & 11.9 & 132.7 \\
+\lc{} $n$-gram (3 settings + grid)       &  8 &     800 &  8.4 &  90.4 \\
+Width sweep, reuse gate                  & 11 &     308 &  2.6 &  25.3 \\
+BFCL, IFEval                             &  4 &     700 &  0.8 &   7.6 \\
+Failed (reuse only, flag bug)$^a$        &  6 &       0 &  0.7 &   3.2 \\
+\textbf{Jetson total}                    & \textbf{60} & \textbf{4{,}913} & \textbf{44.9} & \textbf{476.7} \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{Raspberry Pi 5}} \\
+\lc{} baseline$^b$                        &  4 &     400 & 18.7 & 128.3 \\
+Verify-cost bench, replays               &  6 &      -- &  0.5 &   1.4 \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{iPhone 15 Pro}} \\
+MLX runs used                            &  6 & 1{,}800 &  9.7 & n/c$^c$ \\
+Superseded or stopped                    &  4 &     170 &  2.8 & n/c$^c$ \\
+\bottomrule
+\multicolumn{5}{@{}l}{\footnotesize $^a$ Stopped after 7\,min each; energy from their 1\,Hz telemetry.}\\
+\multicolumn{5}{@{}l}{\footnotesize $^b$ With telemetry; the two s1 runs predate it.}\\
+\multicolumn{5}{@{}l}{\footnotesize $^c$ Battery estimate only, not comparable (Sec.~\ref{sec:devices}).}\\
+\multicolumn{5}{@{}l}{\footnotesize Not counted: two early gates run outside the queue}\\
+\multicolumn{5}{@{}l}{\footnotesize without telemetry (Sec.~\ref{sec:method}).}
+\end{tabular}
+\end{table}
+
+\textbf{Compute budget.} Table~\ref{tab:budget} lists the cost of the study
+itself. The Jetson ran 60 runs for 44.9\,h and 477\,Wh of board energy; the
+comparison and ablation runs cost several times what \sys{}'s own runs did, and
+the Pi's four baseline runs alone took longer than all \sys{} runs on the
+Jetson. Jetson runs span the two clock states of the previous paragraph, which
+shifts energy for the same work by 5--9\,\%.
+
 % ===========================================================================
 \section{Results}\label{sec:results}
 
