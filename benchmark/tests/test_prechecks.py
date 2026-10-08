@@ -42,6 +42,21 @@ class TestPrechecks(unittest.TestCase):
         out = prechecks.run_all(self.p, self.resolved, FakeProbe())
         self.assertTrue(prechecks.passed(out), out)
 
+    def test_clock_caps_off_their_power_mode_refuse_the_run(self):
+        # 2026-10-04: nvpmodel.service failed at boot, 15W declared, not enforced
+        probe = FakeProbe()
+        probe.power_caps = lambda: {"mode": 0,
+                                    "want": {"GPU": 612000000, "CPU_A78_0": 1497600},
+                                    "have": {"GPU": 1020000000, "CPU_A78_0": 1728000}}
+        clocks = self.by_name(prechecks.run_all(self.p, self.resolved, probe), "clocks")
+        self.assertFalse(clocks["ok"])
+        self.assertIn("1020000000", clocks["detail"])
+        self.assertFalse(clocks["overridable"])
+        probe.power_caps = lambda: {"mode": 0,
+                                    "want": {"GPU": 612000000, "CPU_A78_0": 1497600},
+                                    "have": {"GPU": 612000000, "CPU_A78_0": 1497600}}
+        self.assertTrue(self.by_name(prechecks.run_all(self.p, self.resolved, probe), "clocks")["ok"])
+
     def test_insufficient_memory_fails_and_reports_the_numbers(self):
         out = prechecks.run_all(self.p, self.resolved, FakeProbe(mem=4102))
         mem = self.by_name(out, "memory")

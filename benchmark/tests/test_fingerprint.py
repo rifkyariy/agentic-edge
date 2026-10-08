@@ -56,6 +56,11 @@ class TestParseFlags(unittest.TestCase):
         self.assertTrue(f["model"].endswith("gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf"))
         self.assertEqual(f["ngl"], "99")
 
+    def test_reads_llama_cpp_ngram_speculation(self):
+        f = fingerprint.parse_flags("llama-server -m x.gguf --spec-type ngram-simple "
+                                    "--spec-ngram-simple-size-n 3 --spec-ngram-simple-size-m 2")
+        self.assertEqual((f["spec_type"], f["spec_ngram_n"], f["spec_ngram_m"]), ("ngram-simple", "3", "2"))
+
     def test_empty_command_line_yields_all_none(self):
         f = fingerprint.parse_flags("")
         self.assertIsNone(f["ctx"])
@@ -181,6 +186,20 @@ class TestLittleGemma(unittest.TestCase):
         got = fingerprint.capture(runner=lg_board())
         self.assertFalse(fingerprint.agrees(fingerprint.diff(
             got["flags"], self.baselines["mmlupro-baseline"]["flags"])))
+
+    def test_proposed_engine_is_told_apart_from_s3_by_its_build(self):
+        ae = LG_ENGINE.replace("/little-gemma/", "/little-gemma-ae/") + " -reuse -ngram -block 4"
+        got = fingerprint.capture(runner=lg_board(engine=ae))
+        self.assertEqual((got["flags"]["build"], got["flags"]["block"]), ("little-gemma-ae", "4"))
+        self.assertTrue(fingerprint.agrees(fingerprint.diff(got["flags"], self.baselines["ae-full"]["flags"])))
+        # the MTP head is not part of S9: neither baseline ran speculative decoding
+        mtp = fingerprint.capture(runner=lg_board(
+            engine=ae + " -mtp /home/ari/research/models/mtp-gemma-4-E2B-it.gguf"))
+        rows = fingerprint.diff(mtp["flags"], self.baselines["ae-full"]["flags"])
+        self.assertEqual([r["key"] for r in rows if not r["ok"]], ["mtp"])
+        s3 = fingerprint.capture(runner=lg_board())
+        rows = fingerprint.diff(s3["flags"], self.baselines["ae-base"]["flags"])
+        self.assertEqual([r["key"] for r in rows if not r["ok"]], ["build"])
 
     def test_no_server_at_all_captures_nothing(self):
         got = fingerprint.capture(runner=lg_board(engine="", shim=""))

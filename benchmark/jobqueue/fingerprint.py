@@ -24,6 +24,9 @@ _FLAGS = {
     "cache_type_k": ("-ctk", "--cache-type-k"),
     "cache_type_v": ("-ctv", "--cache-type-v"),
     "model": ("-m", "--model"),
+    "spec_type": ("--spec-type",),
+    "spec_ngram_n": ("--spec-ngram-simple-size-n",),
+    "spec_ngram_m": ("--spec-ngram-simple-size-m",),
 }
 _LOOKUP = {flag: key for key, flags in _FLAGS.items() for flag in flags}
 
@@ -81,12 +84,21 @@ def parse_lg(engine_line, shim_line):
                 return tokens[i + 1]
         return None
 
+    head = value(eng, "-mtp")
     return {
         "engine": "little-gemma",
+        # which source tree built the binary: little-gemma (S3) or
+        # little-gemma-ae (S9) — the binary name is the same for both
+        "build": os.path.basename(os.path.dirname(os.path.dirname(eng[0]))) if eng else None,
         "model": value(eng, "-m"),
         "raw": "on" if "-raw" in eng else None,
         "think": value(eng, "-think"),
         "thinking": value(shim, "--thinking"),
+        # S9 switches; absent reads as "off" so a baseline can require it
+        "ngram": "on" if "-ngram" in eng else "off",
+        "reuse": "on" if "-reuse" in eng else "off",
+        "mtp": os.path.basename(head) if head else "off",
+        "block": value(eng, "-block"),
     }
 
 

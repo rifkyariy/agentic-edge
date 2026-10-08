@@ -58,5 +58,68 @@
       "cache_type_k": "turbo3",
       "cache_type_v": "turbo3"
     }
+  },
+  "ae-base": {
+    "description": "S9 with every switch off: the proposed engine's binary must reproduce S3 by itself. The thinking-off task of lg-baseline, run through little-gemma-ae (ae.patch). -block is recorded but not asserted: the verify width is chosen per model.",
+    "flags": {
+      "engine": "little-gemma",
+      "build": "little-gemma-ae",
+      "raw": "on",
+      "thinking": "off",
+      "think": "-1",
+      "ngram": "off",
+      "reuse": "off",
+      "mtp": "off"
+    }
+  },
+  "ae-reuse": {
+    "description": "S9 -reuse: shared-prefix KV snapshots across requests; nothing else. The thinking-off task of lg-baseline, run through little-gemma-ae (ae.patch). -block is recorded but not asserted: the verify width is chosen per model.",
+    "flags": {
+      "engine": "little-gemma",
+      "build": "little-gemma-ae",
+      "raw": "on",
+      "thinking": "off",
+      "think": "-1",
+      "ngram": "off",
+      "reuse": "on",
+      "mtp": "off"
+    }
+  },
+  "ae-ngram": {
+    "description": "S9 -ngram: prompt-lookup drafts through the greedy verify; nothing else. The thinking-off task of lg-baseline, run through little-gemma-ae (ae.patch). -block is recorded but not asserted: the verify width is chosen per model.",
+    "flags": {
+      "engine": "little-gemma",
+      "build": "little-gemma-ae",
+      "raw": "on",
+      "thinking": "off",
+      "think": "-1",
+      "ngram": "on",
+      "reuse": "off",
+      "mtp": "off"
+    }
+  },
+  "ae-full": {
+    "description": "S9 -reuse -ngram: the proposed engine as a whole. No MTP head, as neither baseline ran speculative decoding. The thinking-off task of lg-baseline, run through little-gemma-ae (ae.patch). -block is recorded but not asserted: the verify width is chosen per model.",
+    "flags": {
+      "engine": "little-gemma",
+      "build": "little-gemma-ae",
+      "raw": "on",
+      "thinking": "off",
+      "think": "-1",
+      "ngram": "on",
+      "reuse": "on",
+      "mtp": "off"
+    }
+  },
+  "ngram-baseline": {
+    "description": "S10: mmlupro-baseline's flags plus llama.cpp's own n-gram speculative decoding (--spec-type ngram-simple). The lookup/draft sizes vary by cfg and are recorded, not asserted.",
+    "flags": {
+      "ctx": "8192",
+      "cache_ram": "0",
+      "reasoning": "off",
+      "reasoning_budget": "-1",
+      "ngl": "99",
+      "spec_type": "ngram-simple"
+    }
   }
 }
