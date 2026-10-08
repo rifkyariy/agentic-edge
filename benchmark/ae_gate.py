@@ -51,7 +51,8 @@ def post(port, body, timeout=3600):
 
 
 def samples(run_dir, per_category):
-    for f in sorted(glob.glob(os.path.join(run_dir, "*", "samples_mmlu_pro_*.jsonl"))):
+    for f in sorted(glob.glob(os.path.join(run_dir, "*", "samples_*.jsonl")) +
+                    glob.glob(os.path.join(run_dir, "samples_*.jsonl"))):   # lm-eval nests; bench_prompts.py does not
         with open(f) as fh:
             for i, line in enumerate(fh):
                 if i >= per_category:

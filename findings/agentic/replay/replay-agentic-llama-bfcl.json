@@ -1,0 +1,39 @@
+{
+ "widths": [
+  2,
+  3,
+  4,
+  5
+ ],
+ "runs": [
+  {
+   "run": "/home/mitlab/Research/stdbench-extra/agentic-llama-e2b-bfcl",
+   "thinking": false,
+   "replies": 200,
+   "reply_tokens": 4619,
+   "capped": 0,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.181,
+     "drafted_share": 0.349,
+     "accepted_per_drafted_step": 0.52
+    },
+    "3": {
+     "tokens_per_step": 1.238,
+     "drafted_share": 0.318,
+     "accepted_per_drafted_step": 0.748
+    },
+    "4": {
+     "tokens_per_step": 1.274,
+     "drafted_share": 0.298,
+     "accepted_per_drafted_step": 0.918
+    },
+    "5": {
+     "tokens_per_step": 1.287,
+     "drafted_share": 0.29,
+     "accepted_per_drafted_step": 0.989
+    }
+   }
+  }
+ ]
+}

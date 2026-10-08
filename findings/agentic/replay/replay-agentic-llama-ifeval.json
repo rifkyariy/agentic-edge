@@ -1,0 +1,39 @@
+{
+ "widths": [
+  2,
+  3,
+  4,
+  5
+ ],
+ "runs": [
+  {
+   "run": "/home/mitlab/Research/stdbench-extra/agentic-llama-e2b-ifeval",
+   "thinking": false,
+   "replies": 100,
+   "reply_tokens": 38812,
+   "capped": 0,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.073,
+     "drafted_share": 0.178,
+     "accepted_per_drafted_step": 0.411
+    },
+    "3": {
+     "tokens_per_step": 1.096,
+     "drafted_share": 0.16,
+     "accepted_per_drafted_step": 0.602
+    },
+    "4": {
+     "tokens_per_step": 1.107,
+     "drafted_share": 0.152,
+     "accepted_per_drafted_step": 0.708
+    },
+    "5": {
+     "tokens_per_step": 1.113,
+     "drafted_share": 0.147,
+     "accepted_per_drafted_step": 0.769
+    }
+   }
+  }
+ ]
+}

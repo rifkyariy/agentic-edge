@@ -1,0 +1,39 @@
+{
+ "widths": [
+  2,
+  3,
+  4,
+  5
+ ],
+ "runs": [
+  {
+   "run": "/home/mitlab/Research/stdbench-extra/bfcl-reference",
+   "thinking": false,
+   "replies": 200,
+   "reply_tokens": 4779,
+   "capped": 0,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.17,
+     "drafted_share": 0.34,
+     "accepted_per_drafted_step": 0.501
+    },
+    "3": {
+     "tokens_per_step": 1.222,
+     "drafted_share": 0.31,
+     "accepted_per_drafted_step": 0.716
+    },
+    "4": {
+     "tokens_per_step": 1.254,
+     "drafted_share": 0.292,
+     "accepted_per_drafted_step": 0.87
+    },
+    "5": {
+     "tokens_per_step": 1.266,
+     "drafted_share": 0.286,
+     "accepted_per_drafted_step": 0.929
+    }
+   }
+  }
+ ]
+}

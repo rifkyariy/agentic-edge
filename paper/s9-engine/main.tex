@@ -47,12 +47,14 @@ exact techniques to these facts---prompt-lookup drafting, routed through
 \lgm{}'s existing batched verify, and shared-prefix KV reuse made exact for
 sliding-window ring buffers---without touching a kernel. Over 300 MMLU-Pro
 questions per model, \sys{} reproduces \lgm{}'s replies byte for byte (600/600,
-and 1{,}900/1{,}900 counting ablations and a repeat; \lc{} and \lgm{}
+and 2{,}100/2{,}100 counting ablations, a repeat and 200 tool calls; \lc{} and \lgm{}
 themselves agree on only about 10\,\%), decodes \EtwoSpL$\times$ (E2B) and
 \EfourSpL$\times$ (E4B) faster than \lc{}, and spends \EtwoJsav\,\% and
 \EfourJsav\,\% less board energy per token. \lc{}'s own $n$-gram drafting was
 not byte-exact in any run that drafted: at its fastest setting it changes about
-90\,\% of replies, and \sys{} still decodes 1.11--1.28$\times$ faster.
+90\,\% of replies, and \sys{} still decodes 1.11--1.28$\times$ faster. On
+tool calls (BFCL) \sys{} stays exact and decodes 12\,\% faster; on free-form
+instruction following, replay predicts almost no gain.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -102,7 +104,7 @@ exact for sliding-window rings---host-side code only (Sec.~\ref{sec:design}).
 \item \textbf{Byte identity as the quality standard.} Every reply is compared
 with the baseline runtime's reply to the same question. Two engines on the same
 weights agree on only about 10\,\% of replies (32/300 on E2B, 28/300 on E4B),
-so a 1{,}900/1{,}900 match is strong evidence that nothing but speed changed
+so a 2{,}100/2{,}100 match is strong evidence that nothing but speed changed
 (Sec.~\ref{sec:method}).
 \item \textbf{A measured comparison and ablation} of three engines---and of
 \lc{}'s own $n$-gram drafting---on identical
@@ -330,8 +332,8 @@ order for a batch of $B$ tokens than for one breaks (i), and that is how a
 runtime can verify greedily and still change its replies
 (Sec.~\ref{sec:lcngram}). We therefore treat exactness as an empirical
 property, not a guarantee: every \sys{} reply is compared byte for byte with
-\lgm{}'s reply to the same question (Sec.~\ref{sec:method}), and 1{,}900 of
-1{,}900 match, which is the evidence that \lgm{}'s kernels meet both
+\lgm{}'s reply to the same question (Sec.~\ref{sec:method}), and 2{,}100 of
+2{,}100 match (Secs.~\ref{sec:results} and \ref{sec:agentic}), which is the evidence that \lgm{}'s kernels meet both
 conditions.
 
 \subsection{What we deliberately left out}
@@ -657,6 +659,69 @@ arithmetic chains of thought, a different task and prompt format, still yield
 1.34 tokens per decode step at width~3.
 
 % ===========================================================================
+\section{Beyond Multiple Choice: Tool Calls and Instructions}\label{sec:agentic}
+
+\begin{table}[t]
+\caption{Agent-shaped prompts, Gemma~4 E2B, Jetson Orin Nano (all runs one
+clock state). Top: replayed acceptance at width~3. Bottom: 200 BFCL prompts
+through each engine.}
+\label{tab:agentic}
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Replies (replayed) & Tokens / & Lookup & Accepted / \\
+ & decode step & match & drafted step \\
+\midrule
+MMLU-Pro chain of thought      & 1.41 & 47\,\% & 0.87 \\
+BFCL reference answers         & 1.22 & 31\,\% & 0.72 \\
+BFCL, Gemma's own calls        & 1.24 & 32\,\% & 0.75 \\
+IFEval, Gemma's own replies    & 1.10 & 16\,\% & 0.60 \\
+\midrule
+BFCL, measured & \lc{} & \lgm{} & \ours \\
+\midrule
+Identical to \lgm{}            & 189/200 & ref. & \textbf{200/200} \\
+Prompt / reply tokens          & 599 / 24 & 599 / 24 & 599 / 24 \\
+Prefill share of time          & 46\,\% & 30\,\% & 33\,\% \\
+Decode (tok/s)                 & 25.8 & 28.8 & \textbf{32.3} \\
+Wall time / request (s)        & 1.74 & 1.20 & \textbf{1.13} \\
+Prefix restores                & header$^\star$ & -- & 0 \\
+\bottomrule
+\multicolumn{4}{@{}l}{\footnotesize $^\star$ \lc{} reuses the $\sim$131-token shared header.}
+\end{tabular}
+\end{table}
+
+MMLU-Pro's long chains of thought are a favourable case for copying from the
+context. Agents mostly emit tool calls and follow instructions, so we repeat
+the two checks that need little device time on prompts of that shape
+(Table~\ref{tab:agentic}): 200 BFCL~\cite{bfcl} function-calling prompts (the
+first 100 of \texttt{simple\_python} and of \texttt{multiple}, with BFCL's own
+prompt-mode system prompt) and the first 100 IFEval~\cite{ifeval} prompts.
+
+\textbf{Acceptance, replayed.} Tool calls copy less than chains of thought:
+Gemma's own BFCL replies give 1.24 tokens per decode step at width~3, close to
+BFCL's reference answers (1.22). Function names and argument values come from
+the prompt, the call syntax around them does not, and a reply is only
+$\sim$24 tokens. Free-form instruction following copies least, 1.10 tokens per
+decode step, which the cost curve of Table~\ref{tab:sweep} turns into a
+predicted decode gain of only $\approx$2\,\%.
+
+\textbf{BFCL, measured.} Running the 200 prompts through \lgm{} and \sys{}
+back to back confirms both halves of the claim on a second task. Exactness
+holds: all 200 \sys{} replies equal \lgm{}'s. The live acceptance matches the
+replay to three decimals (0.749 vs.\ 0.748 accepted tokens per drafted step).
+Decode is 12\,\% faster, but prefill is a third of each request here, so a
+request finishes 6\,\% sooner. Prefix reuse never fired: \sys{} snapshots up to
+the start of the final user turn, and in BFCL that span already holds each
+question's own function schemas, so consecutive prompts never share it, whereas
+\lc{}'s longest-common-prefix cache reuses the 131-token header they do share.
+(Short replies also agree far more across engines: 189 of 200 \lc{} replies
+equal \lgm{}'s, against about 10\,\% on MMLU-Pro.)
+
+The speedup is therefore workload-dependent while exactness is not: large for
+long reasoning, moderate for tool calls, negligible for free-form text.
+
+% ===========================================================================
 \section{Other Edge Devices}\label{sec:devices}
 
 \begin{table}[t]
@@ -739,8 +804,15 @@ Sec.~\ref{sec:method}, which adds 5--9\,\% energy and leaves speed within
 $\pm$3\,\%: the speed comparisons hold across it, the energy comparisons only
 within one clock state.
 
-\textbf{What does not generalize.} The engine comparison covers one board, one benchmark
-and greedy decoding. Acceptance depends on how much replies copy their context;
+\textbf{Prefix reuse for agent prompts.} \sys{}'s snapshot rule suits
+few-shot prompts that share everything up to the final user turn; agent
+prompts that put per-request tool schemas in the system turn never match it
+(Sec.~\ref{sec:agentic}). Reusing the longest common prefix, as \lc{} does,
+with the ring treatment of Sec.~\ref{sec:design}, is the obvious extension.
+
+\textbf{What does not generalize.} The engine comparison covers one board,
+one benchmark at full scale plus a 200-prompt tool-calling sample, E2B for the
+latter, and greedy decoding. Acceptance depends on how much replies copy their context;
 multiple-choice chain-of-thought does so heavily, and open-ended generation may
 not---though the replay of Sec.~\ref{sec:where} measures this for any workload
 with recorded outputs (Table~\ref{tab:replay}). Under sampling, drafts are verified against samples and
@@ -748,15 +820,17 @@ acceptance falls. \sys{} inherits \lgm{}'s scope, the Gemma~4 family on CUDA.
 Power is board DC draw, consistent across runs but not wall power.
 
 \section{Conclusion}
-On a 15\,W edge board, decode dominates and chain-of-thought replies repeat
+On a 15\,W edge GPU, decode dominates and chain-of-thought replies repeat
 their context. Two host-side changes built on exactly those facts---drafting
 from the context into an existing verify kernel, and keeping the few-shot
 prefix's KV state across requests---make a specialized runtime decode
 \EtwoSpL$\times$ and \EfourSpL$\times$ faster than \lc{} on Gemma~4 E2B and E4B,
 and \EtwoJsav--\EfourJsav\,\% cheaper in energy per token, without changing one
-byte of its 600 answers. Measure where the time goes, replay
-what the model already said, and verify by identity: speed of this kind needs
-no accuracy trade to justify it.
+byte of its answers. Exactness carried over to tool calls; the speedup carries
+over in proportion to how much a workload copies its context, which a replay of
+recorded replies measures before anything is deployed. Measure where the time
+goes, replay what the model already said, and verify by identity: speed of this
+kind needs no accuracy trade to justify it.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
