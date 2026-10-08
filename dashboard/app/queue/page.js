@@ -54,7 +54,7 @@ function JobForm({ box, onQueued }) {
     const s = {}, t = {};
     for (const [name, rule] of Object.entries(spec.params)) {
       if (rule.enum) s[name] = [rule.default ?? rule.enum[0]];
-      else t[name] = "";
+      else t[name] = rule.default ?? "";
     }
     setSel(s); setText(t); setPre(null); setWaive(false); setReason("");
   }, [kind, box.id, Boolean(spec)]);        // eslint-disable-line react-hooks/exhaustive-deps
@@ -167,7 +167,7 @@ function JobForm({ box, onQueued }) {
         ) : (
           <label key={name}>{name}
             <input value={text[name] ?? ""}
-                   placeholder={rule.pattern ? "letters, digits, . _ -" : ""}
+                   placeholder={rule.hint ?? (rule.pattern ? "letters, digits, . _ -" : "")}
                    onChange={(e) => setText({ ...text, [name]: e.target.value })} />
           </label>
         ))}

@@ -113,6 +113,44 @@ class TestKinds(unittest.TestCase):
         with self.assertRaises(kinds.ValidationError):
             kinds.validate(self.reg, "raw", {"label": "a; rm -rf /", "command": "true"})
 
+    def test_letter_runs_on_the_pi_with_the_baseline_fingerprint(self):
+        got = kinds.resolve(self.reg, "mmlupro-letter", {"model": "e2b", "subset": "s2"}, self.pi)
+        self.assertEqual(got["output_dir"], "mmlupro100-e2b-s2-letter")
+        self.assertEqual(got["baseline"], "mmlupro-baseline")
+        self.assertIn("ROT=0 ./std_mmlupro_letter.sh e2b", got["command"])
+
+    def test_a_letter_rotation_gets_the_directory_the_script_writes(self):
+        got = kinds.resolve(self.reg, "mmlupro-letter",
+                            {"model": "e2b", "subset": "s1", "rotate": "4"}, self.pi)
+        self.assertEqual(got["output_dir"], "mmlupro100-e2b-s1-letter-r4")
+        self.assertEqual(got["label"], "mmlupro-letter-e2b-s1-r4")
+        self.assertIn("ROT=4", got["command"])
+
+    def test_letter_is_refused_on_the_jetson(self):
+        with self.assertRaises(kinds.ValidationError):
+            kinds.resolve(self.reg, "mmlupro-letter", {"model": "e2b", "subset": "s1"}, self.jetson)
+
+    def test_ae_gate_replays_the_s3_run_with_the_switches_as_one_argument(self):
+        got = kinds.resolve(self.reg, "ae-gate",
+                            {"model": "e2b", "flags": "-reuse -ngram -block 4", "name": "b4"},
+                            self.jetson)
+        self.assertEqual(got["output_dir"], "ae-sweep-e2b-b4")
+        self.assertIsNone(got["baseline"])
+        # --flags=: argparse reads a lone "-reuse" after a space as an option of its own
+        self.assertIn('--flags="-reuse -ngram -block 4"', got["command"])
+        self.assertIn("--against /home/ari/research/stdbench/mmlupro100-lg-e2b-s1", got["command"])
+        self.assertIn("--per-category 2 --out /home/ari/research/stdbench/ae-sweep-e2b-b4",
+                      got["command"])
+
+    def test_ae_gate_flags_refuse_shell_metacharacters(self):
+        for bad in ('-reuse"; rm -rf ~', "-ngram $(id)", "-block `4`"):
+            with self.assertRaises(kinds.ValidationError):
+                kinds.validate(self.reg, "ae-gate", {"model": "e2b", "flags": bad, "name": "x"})
+
+    def test_ae_gate_is_refused_on_the_pi(self):
+        with self.assertRaises(kinds.ValidationError):
+            kinds.resolve(self.reg, "ae-gate", {"model": "e2b", "flags": "", "name": "x"}, self.pi)
+
 
 class TestBoardMemory(unittest.TestCase):
     def setUp(self):

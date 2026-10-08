@@ -46,6 +46,45 @@
     }
   },
 
+  "mmlupro-ae": {
+    "description": "S9, the proposed engine: little-gemma + ae.patch, MMLU-Pro on one 100-question subset, one model, thinking off. variant picks the switches (std_mmlupro_lg_jetson.sh): base = none, reuse = shared-prefix KV, ngram = prompt-lookup drafts, full = both. No MTP head: neither baseline ran speculative decoding. All greedy-exact: ae_gate.py must find replies byte-identical to S3 before a full run counts.",
+    "params": {
+      "model":   {"enum": ["e2b", "e4b"]},
+      "subset":  {"enum": ["s1", "s2", "s3"]},
+      "variant": {"enum": ["base", "reuse", "ngram", "full", "full-r2"]}
+    },
+    "label": "mmlupro-ae-{variant}-{model}-{subset}",
+    "output_dir": "mmlupro100-ae-{variant}-{model}-{subset}",
+    "baseline": {"variant": {"base": "ae-base", "reuse": "ae-reuse", "ngram": "ae-ngram", "full": "ae-full", "full-r2": "ae-full"}},
+    "memory_mb": {"e2b": 2600, "e4b": 4400},
+    "_memory_mb": "As mmlupro-lg until measured: -reuse adds one prefix snapshot (39 MiB on E2B, logged as 'kv prefix snapshot').",
+    "boards": {
+      "jetson": {
+        "command": "env SUBSET={subset} THINKING=off VARIANT={variant} ./std_mmlupro_lg_jetson.sh {model}",
+        "env": {"SRVLOG": "{stdbench}/{output_dir}/server.log", "SUBSET": "{subset}"}
+      }
+    }
+  },
+
+  "mmlupro-ngram": {
+    "description": "S10: llama.cpp with its own n-gram speculative decoding (--spec-type ngram-simple), the fair baseline for S9. cfg default = llama.cpp's own knobs; n3mK = 3-token lookup, K-token drafts (verify width K+1), as S9. MMLU-Pro, one subset, one model, thinking off.",
+    "params": {
+      "model":  {"enum": ["e2b", "e4b"]},
+      "subset": {"enum": ["s1", "s2", "s3"]},
+      "cfg":    {"enum": ["default", "n3m2", "n3m3"]}
+    },
+    "label": "mmlupro-ngram-{cfg}-{model}-{subset}",
+    "output_dir": "mmlupro100-ngram-{cfg}-{model}-{subset}",
+    "baseline": {"cfg": {"default": "ngram-baseline", "n3m2": "ngram-baseline", "n3m3": "ngram-baseline"}},
+    "memory_mb": {"e2b": 3900, "e4b": 5200},
+    "boards": {
+      "jetson": {
+        "command": "env SUBSET={subset} THINKING=off SPEC={cfg} ./std_mmlupro_jetson.sh {model}",
+        "env": {"SRVLOG": "{stdbench}/{output_dir}/server.log", "SUBSET": "{subset}"}
+      }
+    }
+  },
+
   "mmlupro-tq": {
     "description": "S8: MMLU-Pro with a TurboQuant turbo3 KV cache (pinned llama.cpp fork), one 100-question subset, one model. Both boards.",
     "params": {
@@ -68,6 +107,49 @@
         "command": "env SUBSET={subset} THINKING={thinking} ./std_mmlupro_tq.sh {model}",
         "env": {"SRVLOG": "{stdbench}/{output_dir}/server.log", "SUBSET": "{subset}"},
         "memory_mb": {"e4b": 5200}
+      }
+    }
+  },
+
+  "mmlupro-letter": {
+    "description": "S4: MMLU-Pro with the answer constrained to a letter, no chain of thought (std_mmlupro_letter.sh, the mmlu_pro_letter task). rotate shifts every question's options by N places, gold included: the permutation-ensemble runs analyze_permutation.py reads; 0 is the plain task. Same server flags as the baseline. Pi only: the script drives va-llm.",
+    "params": {
+      "model":  {"enum": ["e2b", "e4b"]},
+      "subset": {"enum": ["s1", "s2", "s3"]},
+      "rotate": {"enum": ["0", "2", "4", "6", "8"], "default": "0"}
+    },
+    "label": "mmlupro-letter-{model}-{subset}",
+    "output_dir": "mmlupro100-{model}-{subset}-letter",
+    "suffix_when": {"rotate": {"2": "-r2", "4": "-r4", "6": "-r6", "8": "-r8"}},
+    "baseline": "mmlupro-baseline",
+    "memory_mb": {"e2b": 3900, "e4b": 5400},
+    "_memory_mb": "The mmlupro numbers: same server, and at most 16 generated tokens per question, so its peak is below the chain-of-thought baseline's.",
+    "boards": {
+      "pi": {
+        "command": "env SUBSET={subset} ROT={rotate} ./std_mmlupro_letter.sh {model}",
+        "env": {}
+      }
+    }
+  },
+
+  "ae-gate": {
+    "description": "S9 quality gate (ae_gate.py): replay questions the S3 run already answered (mmlupro100-lg-<model>-<subset>) through the proposed engine with these switches; every reply must come back byte-identical. A short sweep of per_category questions per subject, not a benchmark run. Jetson only.",
+    "params": {
+      "model":        {"enum": ["e2b", "e4b"]},
+      "subset":       {"enum": ["s1", "s2", "s3"], "default": "s1"},
+      "flags":        {"pattern": "^[-A-Za-z0-9 .=]{0,80}$", "hint": "engine switches, e.g. -reuse -ngram -block 4 (empty: none)"},
+      "per_category": {"enum": ["1", "2", "3", "5"], "default": "2"},
+      "name":         {"pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$", "hint": "sweep name: b4 makes ae-sweep-<model>-b4"}
+    },
+    "label": "ae-sweep-{model}-{name}",
+    "output_dir": "ae-sweep-{model}-{name}",
+    "baseline": null,
+    "memory_mb": {"e2b": 2600, "e4b": 4400},
+    "_memory_mb": "As mmlupro-lg: the same engine and model files.",
+    "boards": {
+      "jetson": {
+        "command": "./ae_gate.py --model {model} --flags=\"{flags}\" --against {stdbench}/mmlupro100-lg-{model}-{subset} --per-category {per_category} --out {stdbench}/{output_dir}",
+        "env": {}
       }
     }
   },
