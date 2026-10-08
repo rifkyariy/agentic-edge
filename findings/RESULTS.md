@@ -533,7 +533,7 @@ energy for memory the boards did not need. It would only pay off at contexts
 long enough for the KV cache to dominate memory, and this task never reaches
 those.
 
-## 7.6 S9 — the proposed engine (2026-10-04 – 05)
+## 7.6 S9 — the proposed engine (2026-10-04 – 08)
 
 S9 is little-gemma plus this project's `ae.patch` (`benchmark/little_gemma/`).
 It adds two switches, each designed to change speed only:
@@ -591,18 +591,140 @@ Jetson prefills at hundreds to ~1,700 tok/s, so prefill was never the
 bottleneck. The `-reuse` snapshot costs 39 MiB, and peak memory was otherwise
 unchanged (E4B s1: 5,804 MB `full` against 5,924 MB S3).
 
-**Two variants have no runs:**
+**`reuse` alone (2026-10-07 – 08).** The first six `reuse` jobs never started.
+The queue's fingerprint check gave up after 420 s with "no llama-server
+appeared", and each run's `server.log` shows why: `lg_openai_shim.py` exited at
+once with *argument --engine-flags: expected one argument*. With
+`VARIANT=reuse` the value is the single token `-reuse`, and argparse treats a
+leading-dash value as an option unless it contains a space. `-ngram -block 3`
+contains one, which is why the other variants ran. The run script now passes
+`--engine-flags=-reuse`, and all six reruns completed and passed the
+fingerprint. The six original jobs still sit blocked in the queue.
 
-- **`reuse`: all six runs blocked.** The queue's fingerprint check gave up after
-  420 s with "no llama-server appeared". The cause is in each run's
-  `server.log`: `lg_openai_shim.py` exited at once with *argument
-  --engine-flags: expected one argument*. With `VARIANT=reuse` the value
-  is the single token `-reuse`. argparse treats a leading-dash value as an
-  option unless it contains a space. The other variants' values (`-ngram
-  -block 3`) contain one, which is why they ran. Passing it as
-  `--engine-flags=-reuse` would fix this. That fix is not made yet.
-- **`base`**: not queued. The gate's no-switch sweeps (28/28 on both models)
-  are its only evidence so far.
+All 600 replies are byte-identical to S3's and to `full`'s, so the scores are
+again S3's. Cost, pooled over s1/s2/s3:
+
+| Jetson | energy | wall time | J / gen. token | prompt tokens / subset | vs S3 |
+|---|---|---|---|---|---|
+| E2B S9 `reuse` | 25.5 Wh | 136 min | 0.46 | 38k (S3: 144k) | +4% Wh, −4% time |
+| E4B S9 `reuse` | 47.6 Wh | 238 min | 0.85 | 38k (S3: 144k) | ±0% Wh, −8% time |
+
+**Read the time column, not the energy column.** These runs were made after
+the Jetson's clocks were locked (§7.7), which adds 5–9% energy at unchanged
+speed. S3 ran before the lock. So the +4% / ±0% energy does not show that
+`-reuse` costs energy; on equal clocks it would most likely be a small saving.
+The time saving is real. It comes from prefill: E2B s1 spent 29 s prefilling
+against S3's 86 s. It is small next to `-ngram`'s, as `full` against `ngram`
+already showed.
+
+**`base`** (neither switch) is still not queued. The gate's no-switch sweeps
+(28/28 on both models) are its only evidence so far.
+
+**Repeatability.** `full` was rerun on E2B s1 on 2026-10-07 (`-r2`), three days
+after the first run and under the locked clocks. All 100 replies are
+byte-identical to the first run's.
+
+## 7.7 The Jetson's clocks were locked between 2026-10-05 and 10-07
+
+Every Jetson run up to 2026-10-05 ~10:00 ran with the clocks scaling freely:
+CPU averaging 830–910 MHz, GPU averaging 580–605 MHz, idle draw 4.5–4.6 W.
+Every run from 2026-10-07 19:30 on runs with them pinned: CPU at 1,497 MHz
+(`scaling_min_freq` = `scaling_max_freq`), GPU at 612 MHz (devfreq min = max),
+idle 4.9–5.0 W. That is the signature of `jetson_clocks`. `nvpmodel` mode 0 is
+unchanged since the 2026-10-04 boot, and the clocks are still locked as of
+2026-10-08. The journal does not say who or what locked them.
+
+Two pairs of runs measure what the lock does. Each pair produced byte-identical
+replies, so only the clocks differ:
+
+| E2B s1 | before | after | Δ energy | Δ time |
+|---|---|---|---|---|
+| llama.cpp S1 → S10 `n3m2` (which never drafted, §7.8) | 7.65 Wh, 46.5 min | 8.06 Wh, 45.6 min | +5% | −2% |
+| S9 `full` → `full-r2` | 6.66 Wh, 39.7 min | 7.29 Wh, 40.9 min | +9% | +3% |
+
+**So locked clocks cost 5–9% more energy and leave speed within ±3%.** The work
+is GPU-bound, and the GPU was already near 612 MHz. Wall-time comparisons across
+the change are therefore usable. Energy comparisons across it are not. This
+affects §7.6's `reuse` rows and all of §7.8. Every earlier result is untouched.
+
+## 7.8 S10 — llama.cpp's own n-gram speculation (2026-10-07 – 08)
+
+S10 is the fair baseline for S9. It is stock llama.cpp (Jetson build `a894dae`)
+with its own prompt-lookup drafting, `--spec-type ngram-simple`, on the S1 task
+unchanged (thinking off, same flags otherwise). It asks how much of S9's gain
+llama.cpp would get from switching on what it already ships. Three settings:
+
+- **`n3m3`**: 3-token lookup, 3-token drafts (`--spec-ngram-simple-size-n 3
+  --spec-ngram-simple-size-m 3 --spec-draft-n-max 3`), the closest match to S9's
+  `-ngram -block 3`. The full grid: both models, s1/s2/s3.
+- **`default`**: llama.cpp's own settings (12-token lookup, 48-token drafts).
+  E2B s1 only, as a pilot.
+- **`n3m2`**: as `n3m3` but 2-token drafts. E2B s1 only. **It never drafted.**
+  Its `server.log` has no draft-acceptance line for any of the 100 requests,
+  so it is really a plain S1 rerun. The cause was not investigated. Its use
+  here is as the same-day, locked-clock S1 control (§7.7).
+
+All 8 runs passed the `ngram-baseline` fingerprint.
+
+**Accuracy: tied with S1, but not the same answers.**
+
+| Jetson | S1 | S10 `n3m3` | Δ | both / neither / S1 only / S10 only | McNemar | same text | same letter |
+|---|---|---|---|---|---|---|---|
+| E2B | 52.7% | **53.3%** (56/51/53) | +0.6 | 143 / 125 / 15 / 17 | p = 0.86 | 29 / 300 | 76% |
+| E4B | 66.0% | **65.0%** (62/66/67) | −1.0 | 184 / 91 / 14 / 11 | p = 0.69 | 20 / 300 | 85% |
+| E2B s1, `default` | 56% | 53% | −3 | 5 / 2 only | p = 0.45 | 9 / 100 | 85% |
+
+Greedy verification should in theory reproduce S1's text exactly. It does not:
+only 7–10% of `n3m3` replies match S1 byte for byte. The answer letter changes
+about as often as between the Pi and the Jetson (§7.1). The likely cause is
+that verifying several tokens in one batch takes different CUDA kernels from
+single-token decode. The logits then differ in the last bits, and greedy flips
+at near-ties. This was not verified. S9 is different: the gate and all 1,900
+full-run replies show its speculation is byte-exact against its own baseline
+(§7.6). For the paper: **S10 is accuracy-neutral but not lossless; S9 is
+lossless.**
+
+**Drafting.** `n3m3` accepted 46% of drafted tokens on E2B (53.7k of 117.5k)
+and 44% on E4B (47.1k of 108.3k), about 1.36 and 1.29 tokens per decode step.
+`default` drafted on 94 of 100 requests but accepted only 17% (5.5k of 32.8k).
+Long 48-token drafts rarely survive on this task.
+
+**Cost, pooled over s1/s2/s3**:
+
+| Jetson | energy | wall time | decode tok/s | mean W | J / gen. token |
+|---|---|---|---|---|---|
+| E2B S1 | 25.6 Wh | 155 min | 23.0 | 10.1 | 0.46 |
+| E2B S10 `n3m3` | 24.1 Wh (−6%) | 139 min (−10%) | 26.6 | 10.6 | 0.43 |
+| E4B S1 | 54.5 Wh | 313 min | 11.6 | 10.5 | 0.96 |
+| E4B S10 `n3m3` | 50.4 Wh (−7%) | 271 min (−13%) | 13.8 | 11.3 | 0.87 |
+
+S1 here is the 2026-09-22 runs, made before the clock lock (§7.7). Two
+consequences:
+
+- The **time saving holds** within the lock's ±3%. Speculation raises decode
+  speed by 16–19%.
+- The **energy saving is understated** by about the lock's 5–9%. The only
+  same-clock comparison is E2B s1: `n3m3` against the `n3m2` control is
+  7.51 against 8.06 Wh (−7%) and 43.5 against 45.6 min (−5%). `default` gets
+  −2% and −2%.
+
+**Against S9.** n-gram drafting speeds up decode by about the same fraction in
+both engines: llama.cpp 23.0 → 26.6 tok/s (+16%) on E2B and 11.6 → 13.8 (+19%)
+on E4B; little-gemma 25.6 → 29.5 (+15%) and 15.1 → 17.8 (+18%). S9's larger
+total gain is little-gemma's head start plus the same speculation, not better
+speculation. Per 100 questions, S10 `n3m3` costs 8.0 Wh (E2B) and 16.8 Wh (E4B).
+That is close to S3's 8.2 / 15.9 Wh bar and above S9 `full`'s 6.8 / 12.6. The
+S10 figures carry the lock's surcharge, so on equal clocks it would be roughly
+7.4 / 15.6 Wh. That still leaves S9 ahead by about 8% (E2B) and 19% (E4B).
+That last estimate is not measured.
+
+Memory: peak in use fell slightly, 4.52–4.58 GB against S1's 4.82–4.84 GB
+(E2B) and 6.59–6.62 against 6.96–7.09 GB (E4B). Prompt tokens and prefill speed
+match S1 (~38k per subset, ~480 / ~280 tok/s).
+
+**Not run:** `default` and `n3m2` beyond the E2B s1 pilot; S10 on the Pi. The
+Pi's llama.cpp (`661643e`) has the same `--spec-type ngram-simple`, but no Pi
+entry exists for `mmlupro-ngram`.
 
 ## 8. Capability coverage
 
@@ -610,7 +732,7 @@ Paper 1 claims three capability areas. Only one is covered so far.
 
 | Capability | Benchmark | Pi 5 | Jetson | iPhone |
 |---|---|---|---|---|
-| a. General knowledge / reasoning | MMLU-Pro, GSM8K | MMLU-Pro done: llama.cpp (S1/S2), TurboQuant (S8), thinking off and on; GSM8K done | MMLU-Pro done: llama.cpp, little-gemma (S3), TurboQuant (S8), thinking off and on; the proposed engine (S9) thinking off | MMLU-Pro done, thinking off |
+| a. General knowledge / reasoning | MMLU-Pro, GSM8K | MMLU-Pro done: llama.cpp (S1/S2), TurboQuant (S8), thinking off and on; GSM8K done | MMLU-Pro done: llama.cpp, little-gemma (S3), TurboQuant (S8), thinking off and on; the proposed engine (S9) and llama.cpp n-gram (S10) thinking off | MMLU-Pro done, thinking off |
 | b. Instruction following + tool calling | own 10-case suite + classifier audit; **no standard benchmark run** | partial | not started | not started |
 | c. Safety / security | none chosen | — | — | — |
 
@@ -634,7 +756,7 @@ Deleted, 21GB: `~/.litert-lm` and `~/litert-venv` (condition C dropped),
 `~/.cache/pip`, an unrelated Qwen3-4B GGUF. The raw Sep-14 engine comparison
 scratch files were archived to `findings/early-engine-benchmarks/` first.
 
-## 10. Status (2026-10-05)
+## 10. Status (2026-10-08)
 
 **Written up here:**
 - MMLU-Pro both models · tinyGSM8k E2B (256/1024) and E4B (256) · Tier 1–3
@@ -645,9 +767,12 @@ scratch files were archived to `findings/early-engine-benchmarks/` first.
   - The iPhone (§7.3).
   - S3 and S3t, little-gemma on the Jetson (§7.4).
   - S8 TurboQuant on both boards, thinking off and on (§7.5).
-  - S9 `full` and `ngram`, the proposed engine (§7.6).
+  - S9 `full`, `ngram` and `reuse`, the proposed engine (§7.6).
+  - S10 `n3m3`, llama.cpp's own n-gram speculation, on the Jetson (§7.8).
 
-All board runs passed the serving-flag fingerprint.
+All board runs passed the serving-flag fingerprint. Jetson runs from
+2026-10-07 on ran with locked clocks (§7.7): compare their time, not their
+energy, against earlier runs.
 
 Headline, n = 300 per model:
 
@@ -658,21 +783,24 @@ Headline, n = 300 per model:
 | little-gemma (S3) | 53.0% | 65.3% | 8.2 / 15.9 |
 | TurboQuant KV (S8) | 52.7 / 52.0% | **62.3 / 63.3%** | 10.5 / 21.9 |
 | proposed engine (S9 `full`) | 53.0% (= S3, byte-identical) | 65.3% (= S3) | **6.8 / 12.6** |
+| llama.cpp n-gram (S10 `n3m3`) | 53.3% (not byte-identical to S1) | 65.0% | 8.0 / 16.8 (locked clocks, §7.7) |
 
 **Open:**
-- **S9 `reuse`: all six runs blocked.** The cause is now known (§7.6): the shim
-  rejects `--engine-flags -reuse` as a missing argument. It needs
-  `--engine-flags=-reuse` in `std_mmlupro_lg_jetson.sh`, then a requeue.
-  S9 `base` is not queued.
-- Two Jetson jobs from 2026-09-23 (`mmlupro-e4b-s2-think`, `-s3-think`) still
-  sit blocked by a false-positive memory check. Their cells were completed on
-  2026-09-24 by later jobs, so they can be cancelled. The same goes for the six
-  `reuse` jobs once they are requeued.
-- The S9 code (`job_kinds.json` `mmlupro-ae`, the queue and run scripts) is
-  modified on the Jetson but not committed. `ae_gate.py` is committed
-  (2026-10-04).
-- The S3/S8/S9 per-question samples live on the boards. Unlike S1/S2's, they
-  are not yet copied into `findings/stdbench/`.
+- **The Jetson's clocks are still locked** (§7.7). Either restore them
+  (`sudo jetson_clocks --restore` or a reboot; needs the password) before the
+  next run, or accept the locked state and rerun the controls needed for
+  same-clock energy: S1 E4B and S3 on both models.
+- S9 `base` is not queued.
+- Eight stale Jetson jobs still sit blocked: `mmlupro-e4b-s2-think` and
+  `-s3-think` from 2026-09-23 (false-positive memory check; their cells were
+  completed on 2026-09-24), and the six original `reuse` jobs, since rerun.
+  All eight can be cancelled.
+- The S9 and S10 code (`job_kinds.json` `mmlupro-ae` and `mmlupro-ngram`,
+  `SPEC=` in `std_mmlupro_jetson.sh`, the queue and run scripts) is modified on
+  the Jetson but not committed. `ae_gate.py` is committed (2026-10-04).
+  `replay_lookup.py` exists only on the Pi, untracked.
+- The S3/S8/S9/S10 per-question samples live on the boards. Unlike S1/S2's,
+  they are not yet copied into `findings/stdbench/`.
 
 **Not started**, in rough priority order: capability (b) standard benchmark
 (IFEval and BFCL installed but unrun) · capability (c) safety and security (no
