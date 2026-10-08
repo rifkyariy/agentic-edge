@@ -7,6 +7,10 @@
 > boards; `-rea` is `--reasoning`, the thinking switch itself, and
 > `--reasoning-format` is the separate flag that places the thoughts. See
 > AGENTS.md §5.
+>
+> The raw scratch files this was written from (`m_*.txt`, `q_*.txt`, the
+> prompt lists and `qtest*.sh`) sit next to this file, archived from the Pi on
+> 2026-09-20.
 
 Two engines × two models, measured on one box the same afternoon. The headline:
 **little-gemma's README advantage over llama.cpp is real but CUDA-only, and does

@@ -11,7 +11,7 @@ thinking) and is identical on every device. So a new device is one new file,
 a new condition is one new file, and neither duplicates the other — running
 the study elsewhere is `git pull` plus a device file.
 
-Stdlib only. See EXPERIMENT_PLAN.md for which runs to do in what order, and
+Stdlib only. See ../docs/experiment-plan.md for which runs to do in what order, and
 sweep.sh to run a whole tier at once.
 """
 import argparse

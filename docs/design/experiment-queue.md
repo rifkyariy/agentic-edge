@@ -1,13 +1,13 @@
 # Experiment queue, config UI and run logging — design
 
 **Date:** 2026-09-22
-**Status:** approved design, not yet implemented
+**Status:** implemented (`benchmark/queue_runner.py`, `benchmark/jobqueue/`, `dashboard/app/queue/`); kept as the design record
 **Scope:** a device-side job queue for the Pi 5 and Jetson Orin Nano, a
 configuration UI in the dashboard that feeds it, and per-job logging that
 catches both loud failures (crashes, OOM kills) and silent ones (a run that
 completes but is methodologically invalid).
 
-Related: [`AGENTS.md`](../../../AGENTS.md) §3 (running things), §4 (rules),
+Related: [`AGENTS.md`](../../AGENTS.md) §3 (running things), §4 (rules),
 §5 (methodology invariants), §7 (adding a feature), §9 (one job per device),
 §10 (diff the server command line).
 

@@ -100,7 +100,7 @@ remain in `benchmark/results/` unreported.
    questions** (35/223) into a pointless lookup — "How many kilograms are in a
    pound?" → `currency_rate`, "Who won the World Cup 2022?" → `match_result`.
    Measured by replaying BFCL's irrelevance prompts through `classify()`
-   (`findings/e_classifier_on_bfcl.json`), with the 52 hits hand-audited.
+   (`findings/audits/e_classifier_on_bfcl.json`), with the 52 hits hand-audited.
 
 ### Known failure modes (all from logs, all reproducible)
 
@@ -427,7 +427,7 @@ with thinking off (`--thinking off`, engine `-think -1`) and on (`--thinking
 on`, `-think 320`, the §7.2 budget). Jetson only: on the Pi's CPU little-gemma
 decodes ~6× slower and prefills 41–43× slower than llama.cpp. That would put
 the six Pi runs at ~110 h, so they were not run
-(`docs/proposals/EXPERIMENT-MATRIX.md`). All 12 runs passed the serving-flag
+(`docs/experiment-matrix.md`). All 12 runs passed the serving-flag
 fingerprint (`lg-baseline` / `lg-thinking-on`).
 
 | Jetson | llama.cpp (S1 / S2) | little-gemma (S3 / S3t) | Δ | both / neither / llama.cpp only / lg only | McNemar |
@@ -470,7 +470,7 @@ since each question is scored once. No throttling was recorded; maximum
 temperature was 60.9 °C.
 
 These are measurements of two engines other people wrote. They set the bar
-that §7.6 must clear. They are not a contribution (`docs/proposals/ISO-ACCURACY.md`).
+that §7.6 must clear. They are not a contribution (`findings/analyses/iso-accuracy.md`).
 
 ## 7.5 S8 — llama.cpp with a TurboQuant KV cache (2026-09-29 – 10-03)
 
@@ -581,7 +581,7 @@ replies is byte-identical to S3's**. So the scores are S3's exactly: E2B 53.0%
 
 Mean power is unchanged (10.3–11.0 W), so the whole saving is time. Per 100
 questions, S9 `full` costs **6.8 Wh on E2B and 12.6 Wh on E4B**, against
-the 8.2 and 15.9 Wh bar `ISO-ACCURACY.md` set from S3. The E4B S3 totals
+the 8.2 and 15.9 Wh bar `iso-accuracy.md` set from S3. The E4B S3 totals
 include s3's 5 retried requests (§7.4). Over s1 + s2 alone, which had none,
 `full` still takes 18% less time than S3 (139 against 169 min).
 
@@ -805,7 +805,7 @@ Headline, n = 300 per model:
 **Not started**, in rough priority order: capability (b) standard benchmark
 (IFEval and BFCL installed but unrun) · capability (c) safety and security (no
 benchmark chosen) · precision control (S7: E4B Q5_K_M, the highest precision
-both boards fit; `docs/proposals/EXPERIMENT-MATRIX.md`).
+both boards fit; `docs/experiment-matrix.md`).
 
 **No further GSM8K runs.** Its results stay as the methodological appendix on
 generation caps (§1).

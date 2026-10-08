@@ -185,7 +185,7 @@ Checked on the boards, 2026-09-27, rather than assumed.
 
 **Patch llama.cpp, not little-gemma.** An earlier draft of this section said
 the opposite, on the grounds that we already own `agentic-edge.patch` against
-little-gemma's `src/run.c`. That reasoning was wrong, and `gemma4-pi5-benchmarks.md`
+little-gemma's `src/run.c`. That reasoning was wrong, and `findings/early-engine-benchmarks/README.md`
 had the disproof in the repo the whole time: little-gemma's CPU prefill is
 **0.84 tok/s (E4B) and 1.77 tok/s (E2B)** against llama.cpp's 36.3 and 73.3 —
 41–43× slower, because it walks the prompt token-by-token where llama.cpp

@@ -1,7 +1,7 @@
 # TODO
 
 Working list, most-actionable first. Background and full data live in
-[`findings/RESULTS.md`](findings/RESULTS.md) and [`docs/proposals/`](docs/proposals/);
+[`findings/RESULTS.md`](findings/RESULTS.md) (§10 is the status) and [`docs/`](docs/);
 this file is the short version — what to do next and why, not the evidence.
 
 Both boards are idle as of 2026-09-29.
@@ -18,7 +18,7 @@ Both boards are idle as of 2026-09-29.
       governors — cheaper to test, already at `ondemand` per `RESULTS.md`).
 - [ ] **Pick a paper framing for the negative results.** Three cascade
       constructions on the permutation gate all failed
-      (`docs/proposals/PERMUTATION-RESULT-POOLED.md`). That's a legitimate
+      (`findings/analyses/permutation-ensemble.md`). That's a legitimate
       "ruled out with evidence" finding, not a stalled experiment — decide
       whether it's a subsection or an appendix before writing more code
       chasing a fourth variant.
@@ -58,15 +58,11 @@ Both boards are idle as of 2026-09-29.
 
 ## Housekeeping
 
-- [ ] `AGENTS.md` §6 "State as of 2026-09-22" is now a week stale —
-      thinking-on (both engines), little-gemma S3, and the whole permutation
-      cascade investigation happened after that date and aren't reflected.
-      Update once the paper-framing decision above is made, so it's not
-      rewritten twice.
-- [ ] Reconcile `docs/proposals/PERMUTATION-RESULT.md` (superseded, n=100,
-      single subset) vs `PERMUTATION-RESULT-POOLED.md` (current, n=300) —
-      the first should get a one-line "superseded by" pointer at the top so
-      nobody cites the stale +2.0pt number.
+- [x] `AGENTS.md` §6 was stale — it now points at `findings/RESULTS.md` §10
+      instead of keeping its own copy of the state (2026-10-08).
+- [x] The two permutation write-ups are one file now,
+      `findings/analyses/permutation-ensemble.md`: the pooled n=300 result
+      first, the superseded n=100 read as an appendix (2026-10-08).
 
 ## Explicitly not doing (parking, not forgetting)
 
@@ -74,7 +70,7 @@ Both boards are idle as of 2026-09-29.
 - Further GSM8K runs — results stay as a methodological appendix only.
 - little-gemma on the Pi for the full S3 grid — would cost ~110h to confirm
   what the Jetson already answered (~6× slower decode, ~40× slower prefill
-  on Pi CPU per `gemma4-pi5-benchmarks.md`). One smoke-test run is enough
+  on Pi CPU per `findings/early-engine-benchmarks/README.md`). One smoke-test run is enough
   evidence; don't scale it up.
 - Cassandra / PELM-style speculative decoding — Cassandra has no CPU
   results and needs custom weight/KV compression infra; PELM's speculative

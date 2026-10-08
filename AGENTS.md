@@ -14,10 +14,11 @@ and device cost (power, thermals, utilisation) are measured in the same run.
 **Paper 1 scope: text and reasoning parameters only.** Voice into Gemma's
 multimodal path is paper 2 — keep audio results out of this one.
 
-Deeper background: [`benchmark/EXPERIMENT_PLAN.md`](benchmark/EXPERIMENT_PLAN.md)
+Deeper background: [`docs/experiment-plan.md`](docs/experiment-plan.md)
 (protocol, statistical design, revisions results forced),
-[`findings/RESULTS.md`](findings/RESULTS.md) (every number so far),
-[`summary.md`](summary.md) (current state).
+[`findings/RESULTS.md`](findings/RESULTS.md) (every number so far; §10 is the
+current state), [`TODO.md`](TODO.md) (what to do next). The full doc map is in
+[`README.md`](README.md).
 
 ---
 
@@ -81,17 +82,30 @@ dashboard/          Next.js live monitor (runs on the Mac, not the devices)
                       phone (the iPhone app's upload; the only route that writes)
   scripts/check-ssh.mjs  `npm run check` — preflight before a fresh clone runs
 
+docs/               the study's design, written before (or instead of) running it
+  experiment-plan.md  protocol, statistical design, revisions results forced
+  experiment-matrix.md  every condition S1-S10, done and proposed, with costs
+  proposals/          method proposals (cascade, quality flows); README maps them
+  design/             design records for the tooling (experiment queue)
+
 findings/           results and analysis (committed)
   RESULTS.md          the write-up of everything measured
+  analyses/           one-question write-ups: S4 letter-only, permutation, iso-accuracy
+  audits/             classifier-on-BFCL audit, the superseded sanity run
   stdbench/           lm-eval results + per-question samples + subset ids
   measured/           telemetry.csv / requests.csv / summary.json per run
+  phone/              iPhone runs (gzipped uploads)
+  export/             the whole grid as one JSON, for offline analysis
   viz/                static results page + its template
-  early-engine-benchmarks/  raw Sep-14 engine comparison, rescued from the Pi
-
-voice-agent/        the agent under test (condition E), deployed to the Pi
-  services/           asr, llm, tts, orchestrator, tools, web
-  systemd/, config/, deploy.sh
+  early-engine-benchmarks/  the Sep-14 engine comparison (README) + its raw data
 ```
+
+**The voice agent lives on its own branch, `voice-agent`** (history kept, files
+at the branch root). It is the agent under test for condition E and is
+deployed on the Pi as `/opt/voice-agent` + `/etc/voice-agent`. The benchmark
+scripts here use that *deployed* copy (`va-llm`, `runtime.env`, va-web's
+`/model` and `/option`), never the source, so they work without it checked
+out. Change the agent on that branch and deploy it with its `deploy.sh`.
 
 ## 2. The two devices
 
@@ -277,29 +291,16 @@ These are not preferences — breaking them invalidates the paper.
   Same method on both boards, so the comparison holds — but never call it wall
   power.
 
-## 6. State as of 2026-09-22
+## 6. Current state
 
-Done: Pi tiers 1-3, MTP × thinking, quant sweep, tinyGSM8k, the live-answer and
-classifier audits, Jetson setup (CUDA llama.cpp for sm_87, models on the SSD,
-eval venv, telemetry with GPU), and **the full MMLU-Pro baseline grid — s1/s2/s3
-× E2B/E4B on both boards with telemetry**, all on matched serving flags.
+Not kept here, so it cannot go stale twice: **the status is
+[`findings/RESULTS.md`](findings/RESULTS.md) §10** (what is done, the headline
+table, what is open) and **the work list is [`TODO.md`](TODO.md)**. Update
+those, not this section.
 
-Baseline headline (n=300 per model, paired over the same questions): E2B Pi
-51.7% vs Jetson 52.7%, E4B Pi 65.7% vs Jetson 66.0% — tied on both (McNemar
-p = 0.76 and 1.00). The Jetson is ~3.4× faster at decode and ~2.4× cheaper per
-token while drawing ~1.5× the power. The boards pick the same answer letter on
-only 71% (E2B) / 85% (E4B) of questions despite greedy decoding; see
-`findings/RESULTS.md` §7.1.
-
-Running: nothing.
-
-Not started: capability (b) standard benchmark — IFEval and BFCL are installed
-but unrun, so tool calling currently rests on the custom 10-case suite;
-capability (c) safety and security — no benchmark chosen (candidates: XSTest,
-SimpleSafetyTests, AgentDojo); thinking-on MMLU-Pro rows; the manuscript.
-
-Dropped: LiteRT-LM (condition C) entirely; the deployed-prompt MMLU-Pro row;
-further GSM8K runs (its results stay as a methodological appendix).
+Dropped for good: LiteRT-LM (condition C) entirely; the deployed-prompt
+MMLU-Pro row; further GSM8K runs (its results stay as a methodological
+appendix).
 
 ## 7. If you add a feature
 

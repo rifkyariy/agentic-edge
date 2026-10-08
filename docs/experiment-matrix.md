@@ -77,7 +77,7 @@ once generation stops being the cost.
 
 ⚠️ **S3 on the Pi is the expensive one and should not run.** little-gemma on Pi
 CPU is ~6× slower at decode *and* 41–43× slower at prefill
-(`gemma4-pi5-benchmarks.md`), so E4B would be ~37 h *per subset*. The engine
+(`findings/early-engine-benchmarks/README.md`), so E4B would be ~37 h *per subset*. The engine
 comparison is already answered on the Jetson; repeating it on the Pi costs
 ~110 h to confirm what the early engine benchmarks showed in September.
 
