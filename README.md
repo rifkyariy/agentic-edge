@@ -1,5 +1,14 @@
 # Voice agent — modular services
 
+> **This branch is the voice agent only**, split out of `main` on 2026-10-08
+> with its history (`git subtree split --prefix=voice-agent`). The benchmark
+> harness, dashboard and results are on [`main`](https://github.com/rifkyariy/agentic-edge/tree/main);
+> they drive the copy deployed on the Pi (`/opt/voice-agent`,
+> `/etc/voice-agent/runtime.env`, the `va-*` units), so keep those paths and
+> va-web's `/model` and `/option` endpoints stable. The engine comparison this
+> README cites as `gemma4-pi5-benchmarks.md` is now
+> `findings/early-engine-benchmarks/README.md` on `main`.
+
 Six independent systemd services. Each speaks one dumb text protocol, so any
 one can be replaced without touching the others.
 
