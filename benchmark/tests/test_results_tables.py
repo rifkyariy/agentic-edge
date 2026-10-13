@@ -11,12 +11,14 @@ FINDINGS = os.path.join(os.path.dirname(os.path.dirname(HERE)), "findings", "run
 
 @unittest.skipUnless(os.path.isdir(FINDINGS), "findings/runs/jetson not present (a board's checkout)")
 class TestResultsTables(unittest.TestCase):
-    def test_tables_md_is_up_to_date(self):
+    def test_tables_md_and_images_are_up_to_date(self):
         import results_tables
+        text, svgs = results_tables.build()
         with open(results_tables.OUT) as fh:
-            committed = fh.read()
-        self.assertEqual(committed, results_tables.build(),
-                         "findings/TABLES.md is stale: run python3 benchmark/results_tables.py")
+            self.assertEqual(fh.read(), text, "findings/TABLES.md is stale: run python3 benchmark/results_tables.py")
+        for name, (svg, _) in svgs.items():
+            with open(os.path.join(results_tables.IMG, name + ".svg")) as fh:
+                self.assertEqual(fh.read(), svg, "findings/tables/%s.svg is stale" % name)
 
 
 class TestReplay(unittest.TestCase):

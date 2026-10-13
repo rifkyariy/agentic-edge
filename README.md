@@ -12,17 +12,13 @@ verify, and shared-prefix KV reuse made exact for sliding-window ring buffers.
 It reproduces little-gemma's replies byte for byte and is faster and cheaper
 than llama.cpp:
 
-| Jetson Orin Nano, 15 W, n=300 | llama.cpp | llama.cpp + n-gram | little-gemma | **CoPR** |
-|---|---|---|---|---|
-| E2B accuracy | 52.7% | 53.3% | 53.0% | **53.0%** (300/300 replies = little-gemma) |
-| E2B decode tok/s · J/token | 23.00 · 0.465 | 26.63 · 0.429 | 25.58 · 0.446 | **29.52 · 0.370** |
-| E4B accuracy | 66.0% | 65.0% | 65.3% | **65.3%** (300/300 replies = little-gemma) |
-| E4B decode tok/s · J/token | 11.62 · 0.965 | 13.83 · 0.871 | 15.05 · 0.838 | **17.67 · 0.676** |
+![Table III: engines on the Jetson Orin Nano at 15 W](findings/tables/table3.svg)
 
 Every number in that table, and in the paper's Tables I, III, IV, V, VI and
 VIII, is rebuilt from the raw runs committed here by one command (step 1
-below). **All results as tables**, the paper's and every other experiment's,
-generated from the same data: [`findings/TABLES.md`](findings/TABLES.md).
+below). **All results as table images**, the paper's and every other
+experiment's, generated from the same data: [`findings/TABLES.md`](findings/TABLES.md)
+(SVG and 2x PNG in [`findings/tables/`](findings/tables/), ready for slides).
 
 ---
 
@@ -45,7 +41,7 @@ generated from the same data: [`findings/TABLES.md`](findings/TABLES.md).
 | folder | what it holds |
 |---|---|
 | [`benchmark/`](benchmark/) | everything that runs on the boards: run scripts, telemetry, the job queue, the engine patches (`little_gemma/`), the paper's analysis (`paper_tables.py`, `collect_runs.py`), tests, and the iPhone app (`apps/ios/`) |
-| [`findings/`](findings/) | every result. `TABLES.md` has all of them as tables, generated from the data; `runs/jetson/` holds the paper's raw Jetson runs; `RESULTS.md` is the full write-up |
+| [`findings/`](findings/) | every result. `TABLES.md` shows all of them as table images (`tables/*.svg`, `*.png`), generated from the data; `runs/jetson/` holds the paper's raw Jetson runs; `RESULTS.md` is the full write-up |
 | [`docs/`](docs/) | the protocol as run, the index of every experiment, the queue's design record |
 | [`dashboard/`](dashboard/) | optional Next.js monitor and queue UI for the boards; runs on a laptop |
 
@@ -81,14 +77,16 @@ every number matches the manuscript
 ```
 
 The exit status is 1 if any number differs. `--table 1|3|4|5|6|8|text|issues`
-prints a single table. To see every result as markdown tables instead
+prints a single table. To see every result as tables instead
 (per-run, per-subset, per-subject, reply identity between engines, the Pi,
 the iPhone, tinyGSM8k and the own suite), regenerate
-[`findings/TABLES.md`](findings/TABLES.md):
+[`findings/TABLES.md`](findings/TABLES.md) and its images in
+[`findings/tables/`](findings/tables/) (an SVG per table, plus a 2x PNG when
+Google Chrome is installed, used headless to render it):
 
 ```bash
-python3 benchmark/results_tables.py          # rewrites findings/TABLES.md
-python3 benchmark/results_tables.py --check  # is the committed copy current?
+python3 benchmark/results_tables.py          # rewrites TABLES.md and findings/tables/
+python3 benchmark/results_tables.py --check  # are the committed copies current?
 ```
 
 Both checks run in the test suite:
@@ -474,7 +472,7 @@ with its data and write-up. The full numbers are in
 | change anything in the repo: rules, devices, invariants | [`AGENTS.md`](AGENTS.md) — **start here** |
 | know exactly how every measurement was taken | [`docs/protocol.md`](docs/protocol.md) |
 | see every experiment that ran, and where its data is | [`docs/experiments.md`](docs/experiments.md) |
-| see every result as tables | [`findings/TABLES.md`](findings/TABLES.md) (generated) |
+| see every result as tables (images + text) | [`findings/TABLES.md`](findings/TABLES.md); the images alone are in [`findings/tables/`](findings/tables/) |
 | see every number with its interpretation, and the current status | [`findings/RESULTS.md`](findings/RESULTS.md) (§10 is the status) |
 | read one experiment's analysis | [`findings/analyses/`](findings/analyses/): letter-only, permutation ensemble, model cascade, iso-accuracy |
 | use the harness beyond the paper | [`benchmark/README.md`](benchmark/README.md) |
