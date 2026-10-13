@@ -1,0 +1,65 @@
+{
+ "baseline": "ngram-baseline",
+ "captured": {
+  "server_args": "/home/ari/build/llama.cpp/build/bin/llama-server -m /home/ari/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf -c 8192 --host 127.0.0.1 --port 8080 -ngl 99 -rea off --reasoning-budget -1 --cache-ram 0 --spec-type ngram-simple --spec-ngram-simple-size-n 3 --spec-ngram-simple-size-m 3 --spec-draft-n-max 3",
+  "pids": [
+   2944591
+  ],
+  "model_path": "",
+  "governor": "schedutil",
+  "kernel": "Linux 6.8.12-1021-tegra",
+  "flags": {
+   "ctx": "8192",
+   "cache_ram": "0",
+   "reasoning": "off",
+   "reasoning_budget": "-1",
+   "reasoning_format": null,
+   "ngl": "99",
+   "cache_type_k": null,
+   "cache_type_v": null,
+   "model": "/home/ari/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+   "spec_type": "ngram-simple",
+   "spec_ngram_n": "3",
+   "spec_ngram_m": "3"
+  }
+ },
+ "diff": [
+  {
+   "key": "cache_ram",
+   "expected": "0",
+   "actual": "0",
+   "ok": true
+  },
+  {
+   "key": "ctx",
+   "expected": "8192",
+   "actual": "8192",
+   "ok": true
+  },
+  {
+   "key": "ngl",
+   "expected": "99",
+   "actual": "99",
+   "ok": true
+  },
+  {
+   "key": "reasoning",
+   "expected": "off",
+   "actual": "off",
+   "ok": true
+  },
+  {
+   "key": "reasoning_budget",
+   "expected": "-1",
+   "actual": "-1",
+   "ok": true
+  },
+  {
+   "key": "spec_type",
+   "expected": "ngram-simple",
+   "actual": "ngram-simple",
+   "ok": true
+  }
+ ],
+ "agrees": true
+}
