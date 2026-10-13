@@ -1,0 +1,97 @@
+{
+ "label": "ae-sweep-e2b-b3",
+ "model": "",
+ "command": "./ae_gate.py --model e2b --flags -reuse -ngram -block 3 --against /home/ari/research/stdbench/mmlupro100-lg-e2b-s1 --per-category 2 --out /home/ari/research/stdbench/ae-sweep-e2b-b3",
+ "samples": 559,
+ "wall_s": 584.0,
+ "work_s": 523.5,
+ "power": {
+  "idle_w": 4.58,
+  "idle_post_w": 4.56,
+  "work_mean_w": 10.3,
+  "work_peak_w": 11.29,
+  "generation_mean_w": null,
+  "energy_wh": 1.497,
+  "energy_j": 5390.3,
+  "energy_above_idle_j": 2992.8,
+  "_method": "sum of PMIC per-rail V*I, trapezoidal over 1Hz samples; board DC power, excludes PSU conversion loss"
+ },
+ "tokens": {
+  "requests": 0,
+  "prompt_tokens": 0,
+  "generated_tokens": 0,
+  "prefill_s": 0.0,
+  "decode_s": 0.0,
+  "prefill_tok_s": null,
+  "decode_tok_s": null
+ },
+ "efficiency": {
+  "j_per_generated_token": null,
+  "j_per_generated_token_above_idle": null,
+  "j_per_token_all": null,
+  "decode_tok_s_per_w": null,
+  "tokens_per_wh": 0.0
+ },
+ "thermal": {
+  "temp_c": {
+   "mean": 57.37,
+   "median": 58.0,
+   "min": 51.6,
+   "max": 59.0,
+   "n": 501
+  },
+  "throttled_nonzero_samples": 0,
+  "cpu_mhz_mean": 881.39
+ },
+ "utilisation": {
+  "cpu_pct": {
+   "mean": 2.89,
+   "median": 2.1,
+   "min": 1.0,
+   "max": 15.1,
+   "n": 501
+  },
+  "gpu_pct": {
+   "mean": 94.15,
+   "median": 99.7,
+   "min": 0.0,
+   "max": 100.0,
+   "n": 501
+  },
+  "gpu_mhz": {
+   "mean": 596.93,
+   "median": 612.0,
+   "min": 306.0,
+   "max": 612.0,
+   "n": 501
+  },
+  "proc_cpu_pct": {
+   "mean": 1.71,
+   "median": 1.0,
+   "min": 0.0,
+   "max": 82.6,
+   "n": 501
+  },
+  "proc_rss_mb": {
+   "mean": 4457.64,
+   "median": 4498.6,
+   "min": 53.7,
+   "max": 4498.8,
+   "n": 500
+  },
+  "mem_used_mb": {
+   "mean": 3916.54,
+   "median": 3949.0,
+   "min": 1709.0,
+   "max": 3969.0,
+   "n": 501
+  },
+  "swap_used_mb": {
+   "mean": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "max": 0.0,
+   "n": 501
+  }
+ }
+}

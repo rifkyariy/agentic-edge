@@ -18,6 +18,12 @@ Under the queue, as a raw job (telemetry, and the dashboard shows it):
         /home/ari/research/stdbench/mmlupro100-lg-e2b-s1 --per-category 2
         --out /home/ari/research/stdbench/ae-sweep-e2b-b4"}}'
 
+A finished full run is checked the same way, every question against the S3
+run over the same subset:
+
+    ./ae_gate.py --diff ~/research/stdbench/mmlupro100-ae-full-e2b-s1 \\
+        ~/research/stdbench/mmlupro100-lg-e2b-s1
+
 Questions are replayed in category order, so consecutive requests share their
 few-shot prefix the way a real run's do. The engine's own stderr (turn,
 ngram, reuse, mtp lines) is kept in --log for throughput.
@@ -45,7 +51,8 @@ def post(port, body, timeout=3600):
 
 
 def samples(run_dir, per_category):
-    for f in sorted(glob.glob(os.path.join(run_dir, "*", "samples_mmlu_pro_*.jsonl"))):
+    for f in sorted(glob.glob(os.path.join(run_dir, "*", "samples_*.jsonl")) +
+                    glob.glob(os.path.join(run_dir, "samples_*.jsonl"))):   # lm-eval nests; bench_prompts.py does not
         with open(f) as fh:
             for i, line in enumerate(fh):
                 if i >= per_category:
@@ -53,7 +60,30 @@ def samples(run_dir, per_category):
                 yield json.loads(line)
 
 
+def diff_runs(run, ref):
+    """Compare two finished stdbench runs' recorded replies question by question
+    (category + doc id): the full-scale form of the gate, for a whole S9 run
+    against the S3 run over the same subset."""
+    def replies(d):
+        out = {}
+        for s in samples(d, 10 ** 9):
+            out[(s["doc"]["category"], s["doc_id"])] = (s["resps"][0][0], s.get("exact_match"))
+        return out
+    a, b = replies(run), replies(ref)
+    keys = sorted(set(a) | set(b))
+    same = [k for k in keys if k in a and k in b and a[k][0] == b[k][0]]
+    for k in keys:
+        if k not in a or k not in b:
+            print("MISSING %s doc %s in %s" % (k[0], k[1], run if k not in a else ref))
+        elif a[k][0] != b[k][0]:
+            print("DIFF    %s doc %s (score %s vs %s)" % (k[0], k[1], a[k][1], b[k][1]))
+    print("== %d/%d byte-identical: %s vs %s" % (len(same), len(keys), run, ref))
+    return 0 if len(same) == len(keys) else 1
+
+
 def main():
+    if len(sys.argv) == 4 and sys.argv[1] == "--diff":     # ae_gate.py --diff RUN REF
+        return diff_runs(sys.argv[2], sys.argv[3])
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", choices=MODELS, required=True)
     ap.add_argument("--flags", default="", help="engine switches under test")
@@ -76,7 +106,7 @@ def main():
     shim = [sys.executable, os.path.join(HERE, "lg_openai_shim.py"), "--engine", args.engine,
             "-m", os.path.join(research, "models", MODELS[args.model]), "--thinking", "off",
             "--think", "-1", "--port", str(args.port), "--sock", "/tmp/ae-gate.sock",
-            "--engine-flags", args.flags]
+            "--engine-flags=" + args.flags]   # "=": argparse reads a lone "-reuse" as an option
     log = open(args.log, "w")
     proc = subprocess.Popen(shim, stdout=log, stderr=log)
     try:

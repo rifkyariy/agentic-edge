@@ -17,6 +17,18 @@
 #   -c 8192 / answer 2048     -> SERVE_SEQ / SERVE_GEN, compiled in (setup_jetson.sh)
 #   --cache-ram 0             -> no prompt cache exists to limit
 # Build the engine first: ./little_gemma/setup_jetson.sh
+#
+# VARIANT=<v> runs the PROPOSED engine (S9) instead: the same pin plus
+# ae.patch (AE=1 ./little_gemma/setup_jetson.sh), same task, same shim, into
+# mmlupro100-ae-<v>-<model>-<subset>. Every switch is greedy-exact — replies
+# must match S3 byte for byte (ae_gate.py) — so only speed may move:
+#   base   no switches: the S9 binary must reproduce S3 by itself
+#   reuse  -reuse                    shared-prefix KV snapshots across requests
+#   ngram  -ngram -block B           prompt-lookup drafts through the verify
+#   full   both
+# B is BLOCK, the verify width (default per model below). Gemma's MTP draft
+# head (-mtp) is deliberately NOT used: neither baseline ran speculative
+# decoding (S1 no draft-mtp, S3 no -mtp), so S9 gains only from its own two.
 set -uo pipefail
 cd "$(dirname "$0")"
 MODEL_KEY="${1:?usage: $0 e2b|e4b}"
@@ -28,18 +40,33 @@ R=~/research
 M_DIR=$R/models
 S=$R/stdbench
 ENGINE=~/build/little-gemma/build/run-cuda-i8
+VARIANT="${VARIANT:-}"
+ROW=lg
+FLAGS=""
 
 case "$MODEL_KEY" in
-  e2b) M=$M_DIR/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf; TAG=E2B ;;
-  e4b) M=$M_DIR/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf; TAG=E4B ;;
+  e2b) M=$M_DIR/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf; TAG=E2B; B=3 ;;
+  e4b) M=$M_DIR/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf; TAG=E4B; B=3 ;;
   *) echo "unknown model key: $MODEL_KEY" >&2; exit 1 ;;
 esac
+if [ -n "$VARIANT" ]; then
+  ENGINE=~/build/little-gemma-ae/build/run-cuda-i8
+  ROW=ae-$VARIANT
+  BLOCK="${BLOCK:-$B}"
+  case "$VARIANT" in
+    base)  FLAGS="" ;;
+    reuse) FLAGS="-reuse" ;;
+    ngram) FLAGS="-ngram -block $BLOCK" ;;
+    full|full-r2)  FLAGS="-reuse -ngram -block $BLOCK" ;;   # -r2: a repeat, for run-to-run variance
+    *) echo "unknown VARIANT: $VARIANT" >&2; exit 1 ;;
+  esac
+fi
 [ -x "$ENGINE" ] || { echo "no $ENGINE — run ./little_gemma/setup_jetson.sh" >&2; exit 1; }
-OUT=$S/mmlupro100-lg-$MODEL_KEY-$SUBSET
+OUT=$S/mmlupro100-$ROW-$MODEL_KEY-$SUBSET
 [ "$THINKING" = on ] && OUT=$OUT-think
 mkdir -p "$OUT"
 SRVLOG=$OUT/server.log
-cp ~/build/little-gemma/build/BUILD_INFO "$OUT/engine_build.txt" 2>/dev/null
+cp "$(dirname "$ENGINE")/BUILD_INFO" "$OUT/engine_build.txt" 2>/dev/null
 
 stop_servers() {   # by pid, bracketed patterns: never match this script or an ssh line
   pgrep -f "[l]g_openai_shim.py" | xargs -r kill
@@ -48,15 +75,15 @@ stop_servers() {   # by pid, bracketed patterns: never match this script or an s
   pgrep -f "[r]un-cuda-i8 -m" | xargs -r kill   # the shim takes its engine down; belt and braces
 }
 stop_servers
-echo "$(date) starting little-gemma (CUDA int8) on $TAG, thinking=$THINKING budget=$BUDGET"
+echo "$(date) starting little-gemma (CUDA int8) on $TAG, thinking=$THINKING budget=$BUDGET row=$ROW flags='$FLAGS'"
 nohup sh -c "python3 $PWD/lg_openai_shim.py --engine $ENGINE -m $M \
-  --thinking $THINKING --think $BUDGET --port 8080 2>&1 | python3 $PWD/stamp.py little-gemma" \
+  --thinking $THINKING --think $BUDGET --port 8080 --engine-flags='$FLAGS' 2>&1 | python3 $PWD/stamp.py little-gemma" \
   > "$SRVLOG" 2>&1 < /dev/null &
 # E4B's first load spends ~150s in the engine's warmup on this board
 for _ in $(seq 300); do curl -sf localhost:8080/health >/dev/null 2>&1 && break; sleep 2; done
 curl -s localhost:8080/props; echo
 
-echo "$(date) start MMLU-Pro subset100/$SUBSET  model=$TAG engine=little-gemma thinking=$THINKING"
+echo "$(date) start MMLU-Pro subset100/$SUBSET  model=$TAG engine=little-gemma row=$ROW thinking=$THINKING"
 ~/venvs/eval/bin/lm_eval run --model local-chat-completions \
   --model_args "model=gemma4-$TAG,base_url=http://127.0.0.1:8080/v1/chat/completions,num_concurrent=1,max_retries=3,tokenized_requests=False,timeout=3600" \
   --tasks mmlu_pro --apply_chat_template \

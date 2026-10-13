@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="473" height="338" viewBox="0 0 473 338" role="img" aria-label="Table VI — Verify-width selection, 28 s1 questions per row">
+<style>text{font-family:Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;font-variant-numeric:tabular-nums}.title{font-size:15px;font-weight:600}.head{font-size:12px;font-weight:600}.cell{font-size:13px}.cell.b{font-weight:700}.note{font-size:11.5px}.glabel{font-size:13px;font-weight:600;font-style:italic}.hair{stroke-width:0.6}.hair2{stroke-width:0.6}.bg{fill:#fcfcfb}.title{fill:#0b0b0b}.head{fill:#52514e}.cell{fill:#0b0b0b}.note{fill:#52514e}.glabel{fill:#52514e}.rule{stroke:#0b0b0b}.hair{stroke:#e4e3df}.hair2{stroke:#52514e}.tint{fill:#e8f0fa}.group{fill:#f3f2ee}@media (prefers-color-scheme:dark){.bg{fill:#1a1a19}.title{fill:#ffffff}.head{fill:#c3c2b7}.cell{fill:#ffffff}.note{fill:#c3c2b7}.glabel{fill:#c3c2b7}.rule{stroke:#c3c2b7}.hair{stroke:#34332f}.hair2{stroke:#c3c2b7}.tint{fill:#1d2a3b}.group{fill:#242321}}</style>
+<rect class="bg" width="100%" height="100%"/>
+<text class="title" x="20" y="35">Table VI — Verify-width selection, 28 s1 questions per row</text>
+<rect class="tint" x="20" y="157.0" width="429.0" height="27"/>
+<text class="head" x="153.6" y="65.0" text-anchor="middle">E2B</text>
+<line class="hair2" x1="100.8" x2="206.4" y1="72.0" y2="72.0"/>
+<text class="head" x="271.2" y="65.0" text-anchor="middle">E4B</text>
+<line class="hair2" x1="218.4" x2="324.0" y1="72.0" y2="72.0"/>
+<text class="head" x="389.5" y="65.0" text-anchor="middle">per verify (E2B)</text>
+<line class="hair2" x1="336.0" x2="443.0" y1="72.0" y2="72.0"/>
+<text class="head" x="32.0" y="92.0">Width</text>
+<text class="head" x="141.6" y="92.0" text-anchor="end">tok/s</text>
+<text class="head" x="200.4" y="92.0" text-anchor="end">J/tok</text>
+<text class="head" x="259.2" y="92.0" text-anchor="end">tok/s</text>
+<text class="head" x="318.0" y="92.0" text-anchor="end">J/tok</text>
+<text class="head" x="387.7" y="92.0" text-anchor="end">+tokens</text>
+<text class="head" x="437.0" y="92.0" text-anchor="end">cost</text>
+<line class="rule" x1="20" x2="449.0" y1="49.0" y2="49.0" stroke-width="1.5"/>
+<line class="rule" x1="20" x2="449.0" y1="103.0" y2="103.0" stroke-width="0.8"/>
+<line class="rule" x1="20" x2="449.0" y1="238.0" y2="238.0" stroke-width="1.5"/>
+<text class="cell" x="32.0" y="121.0">none</text>
+<text class="cell" x="141.6" y="121.0" text-anchor="end">25.63</text>
+<text class="cell" x="200.4" y="121.0" text-anchor="end">0.451</text>
+<text class="cell" x="259.2" y="121.0" text-anchor="end">15.39</text>
+<text class="cell" x="318.0" y="121.0" text-anchor="end">0.879</text>
+<text class="cell" x="387.7" y="121.0" text-anchor="end">–</text>
+<text class="cell" x="437.0" y="121.0" text-anchor="end">1.00</text>
+<line class="hair" x1="20" x2="449.0" y1="130.0" y2="130.0"/>
+<text class="cell" x="32.0" y="148.0">2</text>
+<text class="cell" x="141.6" y="148.0" text-anchor="end">29.62</text>
+<text class="cell" x="200.4" y="148.0" text-anchor="end">0.386</text>
+<text class="cell" x="259.2" y="148.0" text-anchor="end">17.76</text>
+<text class="cell" x="318.0" y="148.0" text-anchor="end">0.736</text>
+<text class="cell" x="387.7" y="148.0" text-anchor="end">0.57</text>
+<text class="cell" x="437.0" y="148.0" text-anchor="end">1.24</text>
+<line class="hair" x1="20" x2="449.0" y1="157.0" y2="157.0"/>
+<text class="cell" x="32.0" y="175.0">3</text>
+<text class="cell b" x="141.6" y="175.0" text-anchor="end">29.93</text>
+<text class="cell b" x="200.4" y="175.0" text-anchor="end">0.381</text>
+<text class="cell b" x="259.2" y="175.0" text-anchor="end">17.91</text>
+<text class="cell b" x="318.0" y="175.0" text-anchor="end">0.707</text>
+<text class="cell" x="387.7" y="175.0" text-anchor="end">0.90</text>
+<text class="cell" x="437.0" y="175.0" text-anchor="end">1.47</text>
+<line class="hair" x1="20" x2="449.0" y1="184.0" y2="184.0"/>
+<text class="cell" x="32.0" y="202.0">4</text>
+<text class="cell" x="141.6" y="202.0" text-anchor="end">28.81</text>
+<text class="cell" x="200.4" y="202.0" text-anchor="end">0.393</text>
+<text class="cell" x="259.2" y="202.0" text-anchor="end">17.63</text>
+<text class="cell" x="318.0" y="202.0" text-anchor="end">0.713</text>
+<text class="cell" x="387.7" y="202.0" text-anchor="end">1.12</text>
+<text class="cell" x="437.0" y="202.0" text-anchor="end">1.76</text>
+<line class="hair" x1="20" x2="449.0" y1="211.0" y2="211.0"/>
+<text class="cell" x="32.0" y="229.0">3, n=300</text>
+<text class="cell" x="141.6" y="229.0" text-anchor="end">29.52</text>
+<text class="cell" x="200.4" y="229.0" text-anchor="end">0.370</text>
+<text class="cell" x="259.2" y="229.0" text-anchor="end">17.67</text>
+<text class="cell" x="318.0" y="229.0" text-anchor="end">0.676</text>
+<text class="cell" x="387.7" y="229.0" text-anchor="end">–</text>
+<text class="cell" x="437.0" y="229.0" text-anchor="end">–</text>
+<text class="note" x="20" y="263.5">2 questions per subject. CoPR -reuse -ngram; all 224 replies byte-identical to</text>
+<text class="note" x="20" y="280.0">little-gemma. +tokens: extra tokens a verify pass confirms; cost: a verify pass</text>
+<text class="note" x="20" y="296.5">in plain decode steps. Last row: the chosen width over all 300 questions (Table</text>
+<text class="note" x="20" y="313.0">III).</text>
+</svg>

@@ -79,6 +79,40 @@ class Probe:
             pass
         return 0
 
+    def power_caps(self):
+        """A Jetson's clock caps: what its nvpmodel mode declares against what
+        the kernel enforces right now. None off a Jetson (no nvpmodel).
+
+        The mode comes from nvpmodel's status file, the declared caps from
+        /etc/nvpmodel.conf (GPU in Hz, CPU in kHz), the live ones from devfreq
+        and cpufreq in the same units. On 2026-10-04 nvpmodel.service failed
+        at boot: `nvpmodel -q` still said 15W from the stale status file while
+        the GPU ran 1,020 MHz instead of 612, which would have made any run's
+        speed incomparable with every run before it."""
+        try:
+            with open("/var/lib/nvpmodel/status") as f:
+                mode = int(f.read().strip().split(":")[1])
+            with open("/etc/nvpmodel.conf") as f:
+                conf = f.read().splitlines()
+        except (OSError, ValueError, IndexError):
+            return None
+        want, inside = {}, False
+        for line in conf:
+            if line.startswith("< POWER_MODEL"):
+                inside = ("ID=%d " % mode) in line
+            elif inside and line.split()[:2] in (["GPU", "MAX_FREQ"], ["CPU_A78_0", "MAX_FREQ"]):
+                want[line.split()[0]] = int(line.split()[2])
+
+        def read(path):
+            try:
+                with open(path) as f:
+                    return int(f.read().strip())
+            except (OSError, ValueError):
+                return None
+        have = {"GPU": read("/sys/class/devfreq/17000000.gpu/max_freq"),
+                "CPU_A78_0": read("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq")}
+        return {"mode": mode, "want": want, "have": have}
+
     def busy_processes(self):
         """Benchmark processes already running, the deployed server aside."""
         found = [name for name, pattern in (("lm_eval", "[l]m_eval"),
@@ -176,7 +210,25 @@ def _board_idle(paths, resolved, probe):
             "detail": "no benchmark processes running"}
 
 
-CHECKS = (_memory, _output_dir, _subset_ids, _board_idle)
+def _clocks(paths, resolved, probe):
+    """Refuse to run when the kernel's clock caps are not the ones the board's
+    power mode declares: every run on record was measured under those caps, so
+    a run outside them is incomparable with all of them."""
+    caps = getattr(probe, "power_caps", lambda: None)()
+    if not caps:
+        return {"name": "clocks", "ok": True, "measured": None,
+                "detail": "no nvpmodel on this board"}
+    off = {k: (v, caps["have"].get(k)) for k, v in caps["want"].items() if caps["have"].get(k) != v}
+    if not caps["want"] or off:
+        return {"name": "clocks", "ok": False, "measured": caps["have"],
+                "detail": "power mode %d declares %s but the kernel enforces %s — nvpmodel not "
+                          "applied (sudo systemctl restart nvpmodel)"
+                          % (caps["mode"], caps["want"] or "nothing readable", caps["have"])}
+    return {"name": "clocks", "ok": True, "measured": caps["have"],
+            "detail": "power mode %d caps in force: %s" % (caps["mode"], caps["have"])}
+
+
+CHECKS = (_memory, _output_dir, _subset_ids, _board_idle, _clocks)
 
 # Checks about the board's state right now, as opposed to the job's own
 # inputs. While another job is running or queued ahead, "now" says nothing

@@ -1,0 +1,12 @@
+{
+ "label": "mmlupro-ae-reuse-e4b-s3",
+ "command": "env SUBSET=s3 THINKING=off VARIANT=reuse ./std_mmlupro_lg_jetson.sh e4b",
+ "model_path": "",
+ "server_args": "",
+ "governor": "schedutil",
+ "kernel": "Linux 6.8.12-1021-tegra",
+ "host": "mitlab-orin-nano",
+ "cpus": 6,
+ "start_epoch": 1791166160.2654266,
+ "throttled_at_start": ""
+}
