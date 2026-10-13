@@ -788,9 +788,11 @@ Headline, n = 300 per model:
 --paper`), including the six failed `-reuse` runs and the queue's serving-flag
 fingerprints; `paper_tables.py` rebuilds Tables I, III–VI and VIII and the
 in-text figures from it and matches the manuscript everywhere except two
-third-decimal rounding errata. Table VII, the §III replay and the §VII Pi batch
-costs need `replay_lookup.py`, the Pi's thinking-on replies and its
-`llama-batched-bench` output, which are still only on the Pi. Runs outside the
+third-decimal rounding errata. Every result is also laid out as tables in
+`findings/TABLES.md`, generated from the same data. Table VII and the §III
+replay are reimplemented in `benchmark/replay_lookup.py`, pending a one-off
+tokenization on a board; the Pi's thinking-on replies (one Table VII row) and
+its `llama-batched-bench` output (§VII) are still only on the Pi. Runs outside the
 manuscript (S2 on the Jetson, S3t, S4, S8) keep their samples on the boards.
 
 **Two things the data says that the manuscript does not** (`paper_tables.py

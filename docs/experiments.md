@@ -29,11 +29,12 @@ complete at 6 runs per device (n=300 per model).
 | **iPhone** | MLX 4-bit builds of the same QAT checkpoints | iPhone 15 Pro | 6 + 4 superseded/stopped | Table VIII | RESULTS §7.3 | `findings/phone/` |
 | **S2** | llama.cpp, thinking on (`-rea on`, budget 320) | Pi 5 | 6 | Table VII (replies replayed) | RESULTS §7.2 | on the Pi — not yet in the repo |
 | **tinyGSM8k** | E2B at 256 and 1,024 answer tokens | Pi 5 | 2 | Table VII (200 replies replayed) | RESULTS §1 | `findings/stdbench/B-e2b/`, `findings/stdbench/tiny1024-e2b/` |
-| **replay** | prompt-lookup acceptance replayed on recorded replies | offline | — | Table VII; §III | — | `replay_lookup.py` is on the Pi — not yet in the repo |
+| **replay** | prompt-lookup acceptance replayed on recorded replies | offline | — | Table VII; §III | — | `benchmark/replay_lookup.py` (reimplemented, tested); its token cache `findings/replay/` is not filled yet |
 | **Pi batch cost** | llama.cpp CPU cost of a 1–4 token batch | Pi 5 | — | §VII | — | `llama-batched-bench` output on the Pi — not yet in the repo |
 
 Every row with data in the repo is rebuilt and checked against the manuscript
-by `python3 benchmark/paper_tables.py`.
+by `python3 benchmark/paper_tables.py`, and laid out as tables in
+[`../findings/TABLES.md`](../findings/TABLES.md).
 
 ## Run, reported, not used in the manuscript
 

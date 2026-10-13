@@ -21,7 +21,8 @@ than llama.cpp:
 
 Every number in that table, and in the paper's Tables I, III, IV, V, VI and
 VIII, is rebuilt from the raw runs committed here by one command (step 1
-below).
+below). **All results as tables**, the paper's and every other experiment's,
+generated from the same data: [`findings/TABLES.md`](findings/TABLES.md).
 
 ---
 
@@ -44,7 +45,7 @@ below).
 | folder | what it holds |
 |---|---|
 | [`benchmark/`](benchmark/) | everything that runs on the boards: run scripts, telemetry, the job queue, the engine patches (`little_gemma/`), the paper's analysis (`paper_tables.py`, `collect_runs.py`), tests, and the iPhone app (`apps/ios/`) |
-| [`findings/`](findings/) | every result. `runs/jetson/` holds the paper's raw Jetson runs; `RESULTS.md` is the full write-up |
+| [`findings/`](findings/) | every result. `TABLES.md` has all of them as tables, generated from the data; `runs/jetson/` holds the paper's raw Jetson runs; `RESULTS.md` is the full write-up |
 | [`docs/`](docs/) | the protocol as run, the index of every experiment, the queue's design record |
 | [`dashboard/`](dashboard/) | optional Next.js monitor and queue UI for the boards; runs on a laptop |
 
@@ -80,7 +81,17 @@ every number matches the manuscript
 ```
 
 The exit status is 1 if any number differs. `--table 1|3|4|5|6|8|text|issues`
-prints a single table. The same check runs in the test suite:
+prints a single table. To see every result as markdown tables instead
+(per-run, per-subset, per-subject, reply identity between engines, the Pi,
+the iPhone, tinyGSM8k and the own suite), regenerate
+[`findings/TABLES.md`](findings/TABLES.md):
+
+```bash
+python3 benchmark/results_tables.py          # rewrites findings/TABLES.md
+python3 benchmark/results_tables.py --check  # is the committed copy current?
+```
+
+Both checks run in the test suite:
 
 ```bash
 cd benchmark && python3 -m unittest discover -s tests
@@ -406,17 +417,21 @@ boards' energy.
 | **Table IV**: llama.cpp n-gram vs CoPR | `mmlupro100-e2b-s1`, `-ngram-n3m2-`, `-ngram-n3m3-`, `-ngram-default-`, `-ae-full-`, `-ae-full-r2-e2b-s1` | 2.7, third block | `--table 4` |
 | **Table V**: ablation | `-lg-`, `-ae-ngram-`, `-ae-reuse-`, `-ae-full-`, both models × s1–s3 | 2.7, second block | `--table 5` |
 | **Table VI**: verify width | `ae-sweep-<model>-b{0,2,3,4}` | 2.7, fourth block | `--table 6` |
-| **Table VII**: replayed acceptance | recorded replies from several engines and tasks | **not yet reproducible from the repo**: `replay_lookup.py` and the Pi's thinking-on replies are on the Pi | — |
+| **Table VII**: replayed acceptance | little-gemma E2B (Jetson), Pi llama.cpp E2B/E4B (`findings/export/`), tinyGSM8k (`findings/stdbench/`) | `replay_lookup.py tokenize --via <board>` once, then offline | `benchmark/replay_lookup.py`; the token cache is not filled yet, and the Pi's thinking-on replies (one row) are not in the repo |
 | **Table VIII**: other devices | Jetson rows = Table III; Pi in `findings/export/`; iPhone in `findings/phone/` | §3 | `--table 8` |
 | §III: 97% decode, 3.8× prefill, 17 capped replies | as Table I | — | `--table 1`, `--table text` |
-| §III: replay 1.29/1.41/1.48/1.52 tokens per pass | little-gemma E2B replies | needs `replay_lookup.py` (on the Pi) | — |
+| §III: replay 1.29/1.41/1.48/1.52 tokens per pass | little-gemma E2B replies | as Table VII | `replay_lookup.py` |
 | §V: request-window energy, the repeat run, 612 MHz | CoPR and llama.cpp runs | — | `--table text` |
 | §VI-A–C: McNemar tests, 271/280 replies changed, speedup ratios | as Table III | — | `--table text` |
 | §VI-D: six `-reuse` runs failed at startup | `findings/runs/jetson/failed/` (server logs show the parse error) | — | — |
 | §VII: Pi batched-verify cost (132 / 140 ms) | llama.cpp `llama-batched-bench`, E2B, 3 threads, on the Pi | **output is on the Pi** | — |
 
-The three Pi-only items will be added with `collect_runs.py` and
-`paper_tables.py` the next time the Pi is available. It is currently on loan.
+`replay_lookup.py` reimplements the replay from the paper's description
+(Sec. IV-A) and is tested against a brute-force scan. It needs Gemma 4 token
+ids, made once with llama.cpp's own tokenizer on a board and cached in
+`findings/replay/`; that cache is pending a free slot on the Jetson. Still
+only on the Pi, which is on loan: the thinking-on replies (one Table VII row)
+and the `llama-batched-bench` output (§VII).
 
 ### 5. Where the data and the manuscript disagree
 
@@ -459,7 +474,8 @@ with its data and write-up. The full numbers are in
 | change anything in the repo: rules, devices, invariants | [`AGENTS.md`](AGENTS.md) — **start here** |
 | know exactly how every measurement was taken | [`docs/protocol.md`](docs/protocol.md) |
 | see every experiment that ran, and where its data is | [`docs/experiments.md`](docs/experiments.md) |
-| see every number and the current status | [`findings/RESULTS.md`](findings/RESULTS.md) (§10 is the status) |
+| see every result as tables | [`findings/TABLES.md`](findings/TABLES.md) (generated) |
+| see every number with its interpretation, and the current status | [`findings/RESULTS.md`](findings/RESULTS.md) (§10 is the status) |
 | read one experiment's analysis | [`findings/analyses/`](findings/analyses/): letter-only, permutation ensemble, model cascade, iso-accuracy |
 | use the harness beyond the paper | [`benchmark/README.md`](benchmark/README.md) |
 | watch the boards and manage the queue in a browser | [`dashboard/README.md`](dashboard/README.md) |

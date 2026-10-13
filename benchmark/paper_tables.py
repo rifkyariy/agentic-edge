@@ -16,10 +16,10 @@ Inputs (see README.md, "Reproducing the paper"):
     findings/export/                 the Pi baseline runs (Table VIII)
     findings/phone/                  the iPhone runs (Table VIII)
 
-Not rebuilt here, because their inputs are not in the repository yet:
-Table VII and the Sec. III replay figures (replay_lookup.py and the Pi's
-thinking-on replies live on the Pi), and the Pi batched-verify costs of
-Sec. VII (llama-batched-bench output, also on the Pi). Stdlib only.
+Not rebuilt here: Table VII and the Sec. III replay figures, which
+replay_lookup.py computes once its token cache is filled, and the Pi
+batched-verify costs of Sec. VII, whose llama-batched-bench output is still
+only on the Pi. Stdlib only.
 """
 import argparse
 import csv
@@ -454,7 +454,7 @@ def main():
     if ERRATA:
         print("%d manuscript errata (the data is right, the paper's rounding is not): %s"
               % (len(ERRATA), "; ".join(ERRATA)))
-    print("not rebuilt (inputs on the Pi): Table VII, the Sec. III replay, the Sec. VII Pi batch costs")
+    print("not rebuilt here: Table VII and the Sec. III replay (replay_lookup.py), the Sec. VII Pi batch costs (on the Pi)")
     return 1 if FAILS else 0
 
 
