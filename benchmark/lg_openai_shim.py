@@ -25,11 +25,16 @@ Serving flags, and the llama.cpp flags they stand in for:
   answer cap 2048     max_gen_toks 2048     (SERVE_GEN, patched)
 Decoding is greedy, the engine's default; there is no prompt cache to limit.
 
+--engine-flags passes switches straight to the engine — the proposed engine's
+(S9, ae.patch) -ngram, -reuse, -block N and the stock -mtp <head.gguf>. They
+land on the engine's command line, where the run's fingerprint reads them.
+
 stdlib only, like everything else that runs on the boards.
 """
 import argparse
 import json
 import os
+import shlex
 import signal
 import socket
 import struct
@@ -145,7 +150,7 @@ class Engine:
     def __init__(self, args):
         self.args = args
         self.argv = [args.engine, "-m", args.model, "-raw",
-                     "-think", str(args.think), "-s", args.sock]
+                     "-think", str(args.think), "-s", args.sock] + shlex.split(args.engine_flags)
         self.lock = threading.Lock()              # the engine serves one conversation at a time
         self.proc = None
         self.served = 0
@@ -245,6 +250,8 @@ def main():
     ap.add_argument("--thinking", choices=("off", "on"), default="off")
     ap.add_argument("--think", type=int, default=-1,
                     help="engine -think: reasoning budget in tokens, -1 unlimited")
+    ap.add_argument("--engine-flags", default="",
+                    help="extra engine switches, e.g. \"-ngram -reuse -block 4\"")
     ap.add_argument("--sock", default="/tmp/lg-bench.sock")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8080)
