@@ -4,21 +4,26 @@ Read this before changing anything. It covers what the repo is, where things
 live, how to run them, and the handful of rules that are easy to break and
 expensive to discover afterwards.
 
-**The project:** agentic AI on edge devices. Gemma 4 **E2B** and **E4B** on a
-**Raspberry Pi 5** (CPU and RAM only) and an **Nvidia Jetson Orin Nano**
-(CUDA) — plus an **iPhone** running the same MMLU-Pro task on-device with MLX
-(`benchmark/apps/ios`) — measured against the standard runtimes **llama.cpp** and
-**little-gemma**, plus an orchestration layer this project proposes. Accuracy
-and device cost (power, thermals, utilisation) are measured in the same run.
+**The project:** Gemma 4 **E2B** and **E4B** on edge devices — a **Jetson Orin
+Nano** (CUDA, 15 W), a **Raspberry Pi 5** (CPU only) and an **iPhone 15 Pro**
+(MLX, `benchmark/apps/ios`) — with accuracy and device cost (power, thermals,
+utilisation) measured in the same run.
+
+**The manuscript:** *Never Compute Twice: Exact-Output Speedups for Gemma 4 on
+Edge Devices*. It compares llama.cpp, little-gemma and **CoPR** — little-gemma
+plus `benchmark/little_gemma/ae.patch` (prompt-lookup drafting and exact
+shared-prefix KV reuse) — on the Jetson, with byte identity as the quality
+standard. CoPR is called **S9** or **ae** in run names and older notes. Every
+table except Table VII is rebuilt from `findings/runs/jetson/` by
+`benchmark/paper_tables.py`; the README walks through reproducing it.
 
 **Paper 1 scope: text and reasoning parameters only.** Voice into Gemma's
 multimodal path is paper 2 — keep audio results out of this one.
 
-Deeper background: [`docs/experiment-plan.md`](docs/experiment-plan.md)
-(protocol, statistical design, revisions results forced),
-[`findings/RESULTS.md`](findings/RESULTS.md) (every number so far; §10 is the
-current state), [`TODO.md`](TODO.md) (what to do next). The full doc map is in
-[`README.md`](README.md).
+Deeper background: [`README.md`](README.md) (reproducing the paper, doc map),
+[`docs/protocol.md`](docs/protocol.md) (how every measurement was taken),
+[`docs/experiments.md`](docs/experiments.md) (every experiment that ran),
+[`findings/RESULTS.md`](findings/RESULTS.md) (every number; §10 is the status).
 
 ---
 
@@ -40,7 +45,8 @@ benchmark/          the harness (stdlib only on the devices, no pip needed)
   std_mmlupro_lg_jetson.sh  same, through little-gemma (S3, Jetson only)
   lg_openai_shim.py   OpenAI-style HTTP in front of little-gemma's socket
   little_gemma/       pinned upstream commit + patch + setup_jetson.sh
-  std_run.sh          tinyGSM8k; IFEval and BFCL wired but deferred
+  std_run.sh          tinyGSM8k
+  ae_gate.py          CoPR's byte-identity gate: replay S3 questions, or --diff two runs
 
   run_measured.sh     wraps any run with idle baselines + telemetry
   telemetry.py        1Hz sampler: cpu/mhz/temp/throttle/mem/disk/rss/power/gpu
@@ -50,6 +56,8 @@ benchmark/          the harness (stdlib only on the devices, no pip needed)
   probe_status.py     one-shot JSON status of a box (dashboard polls this)
   run_detail.py       one run's timeline + answers + per-request device stats
   build_viz.py        builds findings/viz/mmlupro_run.html
+  collect_runs.py     copies a board's runs into findings/runs/<board>/ (--paper: all of them)
+  paper_tables.py     rebuilds the manuscript's tables from findings/ and checks every number
 
   queue_runner.py     the job queue daemon; one per board, a systemd user unit
   queue_ctl.py        the only thing the dashboard runs over ssh (JSON in/out)
@@ -82,15 +90,16 @@ dashboard/          Next.js live monitor (runs on the Mac, not the devices)
                       phone (the iPhone app's upload; the only route that writes)
   scripts/check-ssh.mjs  `npm run check` — preflight before a fresh clone runs
 
-docs/               the study's design, written before (or instead of) running it
-  experiment-plan.md  protocol, statistical design, revisions results forced
-  experiment-matrix.md  every condition S1-S10, done and proposed, with costs
-  proposals/          method proposals (cascade, quality flows); README maps them
-  design/             design records for the tooling (experiment queue)
+docs/
+  protocol.md         how every measurement was taken, and the corrections results forced
+  experiments.md      every experiment that ran: device, runs, paper table, data location
+  design/             design record for the tooling (experiment queue)
 
 findings/           results and analysis (committed)
   RESULTS.md          the write-up of everything measured
-  analyses/           one-question write-ups: S4 letter-only, permutation, iso-accuracy
+  runs/jetson/        the manuscript's raw Jetson runs, one dir per run (samples, telemetry,
+                      fingerprint, engine build); failed/ holds the six failed -reuse runs
+  analyses/           one-question write-ups: letter-only, permutation, model cascade, iso-accuracy
   audits/             classifier-on-BFCL audit, the superseded sanity run
   stdbench/           lm-eval results + per-question samples + subset ids
   measured/           telemetry.csv / requests.csv / summary.json per run
@@ -294,9 +303,17 @@ These are not preferences — breaking them invalidates the paper.
 ## 6. Current state
 
 Not kept here, so it cannot go stale twice: **the status is
-[`findings/RESULTS.md`](findings/RESULTS.md) §10** (what is done, the headline
-table, what is open) and **the work list is [`TODO.md`](TODO.md)**. Update
-those, not this section.
+[`findings/RESULTS.md`](findings/RESULTS.md) §10**. Update that, not this
+section.
+
+**The repository holds only what ran.** Plans and proposals that never ran were
+removed on 2026-10-13 (they are in git history). Don't add plan documents; add
+results. A new run the paper uses goes into `findings/runs/` through
+`collect_runs.py`, and `paper_tables.py` must keep passing.
+
+**Still only on the Pi** (on loan as of 2026-10-13; its ssh host key changed —
+verify the new key before trusting it): `replay_lookup.py`, the thinking-on
+replies and the `llama-batched-bench` output behind Table VII and §VII.
 
 Dropped for good: LiteRT-LM (condition C) entirely; the deployed-prompt
 MMLU-Pro row; further GSM8K runs (its results stay as a methodological

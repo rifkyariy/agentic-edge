@@ -4,7 +4,7 @@
 #   SUBSET=s1 ./std_mmlupro_letter.sh e2b
 #   SUBSET=s1 ROT=2 ./std_mmlupro_letter.sh e2b   # options rotated 2 places
 #
-# The probe behind docs/proposals/2026-09-27-RECOMMENDATION.md: can Gemma pick
+# The probe behind findings/analyses/s4-letter-only.md: can Gemma pick
 # the right option without reasoning its way there? Decode is 92-98% of
 # per-question time, so if it can, almost all of that is avoidable.
 #
