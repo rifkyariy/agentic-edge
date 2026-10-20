@@ -86,11 +86,28 @@ deploy_one() {
   fi
 }
 
+# Copy files into a remote directory. The user owns the Jetson's, so scp
+# writes there directly. The Pi's need root: stage in a private mktemp -d dir
+# and move exactly the files copied — never a glob over the shared /tmp, where
+# another local user could plant a va-*.service for sudo to install.
+push_files() {
+  local dst="$1" stage names=""; shift
+  if [ -z "$SUDO" ]; then
+    ssh "$HOST" "mkdir -p $dst"
+    scp -q "$@" "$HOST:$dst/"
+    return
+  fi
+  stage="$(ssh -n "$HOST" 'mktemp -d')"
+  for f in "$@"; do names="$names $(basename "$f")"; done
+  scp -q "$@" "$HOST:$stage/"
+  ssh "$HOST" "cd $stage && sudo mkdir -p $dst && sudo mv$names $dst/ && rmdir $stage"
+}
+
 case "${1:-}" in
   units)
     echo "==> $UNITS_SRC/*.service -> $HOST:$UNITS_DST/"
-    scp -q $UNITS_SRC/*.service "$HOST:/tmp/"
-    ssh "$HOST" "mkdir -p $UNITS_DST && ${SUDO}mv /tmp/va-*.service $UNITS_DST/ && ${SUDO}$SYSTEMCTL daemon-reload"
+    push_files "$UNITS_DST" $UNITS_SRC/*.service
+    ssh "$HOST" "${SUDO}$SYSTEMCTL daemon-reload"
     echo "Units updated. Nothing restarted — enable/start what you need explicitly."
     ;;
   config)
@@ -99,8 +116,7 @@ case "${1:-}" in
     ssh -n "$HOST" "cat $ETC/config.env 2>/dev/null" | diff -u - $CONFIG || true
     read -p "Push anyway? [y/N] " ok
     [ "$ok" = y ] || exit 1
-    scp -q $CONFIG "$HOST:/tmp/config.env"
-    ssh "$HOST" "mkdir -p $ETC && ${SUDO}mv /tmp/config.env $ETC/config.env"
+    push_files "$ETC" "$CONFIG"
     echo "Deployed. Every va-* unit reads this file — restart them yourself when ready."
     ;;
   "")
