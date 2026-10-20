@@ -359,8 +359,9 @@ changing it needs no restart. Browser-local preferences (mute) sit in
 
 ### Model switching
 
-The header dropdown lists every `.gguf` found in `$VA_MODELS_DIR`, labelled with
-family, quantisation and size. Choosing one opens a confirmation modal showing
+The header lists every `.gguf` found in `$VA_MODELS_DIR`: as a one-click
+toggle (`E2B | E4B`) when there are two or three, as a dropdown labelled with
+family, quantisation and size when there are more. Choosing one opens a confirmation modal showing
 the from/to models, the measured decode and prefill rate for the target, and how
 long the load will take (~8s per GiB off the SD card). Confirming writes
 `runtime.env` and restarts `va-llm`; Escape, Cancel or clicking outside reverts
@@ -651,7 +652,11 @@ address input is typed only. For the mic, tunnel and open
 ssh -N -L 8090:localhost:8090 MITLAB-JETSON
 ```
 
-Switching E2B ↔ E4B is the header dropdown, as on the Pi: it writes
+Switching E2B ↔ E4B is the `E2B | E4B` toggle in the header. Its
+confirmation quotes this board's load time and speed, from the
+`VA_WEB_LOAD_S_*` / `VA_WEB_SPEED_*` / `VA_WEB_STORAGE` keys in
+`jetson/config.env` (unset on the Pi, which keeps the UI's built-in figures).
+A switch writes
 `~/.config/voice-agent/runtime.env` and runs `systemctl --user restart va-llm`
 (`VA_SYSTEMD_SCOPE=user` in `jetson/config.env`), no sudo involved. From a
 shell, the same thing is

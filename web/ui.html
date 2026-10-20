@@ -538,6 +538,17 @@
     border: 1px solid var(--line); background: var(--bg); color: var(--text);
   }
   header button, header select { padding: 5px 9px; font-size: 13px; }
+  /* Model toggle: one segment per model, shown instead of the dropdown when
+     there are only two or three to pick from. */
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 8px;
+         overflow: hidden; background: var(--bg); }
+  .seg[hidden] { display: none; }
+  header .seg button { border: 0; border-radius: 0; padding: 5px 12px;
+                       background: transparent; color: var(--muted); }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button:hover:not(:disabled):not(.on) { color: var(--accent); }
+  .seg button.on { background: var(--accent); color: var(--bg); font-weight: 500; cursor: default; }
+  .seg button.on:disabled { opacity: 1; }
   button:hover:not(:disabled) { border-color: var(--accent); }
   button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
   button.stop { color: var(--danger); border-color: var(--danger); }
@@ -613,6 +624,7 @@
 <body>
 <header>
   <h1><i data-lucide="audio-lines" class="svg-ico"></i> Voice agent</h1>
+  <div class="seg" id="modelSeg" role="group" aria-label="Model" hidden></div>
   <select id="modelSel" title="Switch model — restarts va-llm"></select>
   <button type="button" id="sound" title="Mute or unmute the agent's voice">
     <i data-lucide="volume-2" class="svg-ico" id="soundIcon"></i> <span id="soundLabel">Sound on</span>
@@ -1962,7 +1974,9 @@ if (!canMic) {
   micLabel.textContent = 'Mic blocked';
   micBtn.title = 'Browser mic needs https or localhost';
   icons();
-  sys('Microphone needs https or localhost. Run: ssh -L 8090:localhost:8090 MITLAB-EDGE — then open http://localhost:8090');
+  // The board this page came from, not a hardcoded one: the same UI is served
+  // by the Pi and the Jetson.
+  sys(`Microphone needs https or localhost — typing works here. For the mic, run: ssh -N -L 8090:localhost:8090 <user>@${location.hostname} — then open http://localhost:8090`);
 } else {
   micBtn.addEventListener('click', async () => {
     if (rec && rec.state === 'recording') { rec.stop(); return; }
@@ -2004,7 +2018,35 @@ async function loadModels() {
       sel.appendChild(o);
     }
     if (!d.models.length) { sel.innerHTML = '<option>no models found</option>'; sel.disabled = true; }
+    renderSeg(d);
   } catch {}
+}
+// Two or three models: a toggle, one click away. More: keep the dropdown.
+const seg = document.getElementById('modelSeg');
+function renderSeg(d) {
+  const use = d.models.length >= 2 && d.models.length <= 3;
+  seg.hidden = !use; sel.hidden = use;
+  if (!use) return;
+  seg.innerHTML = '';
+  for (const m of d.models) {
+    const b = document.createElement('button');
+    const on = m.path === d.current;
+    b.type = 'button';
+    b.textContent = m.family.replace(/^Gemma 4 /, '');
+    b.title = on ? `${m.family} — loaded`
+                 : `Switch to ${m.family}${m.gib ? ' (' + m.gib + ' GiB)' : ''} — restarts va-llm`;
+    b.className = on ? 'on' : '';
+    b.setAttribute('aria-pressed', on);
+    b.disabled = sel.disabled;
+    b.addEventListener('click', () => {
+      if (m.path !== knownModels.current) askSwitch(m.path, knownModels.models, knownModels.current);
+    });
+    seg.appendChild(b);
+  }
+}
+function lockModels(locked) {
+  sel.disabled = locked;
+  seg.querySelectorAll('button').forEach(b => b.disabled = locked);
 }
 // Measured on this board, so the modal can say what the switch will cost.
 const SPEED = {
@@ -2028,13 +2070,18 @@ function askSwitch(path, models, currentPath) {
   const to = models.find(m => m.path === path);
   const from = models.find(m => m.path === currentPath);
   pendingSwitch = path;
+  // The board's own numbers when config.env has them (the Jetson), else the
+  // Pi figures above.
+  const note = (to && (cfg.model_notes || {})[to.family]) || {};
+  const speed = note.speed || (to && SPEED[to.family]);
+  const loadS = note.load_s || (to && to.gib ? Math.ceil(to.gib * 8) : 30);
   document.getElementById('mBody').innerHTML =
     `<div class="swap">${card('from', from)}
        <i data-lucide="arrow-right" class="svg-ico"></i>${card('to', to)}</div>`
-    + (to && SPEED[to.family] ? `<div class="sub" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px">measured here: ${esc(SPEED[to.family])}</div>` : '')
+    + (speed ? `<div class="sub" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px">measured here: ${esc(speed)}</div>` : '')
     + `<div class="warn">This restarts <b>va-llm</b>. Loading
-       ${to && to.gib ? to.gib + ' GiB' : 'the weights'} off the SD card takes
-       roughly ${to && to.gib ? Math.ceil(to.gib * 8) : 30}s, during which the
+       ${to && to.gib ? to.gib + ' GiB' : 'the weights'} off ${esc(cfg.storage || 'the SD card')} takes
+       roughly ${loadS}s, during which the
        model reports <b>loading</b>. Anything you say meanwhile is queued, not
        lost. The choice is remembered for next session.</div>`;
   scrim.hidden = false;
@@ -2061,7 +2108,7 @@ document.getElementById('mOk').addEventListener('click', async () => {
   const path = pendingSwitch;
   closeModal(false);
   if (!path) return;
-  sel.disabled = true;
+  lockModels(true);
   showBusy('loading', 'switching model — restarting va-llm');
   try {
     const r = await fetch('/model', {
@@ -2071,7 +2118,7 @@ document.getElementById('mOk').addEventListener('click', async () => {
     const j = await r.json();
     if (!j.ok) { meta('model switch failed: ' + j.message, 'triangle-alert'); clearBusy(); }
   } catch { meta('network error', 'triangle-alert'); clearBusy(); }
-  setTimeout(() => { sel.disabled = false; loadModels(); loadConfig(); }, 4000);
+  setTimeout(() => { lockModels(false); loadModels(); loadConfig(); }, 4000);
 });
 
 sel.addEventListener('change', () => {

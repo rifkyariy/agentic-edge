@@ -241,6 +241,20 @@ def list_models():
     return {"current": cur, "models": out}
 
 
+def model_notes():
+    """Per-board numbers for the UI's switch modal, from VA_WEB_SPEED_<tier>
+    and VA_WEB_LOAD_S_<tier>. Unset on the Pi, where the UI's built-in
+    figures were measured; the Jetson loads and decodes at different rates."""
+    out = {}
+    for tier in ("E2B", "E4B", "12B"):
+        speed = config_value(f"VA_WEB_SPEED_{tier}")
+        load = config_value(f"VA_WEB_LOAD_S_{tier}")
+        if speed or load:
+            out["Gemma 4 " + tier] = {"speed": speed,
+                                      "load_s": int(load) if load.isdigit() else None}
+    return out
+
+
 def llm_props():
     """Ask llama.cpp what it actually loaded, rather than trusting config."""
     import urllib.request
@@ -455,6 +469,8 @@ class Handler(BaseHTTPRequestHandler):
                     "LiteRT-LM 0.69x (E4B) and 0.55x (E2B). Verify costs ~N "
                     "tokens for N drafts when all 4 cores are already busy.",
                 "props": llm_props(),
+                "model_notes": model_notes(),
+                "storage": config_value("VA_WEB_STORAGE") or "the SD card",
             }))
         elif self.path == "/events":
             self.stream_events()
