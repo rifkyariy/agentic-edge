@@ -640,8 +640,12 @@ systemctl --user stop  va-web va-orchestrator va-tools va-tts va-asr va-llm
 journalctl --user -u va-llm -f
 ```
 
-The UI binds `127.0.0.1` only. Tunnel to it and open `http://localhost:8090`,
-which also makes the browser mic work:
+The UI binds `0.0.0.0`, so anyone on the lab network can review it at
+`http://192.168.1.50:8090` (the Jetson's Wi-Fi address on 2026-10-20). It has
+**no authentication**: whoever reaches it can talk to the agent and switch
+models. Browsers only allow the mic on https or localhost, so from a LAN
+address input is typed only. For the mic, tunnel and open
+`http://localhost:8090`:
 
 ```bash
 ssh -N -L 8090:localhost:8090 MITLAB-JETSON
