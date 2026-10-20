@@ -1,0 +1,28 @@
+[Unit]
+# Brain, CUDA llama.cpp. User unit: the Jetson has no passwordless sudo, and
+# the UI's model switch restarts this with `systemctl --user restart va-llm`.
+# Port 8081 so it never answers a benchmark's health check on 8080.
+Description=Voice agent: LLM (llama.cpp CUDA, OpenAI-compatible)
+After=network.target
+
+[Service]
+EnvironmentFile=%h/.config/voice-agent/config.env
+# UI choices, loaded second so they win. The leading "-" means "fine if absent".
+EnvironmentFile=-%h/.config/voice-agent/runtime.env
+# $VA_LLM_SPEC_ARGS unbraced on purpose: systemd word-splits $VAR, not ${VAR}.
+# --cache-ram 0: the default 8 GiB host prompt cache exceeds the board
+# (AGENTS.md §4.3); -ngl 99 offloads every layer to the GPU.
+ExecStart=%h/build/llama.cpp/build/bin/llama-server \
+  -m ${VA_LLM_MODEL_PATH} \
+  -t ${VA_LLM_THREADS} \
+  -c ${VA_LLM_CTX} \
+  -ngl 99 --cache-ram 0 \
+  --host 127.0.0.1 --port 8081 \
+  -rea ${VA_LLM_REASONING} \
+  --reasoning-budget ${VA_LLM_REASONING_BUDGET} \
+  $VA_LLM_SPEC_ARGS
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

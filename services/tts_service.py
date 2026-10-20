@@ -20,6 +20,11 @@ SOCK = os.environ.get("VA_TTS_SOCK", "/run/voice-agent/tts.sock")
 VOICE = os.environ["VA_TTS_VOICE"]
 SINK = os.environ.get("VA_TTS_AUDIO_OUT", "file:/tmp/va-tts.raw")
 PIPER = os.environ.get("VA_TTS_PIPER_BIN", "/home/mitlab/voice/venv/bin/piper")
+# Extra flags for spool mode. The default is the Pi's; piper-tts 1.2.0 (the
+# Jetson's) has no --output-dir-naming and already names -d output by
+# timestamp, so the Jetson sets this empty. va-web orders clips by mtime anyway.
+SPOOL_ARGS = os.environ.get("VA_TTS_SPOOL_ARGS",
+                            "--output-dir-naming timestamp").split()
 
 _lock = threading.Lock()
 _proc = {"piper": None, "sink": None}
@@ -48,7 +53,7 @@ def start_chain():
         os.makedirs(d, exist_ok=True)
         os.chmod(d, 0o755)
         piper = subprocess.Popen(
-            [PIPER, "-m", VOICE, "-d", d, "--output-dir-naming", "timestamp"],
+            [PIPER, "-m", VOICE, "-d", d] + SPOOL_ARGS,
             stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )

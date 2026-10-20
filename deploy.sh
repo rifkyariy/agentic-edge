@@ -10,7 +10,7 @@
 #   ./deploy.sh asr tts web     deploy + restart just those targets
 #   ./deploy.sh units           push systemd/*.service, then daemon-reload
 #                                (does NOT enable or restart anything)
-#   DEPLOY_HOST=jetson ./deploy.sh   deploy to a different box entirely
+#   DEPLOY_HOST=MITLAB-JETSON ./deploy.sh   the Jetson (see below)
 #   ./deploy.sh config          push config/config.env -> /etc/voice-agent/
 #                                (does NOT restart anything: every service
 #                                reads this file, and runtime.env holds the
@@ -22,11 +22,37 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# Override for a second device: DEPLOY_HOST=jetson ./deploy.sh
+# Override for a second device: DEPLOY_HOST=MITLAB-JETSON ./deploy.sh
 # (condition E in the benchmark needs this stack on every device under test)
 HOST="${DEPLOY_HOST:-MITLAB-EDGE}"
-OPT=/opt/voice-agent
-ETC=/etc/voice-agent
+
+# Two layouts. The Pi has passwordless sudo: code in /opt, config in /etc,
+# system units. The Jetson does not, so everything lives in the user's home
+# and runs under `systemctl --user` (lingering is on, so it survives logout).
+# Its config and units are jetson/, its one-time dependencies jetson/setup.sh.
+# Paths without a leading / are relative to the remote $HOME, for scp and ssh.
+case "$HOST" in
+  *JETSON*|*jetson*|*orin*) PROFILE=jetson ;;
+  *)                        PROFILE=pi ;;
+esac
+PROFILE="${DEPLOY_PROFILE:-$PROFILE}"
+if [ "$PROFILE" = jetson ]; then
+  OPT=voice-agent
+  ETC=.config/voice-agent
+  CONFIG=jetson/config.env
+  UNITS_SRC=jetson/systemd
+  UNITS_DST=.config/systemd/user
+  SYSTEMCTL="systemctl --user"
+  SUDO=
+else
+  OPT=/opt/voice-agent
+  ETC=/etc/voice-agent
+  CONFIG=config/config.env
+  UNITS_SRC=systemd
+  UNITS_DST=/etc/systemd/system
+  SYSTEMCTL="systemctl"
+  SUDO="sudo "
+fi
 CODE_TARGETS="asr tts tools orchestrator web ui prompt"
 
 # Prints "local_path remote_path unit" (unit may be empty) for a target name.
@@ -48,27 +74,33 @@ deploy_one() {
   spec="$(target_spec "$1")" || { echo "unknown target: $1 (have: $CODE_TARGETS units config)" >&2; exit 1; }
   read -r local_path remote_path unit <<< "$spec"
   echo "==> $1: $local_path -> $HOST:$remote_path"
+  ssh "$HOST" "mkdir -p $(dirname "$remote_path")"
   scp -q "$local_path" "$HOST:$remote_path"
-  if [ -n "$unit" ]; then
+  [ -n "$unit" ] || return 0
+  if [ "$PROFILE" = jetson ]; then
+    # Only restart what is already running: the Jetson is a benchmark board
+    # first, and a deploy must not start a llama-server under a queued run.
+    ssh "$HOST" "if $SYSTEMCTL is-active -q $unit; then $SYSTEMCTL restart $unit && $SYSTEMCTL is-active $unit; else echo '   ($unit not running, not started)'; fi"
+  else
     ssh "$HOST" "sudo systemctl restart $unit && systemctl is-active $unit"
   fi
 }
 
 case "${1:-}" in
   units)
-    echo "==> systemd/*.service -> $HOST:/etc/systemd/system/"
-    scp -q systemd/*.service "$HOST:/tmp/"
-    ssh "$HOST" "sudo mv /tmp/va-*.service /etc/systemd/system/ && sudo systemctl daemon-reload"
+    echo "==> $UNITS_SRC/*.service -> $HOST:$UNITS_DST/"
+    scp -q $UNITS_SRC/*.service "$HOST:/tmp/"
+    ssh "$HOST" "mkdir -p $UNITS_DST && ${SUDO}mv /tmp/va-*.service $UNITS_DST/ && ${SUDO}$SYSTEMCTL daemon-reload"
     echo "Units updated. Nothing restarted — enable/start what you need explicitly."
     ;;
   config)
-    echo "==> config/config.env -> $HOST:$ETC/config.env"
+    echo "==> $CONFIG -> $HOST:$ETC/config.env"
     echo "Diff against the live file first:"
-    ssh "$HOST" "cat $ETC/config.env" | diff -u - config/config.env || true
+    ssh -n "$HOST" "cat $ETC/config.env 2>/dev/null" | diff -u - $CONFIG || true
     read -p "Push anyway? [y/N] " ok
     [ "$ok" = y ] || exit 1
-    scp -q config/config.env "$HOST:/tmp/config.env"
-    ssh "$HOST" "sudo mv /tmp/config.env $ETC/config.env"
+    scp -q $CONFIG "$HOST:/tmp/config.env"
+    ssh "$HOST" "mkdir -p $ETC && ${SUDO}mv /tmp/config.env $ETC/config.env"
     echo "Deployed. Every va-* unit reads this file — restart them yourself when ready."
     ;;
   "")

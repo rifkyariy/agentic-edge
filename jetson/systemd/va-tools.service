@@ -1,0 +1,18 @@
+[Unit]
+Description=Voice agent: tools (web search, page fetch)
+After=network-online.target
+
+[Service]
+EnvironmentFile=%h/.config/voice-agent/config.env
+EnvironmentFile=-%h/.config/voice-agent/runtime.env
+ExecStart=/usr/bin/python3 %h/voice-agent/tools_service.py
+RuntimeDirectory=voice-agent
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+Restart=on-failure
+RestartSec=5
+# The Pi unit's ProtectSystem/ProtectHome/PrivateTmp sandbox is left out: in a
+# user unit it needs unprivileged user namespaces, which this kernel restricts.
+
+[Install]
+WantedBy=default.target

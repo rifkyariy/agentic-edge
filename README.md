@@ -608,3 +608,71 @@ printf 'Hello, this is a test.\n' | nc -U /run/voice-agent/tts.sock
 # watch what the ears hear
 nc -U /run/voice-agent/asr.sock
 ```
+
+## On the Jetson Orin Nano
+
+The same code runs on the Jetson, laid out differently because that board has
+no passwordless sudo: everything lives in `ari`'s home and runs as
+`systemctl --user` units (lingering is on, so they outlive the ssh session).
+
+| | Pi 5 | Jetson |
+|---|---|---|
+| code | `/opt/voice-agent/` | `~/voice-agent/` |
+| config + UI state | `/etc/voice-agent/{config,runtime}.env` | `~/.config/voice-agent/{config,runtime}.env` |
+| units | `systemd/` → `/etc/systemd/system/` | `jetson/systemd/` → `~/.config/systemd/user/` |
+| sockets, audio spool | `/run/voice-agent/` | `/run/user/1002/voice-agent/` |
+| llama-server | CPU, `:8080` | CUDA `-ngl 99`, `:8081` |
+| models in the picker | `~/models` | `~/research/models` (E2B, E4B) |
+
+`deploy.sh` picks the layout from the host name, so the commands are the same:
+
+```bash
+ssh MITLAB-JETSON 'bash -s' < jetson/setup.sh   # once, ~25 min: whisper.cpp (CUDA), piper, ffmpeg, models
+export DEPLOY_HOST=MITLAB-JETSON
+./deploy.sh units && ./deploy.sh config && ./deploy.sh
+```
+
+Start, stop and watch it on the board:
+
+```bash
+systemctl --user start va-llm va-asr va-tts va-tools va-orchestrator va-web
+systemctl --user stop  va-web va-orchestrator va-tools va-tts va-asr va-llm
+journalctl --user -u va-llm -f
+```
+
+The UI binds `127.0.0.1` only. Tunnel to it and open `http://localhost:8090`,
+which also makes the browser mic work:
+
+```bash
+ssh -N -L 8090:localhost:8090 MITLAB-JETSON
+```
+
+Switching E2B ↔ E4B is the header dropdown, as on the Pi: it writes
+`~/.config/voice-agent/runtime.env` and runs `systemctl --user restart va-llm`
+(`VA_SYSTEMD_SCOPE=user` in `jetson/config.env`), no sudo involved. From a
+shell, the same thing is
+
+```bash
+curl -s localhost:8090/models
+curl -s -X POST localhost:8090/model -d '{"path": "/home/ari/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf"}'
+```
+
+Measured on deploy (2026-10-20, 15 W mode), one short question each:
+
+| | load after a switch | first spoken clause | browser-mic ASR, 1.7 s clip | free RAM |
+|---|---|---|---|---|
+| E2B | ~66 s | 0.3–0.5 s | 1.2 s | ~840 MB |
+| E4B | ~137 s | 0.8 s warm, 3.5 s cold | 6.5 s | ~80 MB |
+
+E4B fits, but only just: with it loaded, whisper-cli (which loads its model
+per request) is squeezed for memory and ASR runs ~5× slower than on E2B.
+
+**The Jetson is a benchmark board first.** Nothing here is enabled at boot,
+and a deploy only restarts units that are already running. Stop the whole
+stack before queueing a run: one job per device, and the queue's precheck
+refuses jobs while any llama-server other than a benchmark's is up.
+
+Differences from the Pi units, all forced by running unprivileged: no
+`Nice=-5` on va-tts (a user unit cannot raise its priority), and no
+`ProtectSystem`/`ProtectHome` sandbox on va-tools (it needs unprivileged user
+namespaces, which this kernel restricts).

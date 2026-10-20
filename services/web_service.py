@@ -24,6 +24,12 @@ ASR_SOCK = os.environ.get("VA_ASR_SOCK", "/run/voice-agent/asr.sock")
 TTS_SOCK = os.environ.get("VA_TTS_SOCK", "/run/voice-agent/tts.sock")
 EVENT_SOCK = os.environ.get("VA_EVENT_SOCK", "/run/voice-agent/events.sock")
 UNITS = ["va-asr", "va-llm", "va-tts", "va-tools", "va-orchestrator"]
+# "system" on the Pi (units in /etc/systemd/system, restarted through
+# passwordless sudo); "user" on the Jetson, which has no passwordless sudo and
+# runs every va-* unit under `systemctl --user` instead.
+SYSTEMD_SCOPE = os.environ.get("VA_SYSTEMD_SCOPE", "system")
+SYSTEMCTL = ["systemctl", "--user"] if SYSTEMD_SCOPE == "user" else ["systemctl"]
+FFMPEG = os.environ.get("VA_FFMPEG_BIN", "ffmpeg")
 
 # Browser-mic transcription. Uses the same model/binary config as va-asr, so
 # changing the model is still a one-line config edit — but note that swapping
@@ -144,7 +150,7 @@ def transcribe_upload(blob, info):
         fd, dst = tempfile.mkstemp(suffix=".wav")
         os.close(fd)
         r = subprocess.run(
-            ["ffmpeg", "-y", "-loglevel", "error", "-i", src,
+            [FFMPEG, "-y", "-loglevel", "error", "-i", src,
              "-ar", "16000", "-ac", "1", dst],
             capture_output=True, text=True, timeout=120)
         if r.returncode != 0:
@@ -272,8 +278,10 @@ def set_keys(updates):
             f.writelines(out)
     except OSError as e:
         return False, f"state write failed: {e}"
-    r = subprocess.run(["sudo", "-n", "systemctl", "restart", "va-llm"],
-                       capture_output=True, text=True)
+    restart = SYSTEMCTL + ["restart", "va-llm"]
+    if SYSTEMD_SCOPE != "user":
+        restart = ["sudo", "-n"] + restart
+    r = subprocess.run(restart, capture_output=True, text=True)
     if r.returncode != 0:
         return False, f"restart failed: {r.stderr.strip()[:200]}"
     return True, "restarting"
@@ -383,7 +391,7 @@ def llm_ready():
 def statuses():
     out = {}
     for u in UNITS:
-        r = subprocess.run(["systemctl", "is-active", u],
+        r = subprocess.run(SYSTEMCTL + ["is-active", u],
                            capture_output=True, text=True)
         out[u] = r.stdout.strip() or "unknown"
     if out.get("va-llm") == "active" and not llm_ready():
