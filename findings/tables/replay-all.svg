@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="807" height="621" viewBox="0 0 807 621" role="img" aria-label="Every prompt-lookup replay (tokens per verify pass by verify width B)">
+<style>text{font-family:Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;font-variant-numeric:tabular-nums}.title{font-size:15px;font-weight:600}.head{font-size:12px;font-weight:600}.cell{font-size:13px}.cell.b{font-weight:700}.note{font-size:11.5px}.glabel{font-size:13px;font-weight:600;font-style:italic}.hair{stroke-width:0.6}.hair2{stroke-width:0.6}.bg{fill:#fcfcfb}.title{fill:#0b0b0b}.head{fill:#52514e}.cell{fill:#0b0b0b}.note{fill:#52514e}.glabel{fill:#52514e}.rule{stroke:#0b0b0b}.hair{stroke:#e4e3df}.hair2{stroke:#52514e}.tint{fill:#e8f0fa}.group{fill:#f3f2ee}@media (prefers-color-scheme:dark){.bg{fill:#1a1a19}.title{fill:#ffffff}.head{fill:#c3c2b7}.cell{fill:#ffffff}.note{fill:#c3c2b7}.glabel{fill:#c3c2b7}.rule{stroke:#c3c2b7}.hair{stroke:#34332f}.hair2{stroke:#c3c2b7}.tint{fill:#1d2a3b}.group{fill:#242321}}</style>
+<rect class="bg" width="100%" height="100%"/>
+<text class="title" x="20" y="35">Every prompt-lookup replay (tokens per verify pass by verify width B)</text>
+<text class="head" x="32.0" y="68.0">Replies</text>
+<text class="head" x="265.2" y="68.0" text-anchor="end">n</text>
+<text class="head" x="363.4" y="68.0" text-anchor="end">Reply tokens</text>
+<text class="head" x="430.8" y="68.0" text-anchor="end">Capped</text>
+<text class="head" x="480.1" y="68.0" text-anchor="end">B=2</text>
+<text class="head" x="529.4" y="68.0" text-anchor="end">B=3</text>
+<text class="head" x="578.7" y="68.0" text-anchor="end">B=4</text>
+<text class="head" x="628.0" y="68.0" text-anchor="end">B=5</text>
+<text class="head" x="775.0" y="68.0" text-anchor="end">Lookup match at B=4</text>
+<line class="rule" x1="20" x2="787.0" y1="49.0" y2="49.0" stroke-width="1.5"/>
+<line class="rule" x1="20" x2="787.0" y1="79.0" y2="79.0" stroke-width="0.8"/>
+<line class="rule" x1="20" x2="787.0" y1="538.0" y2="538.0" stroke-width="1.5"/>
+<text class="cell" x="32.0" y="97.0">lg-e2b-jetson</text>
+<text class="cell" x="265.2" y="97.0" text-anchor="end">300</text>
+<text class="cell" x="363.4" y="97.0" text-anchor="end">197,694</text>
+<text class="cell" x="430.8" y="97.0" text-anchor="end">17</text>
+<text class="cell" x="480.1" y="97.0" text-anchor="end">1.29</text>
+<text class="cell" x="529.4" y="97.0" text-anchor="end">1.41</text>
+<text class="cell" x="578.7" y="97.0" text-anchor="end">1.48</text>
+<text class="cell" x="628.0" y="97.0" text-anchor="end">1.52</text>
+<text class="cell" x="775.0" y="97.0" text-anchor="end">45%</text>
+<line class="hair" x1="20" x2="787.0" y1="106.0" y2="106.0"/>
+<text class="cell" x="32.0" y="124.0">mmlupro100-e2b-s1</text>
+<text class="cell" x="265.2" y="124.0" text-anchor="end">100</text>
+<text class="cell" x="363.4" y="124.0" text-anchor="end">65,163</text>
+<text class="cell" x="430.8" y="124.0" text-anchor="end">6</text>
+<text class="cell" x="480.1" y="124.0" text-anchor="end">1.30</text>
+<text class="cell" x="529.4" y="124.0" text-anchor="end">1.43</text>
+<text class="cell" x="578.7" y="124.0" text-anchor="end">1.50</text>
+<text class="cell" x="628.0" y="124.0" text-anchor="end">1.54</text>
+<text class="cell" x="775.0" y="124.0" text-anchor="end">45%</text>
+<line class="hair" x1="20" x2="787.0" y1="133.0" y2="133.0"/>
+<text class="cell" x="32.0" y="151.0">mmlupro100-e2b-s2</text>
+<text class="cell" x="265.2" y="151.0" text-anchor="end">100</text>
+<text class="cell" x="363.4" y="151.0" text-anchor="end">65,126</text>
+<text class="cell" x="430.8" y="151.0" text-anchor="end">7</text>
+<text class="cell" x="480.1" y="151.0" text-anchor="end">1.28</text>
+<text class="cell" x="529.4" y="151.0" text-anchor="end">1.41</text>
+<text class="cell" x="578.7" y="151.0" text-anchor="end">1.47</text>
+<text class="cell" x="628.0" y="151.0" text-anchor="end">1.52</text>
+<text class="cell" x="775.0" y="151.0" text-anchor="end">44%</text>
+<line class="hair" x1="20" x2="787.0" y1="160.0" y2="160.0"/>
+<text class="cell" x="32.0" y="178.0">mmlupro100-e2b-s3</text>
+<text class="cell" x="265.2" y="178.0" text-anchor="end">100</text>
+<text class="cell" x="363.4" y="178.0" text-anchor="end">71,009</text>
+<text class="cell" x="430.8" y="178.0" text-anchor="end">12</text>
+<text class="cell" x="480.1" y="178.0" text-anchor="end">1.30</text>
+<text class="cell" x="529.4" y="178.0" text-anchor="end">1.44</text>
+<text class="cell" x="578.7" y="178.0" text-anchor="end">1.51</text>
+<text class="cell" x="628.0" y="178.0" text-anchor="end">1.56</text>
+<text class="cell" x="775.0" y="178.0" text-anchor="end">46%</text>
+<line class="hair" x1="20" x2="787.0" y1="187.0" y2="187.0"/>
+<text class="cell" x="32.0" y="205.0">mmlupro100-e2b-s1-think (think)</text>
+<text class="cell" x="265.2" y="205.0" text-anchor="end">100</text>
+<text class="cell" x="363.4" y="205.0" text-anchor="end">82,294</text>
+<text class="cell" x="430.8" y="205.0" text-anchor="end">10</text>
+<text class="cell" x="480.1" y="205.0" text-anchor="end">1.29</text>
+<text class="cell" x="529.4" y="205.0" text-anchor="end">1.42</text>
+<text class="cell" x="578.7" y="205.0" text-anchor="end">1.50</text>
+<text class="cell" x="628.0" y="205.0" text-anchor="end">1.54</text>
+<text class="cell" x="775.0" y="205.0" text-anchor="end">43%</text>
+<line class="hair" x1="20" x2="787.0" y1="214.0" y2="214.0"/>
+<text class="cell" x="32.0" y="232.0">mmlupro100-e2b-s2-think (think)</text>
+<text class="cell" x="265.2" y="232.0" text-anchor="end">100</text>
+<text class="cell" x="363.4" y="232.0" text-anchor="end">81,794</text>
+<text class="cell" x="430.8" y="232.0" text-anchor="end">6</text>
+<text class="cell" x="480.1" y="232.0" text-anchor="end">1.30</text>
+<text class="cell" x="529.4" y="232.0" text-anchor="end">1.43</text>
+<text class="cell" x="578.7" y="232.0" text-anchor="end">1.50</text>
+<text class="cell" x="628.0" y="232.0" text-anchor="end">1.55</text>
+<text class="cell" x="775.0" y="232.0" text-anchor="end">43%</text>
+<line class="hair" x1="20" x2="787.0" y1="241.0" y2="241.0"/>
+<text class="cell" x="32.0" y="259.0">mmlupro100-e2b-s3-think (think)</text>
+<text class="cell" x="265.2" y="259.0" text-anchor="end">100</text>
+<text class="cell" x="363.4" y="259.0" text-anchor="end">84,716</text>
+<text class="cell" x="430.8" y="259.0" text-anchor="end">9</text>
+<text class="cell" x="480.1" y="259.0" text-anchor="end">1.28</text>
+<text class="cell" x="529.4" y="259.0" text-anchor="end">1.40</text>
+<text class="cell" x="578.7" y="259.0" text-anchor="end">1.48</text>
+<text class="cell" x="628.0" y="259.0" text-anchor="end">1.52</text>
+<text class="cell" x="775.0" y="259.0" text-anchor="end">42%</text>
+<line class="hair" x1="20" x2="787.0" y1="268.0" y2="268.0"/>
+<text class="cell" x="32.0" y="286.0">mmlupro100-e4b-s1</text>
+<text class="cell" x="265.2" y="286.0" text-anchor="end">100</text>
+<text class="cell" x="363.4" y="286.0" text-anchor="end">66,414</text>
+<text class="cell" x="430.8" y="286.0" text-anchor="end">10</text>
+<text class="cell" x="480.1" y="286.0" text-anchor="end">1.25</text>
+<text class="cell" x="529.4" y="286.0" text-anchor="end">1.35</text>
+<text class="cell" x="578.7" y="286.0" text-anchor="end">1.41</text>
+<text class="cell" x="628.0" y="286.0" text-anchor="end">1.44</text>
+<text class="cell" x="775.0" y="286.0" text-anchor="end">40%</text>
+<line class="hair" x1="20" x2="787.0" y1="295.0" y2="295.0"/>
+<text class="cell" x="32.0" y="313.0">mmlupro100-e4b-s2</text>
+<text class="cell" x="265.2" y="313.0" text-anchor="end">100</text>
+<text class="cell" x="363.4" y="313.0" text-anchor="end">69,252</text>
+<text class="cell" x="430.8" y="313.0" text-anchor="end">8</text>
+<text class="cell" x="480.1" y="313.0" text-anchor="end">1.26</text>
+<text class="cell" x="529.4" y="313.0" text-anchor="end">1.37</text>
+<text class="cell" x="578.7" y="313.0" text-anchor="end">1.43</text>
+<text class="cell" x="628.0" y="313.0" text-anchor="end">1.46</text>
+<text class="cell" x="775.0" y="313.0" text-anchor="end">40%</text>
+<line class="hair" x1="20" x2="787.0" y1="322.0" y2="322.0"/>
+<text class="cell" x="32.0" y="340.0">mmlupro100-e4b-s3</text>
+<text class="cell" x="265.2" y="340.0" text-anchor="end">100</text>
+<text class="cell" x="363.4" y="340.0" text-anchor="end">69,066</text>
+<text class="cell" x="430.8" y="340.0" text-anchor="end">9</text>
+<text class="cell" x="480.1" y="340.0" text-anchor="end">1.26</text>
+<text class="cell" x="529.4" y="340.0" text-anchor="end">1.36</text>
+<text class="cell" x="578.7" y="340.0" text-anchor="end">1.42</text>
+<text class="cell" x="628.0" y="340.0" text-anchor="end">1.46</text>
+<text class="cell" x="775.0" y="340.0" text-anchor="end">40%</text>
+<line class="hair" x1="20" x2="787.0" y1="349.0" y2="349.0"/>
+<text class="cell" x="32.0" y="367.0">tiny1024-e2b</text>
+<text class="cell" x="265.2" y="367.0" text-anchor="end">200</text>
+<text class="cell" x="363.4" y="367.0" text-anchor="end">40,996</text>
+<text class="cell" x="430.8" y="367.0" text-anchor="end">0</text>
+<text class="cell" x="480.1" y="367.0" text-anchor="end">1.25</text>
+<text class="cell" x="529.4" y="367.0" text-anchor="end">1.34</text>
+<text class="cell" x="578.7" y="367.0" text-anchor="end">1.39</text>
+<text class="cell" x="628.0" y="367.0" text-anchor="end">1.41</text>
+<text class="cell" x="775.0" y="367.0" text-anchor="end">53%</text>
+<line class="hair" x1="20" x2="787.0" y1="376.0" y2="376.0"/>
+<text class="cell" x="32.0" y="394.0">mmlupro100-e4b-s1-think (think)</text>
+<text class="cell" x="265.2" y="394.0" text-anchor="end">100</text>
+<text class="cell" x="363.4" y="394.0" text-anchor="end">82,052</text>
+<text class="cell" x="430.8" y="394.0" text-anchor="end">7</text>
+<text class="cell" x="480.1" y="394.0" text-anchor="end">1.25</text>
+<text class="cell" x="529.4" y="394.0" text-anchor="end">1.35</text>
+<text class="cell" x="578.7" y="394.0" text-anchor="end">1.41</text>
+<text class="cell" x="628.0" y="394.0" text-anchor="end">1.44</text>
+<text class="cell" x="775.0" y="394.0" text-anchor="end">38%</text>
+<line class="hair" x1="20" x2="787.0" y1="403.0" y2="403.0"/>
+<text class="cell" x="32.0" y="421.0">mmlupro100-e4b-s2-think (think)</text>
+<text class="cell" x="265.2" y="421.0" text-anchor="end">100</text>
+<text class="cell" x="363.4" y="421.0" text-anchor="end">82,754</text>
+<text class="cell" x="430.8" y="421.0" text-anchor="end">6</text>
+<text class="cell" x="480.1" y="421.0" text-anchor="end">1.26</text>
+<text class="cell" x="529.4" y="421.0" text-anchor="end">1.37</text>
+<text class="cell" x="578.7" y="421.0" text-anchor="end">1.43</text>
+<text class="cell" x="628.0" y="421.0" text-anchor="end">1.46</text>
+<text class="cell" x="775.0" y="421.0" text-anchor="end">39%</text>
+<line class="hair" x1="20" x2="787.0" y1="430.0" y2="430.0"/>
+<text class="cell" x="32.0" y="448.0">mmlupro100-e4b-s3-think (think)</text>
+<text class="cell" x="265.2" y="448.0" text-anchor="end">100</text>
+<text class="cell" x="363.4" y="448.0" text-anchor="end">84,345</text>
+<text class="cell" x="430.8" y="448.0" text-anchor="end">7</text>
+<text class="cell" x="480.1" y="448.0" text-anchor="end">1.25</text>
+<text class="cell" x="529.4" y="448.0" text-anchor="end">1.36</text>
+<text class="cell" x="578.7" y="448.0" text-anchor="end">1.42</text>
+<text class="cell" x="628.0" y="448.0" text-anchor="end">1.45</text>
+<text class="cell" x="775.0" y="448.0" text-anchor="end">39%</text>
+<line class="hair" x1="20" x2="787.0" y1="457.0" y2="457.0"/>
+<text class="cell" x="32.0" y="475.0">bfcl-reference</text>
+<text class="cell" x="265.2" y="475.0" text-anchor="end">200</text>
+<text class="cell" x="363.4" y="475.0" text-anchor="end">4,779</text>
+<text class="cell" x="430.8" y="475.0" text-anchor="end">0</text>
+<text class="cell" x="480.1" y="475.0" text-anchor="end">1.17</text>
+<text class="cell" x="529.4" y="475.0" text-anchor="end">1.22</text>
+<text class="cell" x="578.7" y="475.0" text-anchor="end">1.25</text>
+<text class="cell" x="628.0" y="475.0" text-anchor="end">1.27</text>
+<text class="cell" x="775.0" y="475.0" text-anchor="end">29%</text>
+<line class="hair" x1="20" x2="787.0" y1="484.0" y2="484.0"/>
+<text class="cell" x="32.0" y="502.0">agentic-llama-e2b-bfcl</text>
+<text class="cell" x="265.2" y="502.0" text-anchor="end">200</text>
+<text class="cell" x="363.4" y="502.0" text-anchor="end">4,619</text>
+<text class="cell" x="430.8" y="502.0" text-anchor="end">0</text>
+<text class="cell" x="480.1" y="502.0" text-anchor="end">1.18</text>
+<text class="cell" x="529.4" y="502.0" text-anchor="end">1.24</text>
+<text class="cell" x="578.7" y="502.0" text-anchor="end">1.27</text>
+<text class="cell" x="628.0" y="502.0" text-anchor="end">1.29</text>
+<text class="cell" x="775.0" y="502.0" text-anchor="end">30%</text>
+<line class="hair" x1="20" x2="787.0" y1="511.0" y2="511.0"/>
+<text class="cell" x="32.0" y="529.0">agentic-llama-e2b-ifeval</text>
+<text class="cell" x="265.2" y="529.0" text-anchor="end">100</text>
+<text class="cell" x="363.4" y="529.0" text-anchor="end">38,812</text>
+<text class="cell" x="430.8" y="529.0" text-anchor="end">0</text>
+<text class="cell" x="480.1" y="529.0" text-anchor="end">1.07</text>
+<text class="cell" x="529.4" y="529.0" text-anchor="end">1.10</text>
+<text class="cell" x="578.7" y="529.0" text-anchor="end">1.11</text>
+<text class="cell" x="628.0" y="529.0" text-anchor="end">1.11</text>
+<text class="cell" x="775.0" y="529.0" text-anchor="end">15%</text>
+<text class="note" x="20" y="563.5">replay_lookup.py, 3-gram lookup falling back to 2, Gemma 4 tokenizer on the Pi. lg-e2b-jetson is little-gemma's 300 E2B replies (s1–s3);</text>
+<text class="note" x="20" y="580.0">mmlupro100-* and tiny1024-e2b are llama.cpp on the Pi; bfcl-reference and agentic-* are tool-calling and instruction prompts, not in the paper.</text>
+<text class="note" x="20" y="596.5">Capped: replies of 2,040 tokens or more.</text>
+</svg>

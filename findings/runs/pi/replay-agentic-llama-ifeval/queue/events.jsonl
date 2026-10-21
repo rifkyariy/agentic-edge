@@ -1,0 +1,4 @@
+{"by": "queue_ctl", "event": "queued", "job": "20261008-210740-ffba2d", "label": "replay-agentic-llama-ifeval", "ts": 1791464860.557405}
+{"event": "precheck_passed", "job": "20261008-210740-ffba2d", "ts": 1791464864.6037722}
+{"command": "./run_measured.sh replay-agentic-llama-ifeval -- sh -c \"mkdir -p /home/mitlab/Research/stdbench/replay-agentic-llama-ifeval && ./replay_lookup.py --model /home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf --server /home/mitlab/llama.cpp/build/bin/llama-server --out /home/mitlab/Research/stdbench/replay-agentic-llama-ifeval/replay.json /home/mitlab/Research/stdbench-extra/agentic-llama-e2b-ifeval && touch /home/mitlab/Research/stdbench/replay-agentic-llama-ifeval/.done\"", "event": "started", "job": "20261008-210740-ffba2d", "ts": 1791464864.6209693}
+{"event": "completed", "exit_code": 0, "job": "20261008-210740-ffba2d", "ts": 1791464944.06706}

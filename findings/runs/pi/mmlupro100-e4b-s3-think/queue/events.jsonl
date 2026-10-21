@@ -1,0 +1,5 @@
+{"by": "dashboard", "event": "queued", "job": "20260923-233627-4b9666", "label": "mmlupro-e4b-s3-think", "ts": 1790177787.4441948}
+{"event": "precheck_passed", "job": "20260923-233627-4b9666", "ts": 1790249830.4690516}
+{"command": "./run_measured.sh mmlupro-e4b-s3-think -- env SUBSET=s3 THINKING=on ./std_mmlupro.sh e4b", "event": "started", "job": "20260923-233627-4b9666", "ts": 1790249830.486494}
+{"baseline": "mmlupro-thinking-on", "event": "fingerprint_ok", "job": "20260923-233627-4b9666", "ts": 1790249865.7739353}
+{"event": "completed", "exit_code": 0, "job": "20260923-233627-4b9666", "ts": 1790277057.6033938}

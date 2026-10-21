@@ -1,0 +1,16 @@
+{
+ "label": "pi-verify-cost-e2b",
+ "command": "sh -c mkdir -p /home/mitlab/Research/stdbench/pi-verify-cost-e2b && /home/mitlab/llama.cpp/build/bin/llama-bench -m /home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf -t 3 -p 1,2,3,4 -n 32 -r 5 -o md | tee /home/mitlab/Research/stdbench/pi-verify-cost-e2b/bench.md && touch /home/mitlab/Research/stdbench/pi-verify-cost-e2b/.done",
+ "model_path": "/home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf",
+ "server_args": "/home/mitlab/llama.cpp/build/bin/llama-server -m /home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf -t 3 -c 8192 --host 127.0.0.1 --port 8080 -rea off --reasoning-budget -1",
+ "governor": "ondemand",
+ "kernel": "Linux 6.18.34+rpt-rpi-2712",
+ "host": "MITLAB-EDGE-PI-5-128",
+ "cpus": 4,
+ "start_epoch": 1791131382.4107864,
+ "throttled_at_start": "throttled=0x0",
+ "server_args_after": "/home/mitlab/llama.cpp/build/bin/llama-server -m /home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf -t 3 -c 8192 --host 127.0.0.1 --port 8080 -rea off --reasoning-budget -1",
+ "work_start_epoch": 1791131412.0,
+ "work_end_epoch": 1791131439.0,
+ "exit_code": 0
+}

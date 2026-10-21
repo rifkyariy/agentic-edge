@@ -1,0 +1,10 @@
+/home/mitlab/Research/stdbench/mmlupro100-e2b-s1: 100 replies, 65163 tokens, B=2 1.30, B=3 1.43, B=4 1.50, B=5 1.54
+/home/mitlab/Research/stdbench/mmlupro100-e2b-s2: 100 replies, 65126 tokens, B=2 1.28, B=3 1.41, B=4 1.47, B=5 1.51
+/home/mitlab/Research/stdbench/mmlupro100-e2b-s3: 100 replies, 71009 tokens, B=2 1.30, B=3 1.44, B=4 1.51, B=5 1.56
+/home/mitlab/Research/stdbench/mmlupro100-e2b-s1-think (think): 100 replies, 82294 tokens, B=2 1.29, B=3 1.42, B=4 1.50, B=5 1.54
+/home/mitlab/Research/stdbench/mmlupro100-e2b-s2-think (think): 100 replies, 81794 tokens, B=2 1.29, B=3 1.43, B=4 1.50, B=5 1.54
+/home/mitlab/Research/stdbench/mmlupro100-e2b-s3-think (think): 100 replies, 84716 tokens, B=2 1.28, B=3 1.40, B=4 1.48, B=5 1.52
+/home/mitlab/Research/stdbench/mmlupro100-e4b-s1: 100 replies, 66414 tokens, B=2 1.25, B=3 1.35, B=4 1.41, B=5 1.44
+/home/mitlab/Research/stdbench/mmlupro100-e4b-s2: 100 replies, 69252 tokens, B=2 1.26, B=3 1.37, B=4 1.43, B=5 1.46
+/home/mitlab/Research/stdbench/mmlupro100-e4b-s3: 100 replies, 69066 tokens, B=2 1.25, B=3 1.36, B=4 1.42, B=5 1.46
+/home/mitlab/Research/stdbench-extra/tiny1024-e2b: 200 replies, 40996 tokens, B=2 1.25, B=3 1.34, B=4 1.39, B=5 1.41

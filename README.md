@@ -14,9 +14,9 @@ than llama.cpp:
 
 ![Table III: engines on the Jetson Orin Nano at 15 W](findings/tables/table3.svg)
 
-Every number in that table, and in the paper's Tables I, III, IV, V, VI and
-VIII, is rebuilt from the raw runs committed here by one command (step 1
-below). **All results as table images**, the paper's and every other
+Every number in that table, and in **all eight of the paper's tables** and its
+in-text figures, is rebuilt from the raw runs committed here by one command
+(step 1 below). **All results as table images**, the paper's and every other
 experiment's, generated from the same data: [`findings/TABLES.md`](findings/TABLES.md)
 (SVG and 2x PNG in [`findings/tables/`](findings/tables/), ready for slides).
 
@@ -41,7 +41,7 @@ experiment's, generated from the same data: [`findings/TABLES.md`](findings/TABL
 | folder | what it holds |
 |---|---|
 | [`benchmark/`](benchmark/) | everything that runs on the boards: run scripts, telemetry, the job queue, the engine patches (`little_gemma/`), the paper's analysis (`paper_tables.py`, `collect_runs.py`), tests, and the iPhone app (`apps/ios/`) |
-| [`findings/`](findings/) | every result. `TABLES.md` shows all of them as table images (`tables/*.svg`, `*.png`), generated from the data; `runs/jetson/` holds the paper's raw Jetson runs; `RESULTS.md` is the full write-up |
+| [`findings/`](findings/) | every result. `TABLES.md` shows all of them as table images (`tables/*.svg`, `*.png`), generated from the data; `runs/jetson/` and `runs/pi/` hold the paper's raw runs; `RESULTS.md` is the full write-up |
 | [`docs/`](docs/) | the protocol as run, the index of every experiment, the queue's design record |
 | [`dashboard/`](dashboard/) | optional Next.js monitor and queue UI for the boards; runs on a laptop |
 
@@ -379,9 +379,13 @@ Table VIII sets the Jetson result beside other deployments of the same
 checkpoint on the same 300 questions. Its rows compare deployments, not
 engines.
 
-**Raspberry Pi 5 (llama.cpp, CPU).** Committed in
-`findings/export/experiment-full.json.gz`, and checked by
-`paper_tables.py --table 8`. To re-run: llama.cpp `661643e`, CPU build with
+**Raspberry Pi 5 (llama.cpp, CPU).** Every Pi run the paper uses is in
+`findings/runs/pi/`: the baseline and thinking-on MMLU-Pro runs (s1–s3, both
+models), the prompt-lookup replays behind Table VII, and the batched-verify
+cost behind §VII. The baseline is also in `findings/export/experiment-full.json.gz`,
+which Table VIII reads. Collect them again with
+`python3 benchmark/collect_runs.py --board pi --from <pi-host>:Research --paper`.
+To re-run: llama.cpp `661643e`, CPU build with
 `GGML_NATIVE=ON`, the same GGUFs, eval venv at `~/Research/eval-venv`. Then
 per model and subset:
 
@@ -395,7 +399,25 @@ cd ~/Research/agentic-edge/benchmark          # capital R on the Pi
 restoring the deployed values afterwards. On a Pi without that unit, launch
 `llama-server` with those flags as `std_mmlupro_jetson.sh` does, minus `-ngl`.
 Then `python3 benchmark/export_experiment.py --out findings/export/experiment-full.json`
-regenerates the export.
+regenerates the export. Thinking-on is the same command with `THINKING=on`.
+
+The two offline measurements, exactly as they ran on the Pi (queue kind
+`raw`, from `~/Research/agentic-edge/benchmark`):
+
+```bash
+# Table VII / Secs. III and VII: prompt-lookup acceptance replayed on recorded replies
+./replay_lookup.py --model ~/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf \
+  --server ~/llama.cpp/build/bin/llama-server --out replay.json \
+  ~/Research/stdbench/mmlupro100-e2b-s{1,2,3} ~/Research/stdbench/mmlupro100-e2b-s{1,2,3}-think:think \
+  ~/Research/stdbench/mmlupro100-e4b-s{1,2,3} ~/Research/stdbench-extra/tiny1024-e2b
+# Sec. VII: what a 1-4 token batch costs on the Pi's CPU
+~/llama.cpp/build/bin/llama-bench -m ~/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf -t 3 -p 1,2,3,4 -n 32 -r 5 -o md
+```
+
+`replay_lookup.py` runs llama-server only as a tokenizer (`-ngl 0`). For
+little-gemma's replies, put its per-subject `samples_*.jsonl` (the Jetson's
+`mmlupro100-lg-e2b-s*`) in one directory and pass that; the GSM8K input is the
+same file as `findings/stdbench/tiny1024-e2b`.
 
 **iPhone 15 Pro (MLX).** The GemmaBench app in `benchmark/apps/ios/` runs the
 same prompts on-device and uploads each run. Build and run it by following
@@ -415,31 +437,30 @@ boards' energy.
 | **Table IV**: llama.cpp n-gram vs CoPR | `mmlupro100-e2b-s1`, `-ngram-n3m2-`, `-ngram-n3m3-`, `-ngram-default-`, `-ae-full-`, `-ae-full-r2-e2b-s1` | 2.7, third block | `--table 4` |
 | **Table V**: ablation | `-lg-`, `-ae-ngram-`, `-ae-reuse-`, `-ae-full-`, both models × s1–s3 | 2.7, second block | `--table 5` |
 | **Table VI**: verify width | `ae-sweep-<model>-b{0,2,3,4}` | 2.7, fourth block | `--table 6` |
-| **Table VII**: replayed acceptance | little-gemma E2B (Jetson), Pi llama.cpp E2B/E4B (`findings/export/`), tinyGSM8k (`findings/stdbench/`) | `replay_lookup.py tokenize --via <board>` once, then offline | `benchmark/replay_lookup.py`; the token cache is not filled yet, and the Pi's thinking-on replies (one row) are not in the repo |
-| **Table VIII**: other devices | Jetson rows = Table III; Pi in `findings/export/`; iPhone in `findings/phone/` | §3 | `--table 8` |
+| **Table VII**: replayed acceptance | `findings/runs/pi/replay-lookup-pi/`, `…/replay-lookup-lg-e2b/` (`replay.json`) | §3, `replay_lookup.py` | `--table 7` |
+| **Table VIII**: other devices | Jetson rows = Table III; Pi in `findings/export/` and `findings/runs/pi/`; iPhone in `findings/phone/` | §3 | `--table 8` |
 | §III: 97% decode, 3.8× prefill, 17 capped replies | as Table I | — | `--table 1`, `--table text` |
-| §III: replay 1.29/1.41/1.48/1.52 tokens per pass | little-gemma E2B replies | as Table VII | `replay_lookup.py` |
+| §III: replay 1.29/1.41/1.48/1.52 tokens per pass | `findings/runs/pi/replay-lookup-lg-e2b/` | §3 | `--table text` |
 | §V: request-window energy, the repeat run, 612 MHz | CoPR and llama.cpp runs | — | `--table text` |
 | §VI-A–C: McNemar tests, 271/280 replies changed, speedup ratios | as Table III | — | `--table text` |
 | §VI-D: six `-reuse` runs failed at startup | `findings/runs/jetson/failed/` (server logs show the parse error) | — | — |
-| §VII: Pi batched-verify cost (132 / 140 ms) | llama.cpp `llama-batched-bench`, E2B, 3 threads, on the Pi | **output is on the Pi** | — |
+| §VII: Pi batched-verify cost (132 / 140 ms), replay at width 4 (1.49, 45%) | `findings/runs/pi/pi-verify-cost-e2b/` (`bench.md`), `…/replay-lookup-pi/` | §3 | `--table text` |
 
-`replay_lookup.py` reimplements the replay from the paper's description
-(Sec. IV-A) and is tested against a brute-force scan. It needs Gemma 4 token
-ids, made once with llama.cpp's own tokenizer on a board and cached in
-`findings/replay/`; that cache is pending a free slot on the Jetson. Still
-only on the Pi, which is on loan: the thinking-on replies (one Table VII row)
-and the `llama-batched-bench` output (§VII).
+Every table and figure of the paper now has its inputs in the repository. The
+one aside not rebuilt is §III's "1.39 at width 3 without the 17 capped
+replies", which no recorded output holds.
 
 ### 5. Where the data and the manuscript disagree
 
 `paper_tables.py` found these. The repository records the data as measured.
 Fix the paper, not the data.
 
-1. **Two rounding errata, both in Table IV.** The llama.cpp n-gram width-4
+1. **Three rounding errata.** In Table IV, the llama.cpp n-gram width-4
    row's "above idle" is 0.22447 J, printed 0.225; it should be 0.224. CoPR
    width 3's J/tok is 0.36947 J, printed 0.370; it should be 0.369. Both were
-   rounded twice. Table III's pooled 0.370 is correct.
+   rounded twice; Table III's pooled 0.370 is correct. In §VII, the Pi's
+   replies give 1.495 tokens per verify pass at width 4 over s1–s3, printed
+   1.49; it should be 1.50.
 2. **Table IV's "llama.cpp n-gram, width 3" run never drafted.** Its
    llama-server log has no draft-acceptance line on any of its 100 requests.
    Width 4 has one on 100/100, stock settings on 94/100. So that row is a plain

@@ -1,0 +1,39 @@
+{
+ "widths": [
+  2,
+  3,
+  4,
+  5
+ ],
+ "runs": [
+  {
+   "run": "/home/mitlab/Research/stdbench-extra/lg-e2b-jetson",
+   "thinking": false,
+   "replies": 300,
+   "reply_tokens": 197694,
+   "capped": 17,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.287,
+     "drafted_share": 0.518,
+     "accepted_per_drafted_step": 0.554
+    },
+    "3": {
+     "tokens_per_step": 1.411,
+     "drafted_share": 0.471,
+     "accepted_per_drafted_step": 0.871
+    },
+    "4": {
+     "tokens_per_step": 1.48,
+     "drafted_share": 0.446,
+     "accepted_per_drafted_step": 1.077
+    },
+    "5": {
+     "tokens_per_step": 1.521,
+     "drafted_share": 0.43,
+     "accepted_per_drafted_step": 1.211
+    }
+   }
+  }
+ ]
+}

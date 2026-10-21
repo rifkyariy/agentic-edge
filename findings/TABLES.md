@@ -4,11 +4,11 @@ Every result in this repository as tables, **generated from the committed data**
 
 **Names.** CoPR is the paper's name for the proposed engine; run names call it `ae` (S9). `lg` is little-gemma (S3), `ngram-n3m3` is llama.cpp's n-gram drafting at width 4 (S10), an empty row name is plain llama.cpp (S1). Power is board DC draw (INA3221 on the Jetson, PMIC on the Pi), not wall power.
 
-**Contents.** 1 · the manuscript's tables — 2 · reply identity between engines — 3 · accuracy — 4 · every Jetson run — 5 · Pi and iPhone runs — 6 · tinyGSM8k — 7 · own suite — 8 · data vs manuscript
+**Contents.** 1 · the manuscript's tables — 2 · reply identity between engines — 2b · every replay — 3 · accuracy — 4 · every Jetson run — 5 · Pi and iPhone runs — 6 · tinyGSM8k — 7 · own suite — 8 · data vs manuscript
 
 ## 1. The manuscript's tables, from the data
 
-Rebuilt from `findings/runs/jetson/` by the functions `paper_tables.py` checks against the paper (203 values match), in the paper's layout. Table VII (the replay) follows once its token cache is filled.
+All eight, in the paper's layout, rebuilt by the functions `paper_tables.py` checks against the paper: Tables I and III–VI from `findings/runs/jetson/`, Table VII and the Sec. VII batch costs from the Pi's recorded outputs in `findings/runs/pi/`, Table VIII from both plus the iPhone's.
 
 ### Table I — Baseline anatomy, E2B, Jetson at 15 W
 
@@ -109,6 +109,24 @@ The first row of each model is little-gemma (S3); CoPR with every switch off rep
 
 </details>
 
+### Table VII — Replayed prompt-lookup acceptance (tokens per verify pass)
+
+![table7](tables/table7.svg)
+
+<details><summary>as text</summary>
+
+| Replies | Engine | B=3 | B=4 |
+|---|---|---:|---:|
+| E2B MMLU-Pro, no thinking | little-gemma (Orin Nano) | 1.41 | 1.48 |
+| E2B MMLU-Pro, no thinking | llama.cpp (Pi) | 1.41–1.44 | 1.47–1.51 |
+| E2B MMLU-Pro, thinking | llama.cpp (Pi) | 1.40–1.43 | 1.48–1.50 |
+| E4B MMLU-Pro, no thinking | llama.cpp (Pi) | 1.35–1.37 | 1.41–1.43 |
+| E2B GSM8K (200 replies) | llama.cpp (Pi) | 1.34 | 1.39 |
+
+Recorded greedy replies from other engines, modes and tasks, replayed through replay_lookup.py on the Pi's tokenizer; no device time. Ranges span the three MMLU-Pro subsets (n=100 each).
+
+</details>
+
 ### Table VIII — Same checkpoint and 300 questions on other edge devices
 
 ![table8](tables/table8.svg)
@@ -127,6 +145,23 @@ The first row of each model is little-gemma (S3); CoPR with every switch off rep
 | iPhone 15 Pro | MLXᵈ | 66.0 | 9.18ᵉ | 0.593ᵇ |
 
 Deployment context, not an engine comparison. ᵃ Pi rates pooled over the two subsets with request logs (n=200). ᵇ Whole-phone battery estimate (battery % × capacity, 1% steps, screen on), not board DC: not comparable. ᵈ MLX 4-bit builds of the same QAT checkpoints. ᵉ Thermally throttled: iOS state ≥2 for most of each run.
+
+</details>
+
+### Batched verify cost on the Raspberry Pi 5 (llama.cpp CPU, E2B, 3 threads)
+
+![pi-batch-cost](tables/pi-batch-cost.svg)
+
+<details><summary>as text</summary>
+
+| Tokens in batch | Batch tok/s | ms per batch | Cost vs one token |
+|---|---:|---:|---:|
+| 1 | 7.57 | 132 | 1.00 |
+| 2 | 11.67 | 171 | 1.30 |
+| 3 | 14.35 | 209 | 1.58 |
+| 4 | 28.56 | 140 | 1.06 |
+
+llama-bench -t 3 -p 1,2,3,4 -n 32 -r 5, llama.cpp 661643e. A 4-token batch costs about as much as one token (Q4_0 kernels work on 4-row tiles); 2 and 3 do not. Sec. VII.
 
 </details>
 
@@ -170,6 +205,38 @@ Jetson Orin Nano, same weights and prompts, s1–s3 pooled. Greedy decoding is d
 
 </details>
 
+## 2b. Every prompt-lookup replay
+
+### Every prompt-lookup replay (tokens per verify pass by verify width B)
+
+![replay-all](tables/replay-all.svg)
+
+<details><summary>as text</summary>
+
+| Replies | n | Reply tokens | Capped | B=2 | B=3 | B=4 | B=5 | Lookup match at B=4 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| lg-e2b-jetson | 300 | 197,694 | 17 | 1.29 | 1.41 | 1.48 | 1.52 | 45% |
+| mmlupro100-e2b-s1 | 100 | 65,163 | 6 | 1.30 | 1.43 | 1.50 | 1.54 | 45% |
+| mmlupro100-e2b-s2 | 100 | 65,126 | 7 | 1.28 | 1.41 | 1.47 | 1.52 | 44% |
+| mmlupro100-e2b-s3 | 100 | 71,009 | 12 | 1.30 | 1.44 | 1.51 | 1.56 | 46% |
+| mmlupro100-e2b-s1-think (think) | 100 | 82,294 | 10 | 1.29 | 1.42 | 1.50 | 1.54 | 43% |
+| mmlupro100-e2b-s2-think (think) | 100 | 81,794 | 6 | 1.30 | 1.43 | 1.50 | 1.55 | 43% |
+| mmlupro100-e2b-s3-think (think) | 100 | 84,716 | 9 | 1.28 | 1.40 | 1.48 | 1.52 | 42% |
+| mmlupro100-e4b-s1 | 100 | 66,414 | 10 | 1.25 | 1.35 | 1.41 | 1.44 | 40% |
+| mmlupro100-e4b-s2 | 100 | 69,252 | 8 | 1.26 | 1.37 | 1.43 | 1.46 | 40% |
+| mmlupro100-e4b-s3 | 100 | 69,066 | 9 | 1.26 | 1.36 | 1.42 | 1.46 | 40% |
+| tiny1024-e2b | 200 | 40,996 | 0 | 1.25 | 1.34 | 1.39 | 1.41 | 53% |
+| mmlupro100-e4b-s1-think (think) | 100 | 82,052 | 7 | 1.25 | 1.35 | 1.41 | 1.44 | 38% |
+| mmlupro100-e4b-s2-think (think) | 100 | 82,754 | 6 | 1.26 | 1.37 | 1.43 | 1.46 | 39% |
+| mmlupro100-e4b-s3-think (think) | 100 | 84,345 | 7 | 1.25 | 1.36 | 1.42 | 1.45 | 39% |
+| bfcl-reference | 200 | 4,779 | 0 | 1.17 | 1.22 | 1.25 | 1.27 | 29% |
+| agentic-llama-e2b-bfcl | 200 | 4,619 | 0 | 1.18 | 1.24 | 1.27 | 1.29 | 30% |
+| agentic-llama-e2b-ifeval | 100 | 38,812 | 0 | 1.07 | 1.10 | 1.11 | 1.11 | 15% |
+
+replay_lookup.py, 3-gram lookup falling back to 2, Gemma 4 tokenizer on the Pi. lg-e2b-jetson is little-gemma's 300 E2B replies (s1–s3); mmlupro100-* and tiny1024-e2b are llama.cpp on the Pi; bfcl-reference and agentic-* are tool-calling and instruction prompts, not in the paper. Capped: replies of 2,040 tokens or more.
+
+</details>
+
 ## 3. Accuracy
 
 ### MMLU-Pro accuracy by subset (%), every device
@@ -186,6 +253,7 @@ Jetson Orin Nano, same weights and prompts, s1–s3 pooled. Greedy decoding is d
 | Jetson · little-gemma | 54 | 51 | 54 | 53.0 ± 5.6 |
 | Jetson · CoPR (ours) | 54 | 51 | 54 | 53.0 ± 5.6 |
 | Pi 5 · llama.cpp | 56 | 51 | 48 | 51.7 ± 5.7 |
+| Pi 5 · llama.cpp, thinking on | 48 | 50 | 52 | 50.0 ± 5.7 |
 | iPhone · MLX 4-bit | 51 | 47 | 55 | 51.0 ± 5.7 |
 | *Gemma 4 E4B* | | | | |
 | Jetson · llama.cpp | 67 | 66 | 65 | 66.0 ± 5.4 |
@@ -193,6 +261,7 @@ Jetson Orin Nano, same weights and prompts, s1–s3 pooled. Greedy decoding is d
 | Jetson · little-gemma | 64 | 67 | 65 | 65.3 ± 5.4 |
 | Jetson · CoPR (ours) | 64 | 67 | 65 | 65.3 ± 5.4 |
 | Pi 5 · llama.cpp | 64 | 66 | 67 | 65.7 ± 5.4 |
+| Pi 5 · llama.cpp, thinking on | 64 | 69 | 66 | 66.3 ± 5.3 |
 | iPhone · MLX 4-bit | 65 | 64 | 69 | 66.0 ± 5.4 |
 
 5-shot chain of thought, greedy, thinking off, n=100 per subset. ± is the 95% interval from question sampling; repeating the same questions moves a score by about one point.
@@ -347,22 +416,28 @@ All six were rerun after the fix; the reruns are the ae-reuse rows of the run ta
 
 ## 5. Pi 5 and iPhone, run by run
 
-### Raspberry Pi 5, llama.cpp 661643e (CPU): every MMLU-Pro baseline run
+### Every Raspberry Pi 5 run in findings/runs/pi/ (llama.cpp 661643e, CPU)
 
 ![pi-runs](tables/pi-runs.svg)
 
 <details><summary>as text</summary>
 
-| Run | Subset | Acc % | Minutes | Decode tok/s | Mean W | Wh | J / gen. token | Peak °C |
-|---|---|---:|---:|---:|---:|---:|---:|---:|
-| mmlupro100-e2b | s1 | 56 | 181 | 6.66 | 7.05 | 21.37 | 1.179 | 72 |
-| mmlupro100-e2b-s2 | s2 | 51 | 177 | 6.82 | 6.89 | 20.37 | 1.124 | 71 |
-| mmlupro100-e2b-s3 | s3 | 48 | 190 | 6.91 | 7.08 | 22.42 | 1.135 | 73 |
-| mmlupro100-e4b-s1 | s1 | 64 | 359 | 3.37 | 6.66 | 39.98 | 2.164 | 73 |
-| mmlupro100-e4b-s2 | s2 | 66 | 377 | 3.33 | 6.72 | 42.37 | 2.200 | 73 |
-| mmlupro100-e4b-s3 | s3 | 67 | 369 | 3.41 | 7.01 | 43.16 | 2.247 | 76 |
+| Run | Started | Acc % | Decode tok/s | Prefill tok/s | Gen. tokens | Wall min | W gen. | J/tok | Idle W | Peak °C | Fingerprint |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| e2b-s1 | 2026-09-20 23:08 | 56 | 6.66 | 37 | 65,257 | 182 | 6.97 | 1.179 | 1.61 | 72.2 | by hand |
+| e2b-s2 | 2026-09-21 08:17 | 51 | 6.82 | 37 | 65,219 | 178 | 6.81 | 1.124 | 1.71 | 71.0 | by hand |
+| e2b-s3 | 2026-09-21 11:17 | 48 | 6.91 | 37 | 71,097 | 191 | 6.99 | 1.135 | 1.68 | 72.7 | by hand |
+| e4b-s1 | 2026-09-21 02:13 | 64 | 3.37 | 21 | 66,504 | 361 | 6.55 | 2.164 | 2.01 | 72.7 | by hand |
+| e4b-s2 | 2026-09-21 14:29 | 66 | 3.33 | 21 | 69,345 | 379 | 6.61 | 2.200 | 1.63 | 73.2 | by hand |
+| e4b-s3 | 2026-09-21 20:49 | 67 | 3.41 | 21 | 69,159 | 370 | 6.90 | 2.247 | 1.89 | 75.5 | by hand |
+| e2b-s1-think | 2026-09-23 15:52 | 48 | 6.56 | 37 | 82,527 | 229 | 6.96 | 1.167 | 2.29 | 73.8 | ok · mmlupro-thinking-on |
+| e2b-s2-think | 2026-09-23 21:22 | 50 | 6.89 | 37 | 83,650 | 221 | 7.06 | 1.126 | 2.23 | 73.2 | ok · mmlupro-thinking-on |
+| e2b-s3-think | 2026-09-24 15:41 | 52 | 6.56 | 37 | 84,807 | 235 | 6.82 | 1.142 | 1.88 | 72.2 | ok · mmlupro-thinking-on |
+| e4b-s1-think | 2026-09-24 01:03 | 64 | 3.35 | 21 | 82,145 | 442 | 6.68 | 2.180 | 1.83 | 76.5 | ok · mmlupro-thinking-on |
+| e4b-s2-think | 2026-09-24 08:25 | 69 | 3.41 | 21 | 82,849 | 436 | 6.76 | 2.157 | 2.05 | 75.5 | ok · mmlupro-thinking-on |
+| e4b-s3-think | 2026-09-24 19:37 | 66 | 3.34 | 21 | 84,440 | 454 | 6.78 | 2.210 | 2.16 | 73.8 | ok · mmlupro-thinking-on |
 
-From findings/export/. Board DC power from the PMIC rails, not wall power.
+Baseline (thinking off) and thinking-on (-rea on, budget 320, --reasoning-format none), s1–s3 for both models. Board DC power from the PMIC rails. The baseline runs predate the queue and were launched by hand; the thinking-on runs passed the serving-flag fingerprint.
 
 </details>
 

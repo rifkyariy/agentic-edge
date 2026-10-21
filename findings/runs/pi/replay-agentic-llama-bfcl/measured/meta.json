@@ -1,0 +1,16 @@
+{
+ "label": "replay-agentic-llama-bfcl",
+ "command": "sh -c mkdir -p /home/mitlab/Research/stdbench/replay-agentic-llama-bfcl && ./replay_lookup.py --model /home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf --server /home/mitlab/llama.cpp/build/bin/llama-server --out /home/mitlab/Research/stdbench/replay-agentic-llama-bfcl/replay.json /home/mitlab/Research/stdbench-extra/agentic-llama-e2b-bfcl && touch /home/mitlab/Research/stdbench/replay-agentic-llama-bfcl/.done",
+ "model_path": "",
+ "server_args": "",
+ "governor": "ondemand",
+ "kernel": "Linux 6.18.34+rpt-rpi-2712",
+ "host": "MITLAB-EDGE-PI-5-128",
+ "cpus": 4,
+ "start_epoch": 1791462915.8911445,
+ "throttled_at_start": "throttled=0x0",
+ "server_args_after": "/home/mitlab/llama.cpp/build/bin/llama-server -m /home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf -ngl 0 -c 512 --cache-ram 0 --host 127.0.0.1 --port 8099",
+ "work_start_epoch": 1791462945.0,
+ "work_end_epoch": 1791462953.0,
+ "exit_code": 0
+}

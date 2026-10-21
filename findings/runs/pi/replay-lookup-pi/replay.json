@@ -1,0 +1,300 @@
+{
+ "widths": [
+  2,
+  3,
+  4,
+  5
+ ],
+ "runs": [
+  {
+   "run": "/home/mitlab/Research/stdbench/mmlupro100-e2b-s1",
+   "thinking": false,
+   "replies": 100,
+   "reply_tokens": 65163,
+   "capped": 6,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.297,
+     "drafted_share": 0.522,
+     "accepted_per_drafted_step": 0.568
+    },
+    "3": {
+     "tokens_per_step": 1.426,
+     "drafted_share": 0.475,
+     "accepted_per_drafted_step": 0.897
+    },
+    "4": {
+     "tokens_per_step": 1.498,
+     "drafted_share": 0.448,
+     "accepted_per_drafted_step": 1.111
+    },
+    "5": {
+     "tokens_per_step": 1.54,
+     "drafted_share": 0.433,
+     "accepted_per_drafted_step": 1.249
+    }
+   }
+  },
+  {
+   "run": "/home/mitlab/Research/stdbench/mmlupro100-e2b-s2",
+   "thinking": false,
+   "replies": 100,
+   "reply_tokens": 65126,
+   "capped": 7,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.284,
+     "drafted_share": 0.511,
+     "accepted_per_drafted_step": 0.556
+    },
+    "3": {
+     "tokens_per_step": 1.405,
+     "drafted_share": 0.465,
+     "accepted_per_drafted_step": 0.872
+    },
+    "4": {
+     "tokens_per_step": 1.473,
+     "drafted_share": 0.439,
+     "accepted_per_drafted_step": 1.077
+    },
+    "5": {
+     "tokens_per_step": 1.515,
+     "drafted_share": 0.424,
+     "accepted_per_drafted_step": 1.216
+    }
+   }
+  },
+  {
+   "run": "/home/mitlab/Research/stdbench/mmlupro100-e2b-s3",
+   "thinking": false,
+   "replies": 100,
+   "reply_tokens": 71009,
+   "capped": 12,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.303,
+     "drafted_share": 0.535,
+     "accepted_per_drafted_step": 0.567
+    },
+    "3": {
+     "tokens_per_step": 1.438,
+     "drafted_share": 0.486,
+     "accepted_per_drafted_step": 0.903
+    },
+    "4": {
+     "tokens_per_step": 1.514,
+     "drafted_share": 0.459,
+     "accepted_per_drafted_step": 1.121
+    },
+    "5": {
+     "tokens_per_step": 1.559,
+     "drafted_share": 0.443,
+     "accepted_per_drafted_step": 1.263
+    }
+   }
+  },
+  {
+   "run": "/home/mitlab/Research/stdbench/mmlupro100-e2b-s1-think",
+   "thinking": true,
+   "replies": 100,
+   "reply_tokens": 82294,
+   "capped": 10,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.294,
+     "drafted_share": 0.507,
+     "accepted_per_drafted_step": 0.58
+    },
+    "3": {
+     "tokens_per_step": 1.423,
+     "drafted_share": 0.457,
+     "accepted_per_drafted_step": 0.926
+    },
+    "4": {
+     "tokens_per_step": 1.498,
+     "drafted_share": 0.429,
+     "accepted_per_drafted_step": 1.162
+    },
+    "5": {
+     "tokens_per_step": 1.543,
+     "drafted_share": 0.411,
+     "accepted_per_drafted_step": 1.321
+    }
+   }
+  },
+  {
+   "run": "/home/mitlab/Research/stdbench/mmlupro100-e2b-s2-think",
+   "thinking": true,
+   "replies": 100,
+   "reply_tokens": 81794,
+   "capped": 6,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.295,
+     "drafted_share": 0.505,
+     "accepted_per_drafted_step": 0.585
+    },
+    "3": {
+     "tokens_per_step": 1.426,
+     "drafted_share": 0.455,
+     "accepted_per_drafted_step": 0.936
+    },
+    "4": {
+     "tokens_per_step": 1.501,
+     "drafted_share": 0.427,
+     "accepted_per_drafted_step": 1.176
+    },
+    "5": {
+     "tokens_per_step": 1.545,
+     "drafted_share": 0.41,
+     "accepted_per_drafted_step": 1.331
+    }
+   }
+  },
+  {
+   "run": "/home/mitlab/Research/stdbench/mmlupro100-e2b-s3-think",
+   "thinking": true,
+   "replies": 100,
+   "reply_tokens": 84716,
+   "capped": 9,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.282,
+     "drafted_share": 0.498,
+     "accepted_per_drafted_step": 0.566
+    },
+    "3": {
+     "tokens_per_step": 1.403,
+     "drafted_share": 0.45,
+     "accepted_per_drafted_step": 0.896
+    },
+    "4": {
+     "tokens_per_step": 1.475,
+     "drafted_share": 0.422,
+     "accepted_per_drafted_step": 1.129
+    },
+    "5": {
+     "tokens_per_step": 1.516,
+     "drafted_share": 0.406,
+     "accepted_per_drafted_step": 1.271
+    }
+   }
+  },
+  {
+   "run": "/home/mitlab/Research/stdbench/mmlupro100-e4b-s1",
+   "thinking": false,
+   "replies": 100,
+   "reply_tokens": 66414,
+   "capped": 10,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.249,
+     "drafted_share": 0.464,
+     "accepted_per_drafted_step": 0.537
+    },
+    "3": {
+     "tokens_per_step": 1.35,
+     "drafted_share": 0.421,
+     "accepted_per_drafted_step": 0.831
+    },
+    "4": {
+     "tokens_per_step": 1.405,
+     "drafted_share": 0.397,
+     "accepted_per_drafted_step": 1.02
+    },
+    "5": {
+     "tokens_per_step": 1.435,
+     "drafted_share": 0.385,
+     "accepted_per_drafted_step": 1.13
+    }
+   }
+  },
+  {
+   "run": "/home/mitlab/Research/stdbench/mmlupro100-e4b-s2",
+   "thinking": false,
+   "replies": 100,
+   "reply_tokens": 69252,
+   "capped": 8,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.259,
+     "drafted_share": 0.469,
+     "accepted_per_drafted_step": 0.553
+    },
+    "3": {
+     "tokens_per_step": 1.367,
+     "drafted_share": 0.423,
+     "accepted_per_drafted_step": 0.869
+    },
+    "4": {
+     "tokens_per_step": 1.429,
+     "drafted_share": 0.397,
+     "accepted_per_drafted_step": 1.08
+    },
+    "5": {
+     "tokens_per_step": 1.459,
+     "drafted_share": 0.384,
+     "accepted_per_drafted_step": 1.196
+    }
+   }
+  },
+  {
+   "run": "/home/mitlab/Research/stdbench/mmlupro100-e4b-s3",
+   "thinking": false,
+   "replies": 100,
+   "reply_tokens": 69066,
+   "capped": 9,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.255,
+     "drafted_share": 0.473,
+     "accepted_per_drafted_step": 0.54
+    },
+    "3": {
+     "tokens_per_step": 1.364,
+     "drafted_share": 0.427,
+     "accepted_per_drafted_step": 0.852
+    },
+    "4": {
+     "tokens_per_step": 1.422,
+     "drafted_share": 0.403,
+     "accepted_per_drafted_step": 1.049
+    },
+    "5": {
+     "tokens_per_step": 1.455,
+     "drafted_share": 0.389,
+     "accepted_per_drafted_step": 1.171
+    }
+   }
+  },
+  {
+   "run": "/home/mitlab/Research/stdbench-extra/tiny1024-e2b",
+   "thinking": false,
+   "replies": 200,
+   "reply_tokens": 40996,
+   "capped": 0,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.248,
+     "drafted_share": 0.578,
+     "accepted_per_drafted_step": 0.432
+    },
+    "3": {
+     "tokens_per_step": 1.342,
+     "drafted_share": 0.546,
+     "accepted_per_drafted_step": 0.632
+    },
+    "4": {
+     "tokens_per_step": 1.386,
+     "drafted_share": 0.531,
+     "accepted_per_drafted_step": 0.733
+    },
+    "5": {
+     "tokens_per_step": 1.412,
+     "drafted_share": 0.522,
+     "accepted_per_drafted_step": 0.794
+    }
+   }
+  }
+ ]
+}

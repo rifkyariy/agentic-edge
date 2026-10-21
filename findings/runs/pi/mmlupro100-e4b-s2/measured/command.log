@@ -1,0 +1,4 @@
+/home/mitlab/llama.cpp/build/bin/llama-server -m /home/mitlab/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf -t 3 -c 8192 --host 127.0.0.1 --port 8080 -rea off --reasoning-budget -1 --cache-ram 0
+Mon 21 Sep 14:30:33 CST 2026 start MMLU-Pro subset100/s2  model=E4B thinking=off
+Mon 21 Sep 20:47:50 CST 2026 end rc=0
+finished
