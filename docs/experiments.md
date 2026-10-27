@@ -18,7 +18,7 @@ complete at 6 runs per device (n=300 per model).
 | condition | what | device | runs | paper | write-up | data in the repo |
 |---|---|---|---|---|---|---|
 | **S1** | llama.cpp baseline, thinking off (`-rea off`) | Jetson | 6 | Tables I, III, IV; §VI | RESULTS §7.1 | `findings/runs/jetson/mmlupro100-<m>-<s>/` |
-| **S1** | the same, on the Pi | Pi 5 | 6 | Table VIII; §VII | RESULTS §7.1 | `findings/export/` (per-request timeline, answers, telemetry) |
+| **S1** | the same, on the Pi | Pi 5 | 6 | Table VIII; Table VII; §VII | RESULTS §7.1 | `findings/runs/pi/mmlupro100-<m>-<s>/`; also `findings/export/` |
 | **S3** | little-gemma, stock engine (+ `agentic-edge.patch` for raw prompts) | Jetson | 6 | Tables I, III, V | RESULTS §7.4 | `findings/runs/jetson/mmlupro100-lg-*` |
 | **S9 / CoPR** | little-gemma + `ae.patch`: `full` = `-reuse -ngram -block 3` | Jetson | 6 + 1 repeat | Tables III, IV, V; §V repeat | RESULTS §7.6 | `findings/runs/jetson/mmlupro100-ae-full-*` |
 | **S9 ablation** | `-ngram -block 3` alone; `-reuse` alone | Jetson | 6 + 6 | Table V | RESULTS §7.6 | `…/mmlupro100-ae-ngram-*`, `…/mmlupro100-ae-reuse-*` |
@@ -27,10 +27,10 @@ complete at 6 runs per device (n=300 per model).
 | **S10** | llama.cpp's own n-gram drafting, `n3m3` (width 4) | Jetson | 6 | Tables III, IV; §VI-C | RESULTS §7.8 | `findings/runs/jetson/mmlupro100-ngram-n3m3-*` |
 | **S10 settings** | `n3m2` (width 3, matched to CoPR) and stock settings, s1 | Jetson | 2 | Table IV | RESULTS §7.8 | `…/mmlupro100-ngram-n3m2-e2b-s1`, `…-default-e2b-s1` |
 | **iPhone** | MLX 4-bit builds of the same QAT checkpoints | iPhone 15 Pro | 6 + 4 superseded/stopped | Table VIII | RESULTS §7.3 | `findings/phone/` |
-| **S2** | llama.cpp, thinking on (`-rea on`, budget 320) | Pi 5 | 6 | Table VII (replies replayed) | RESULTS §7.2 | on the Pi — not yet in the repo |
+| **S2** | llama.cpp, thinking on (`-rea on`, budget 320) | Pi 5 | 6 | Table VII (replies replayed) | RESULTS §7.2 | `findings/runs/pi/mmlupro100-<m>-<s>-think/` |
 | **tinyGSM8k** | E2B at 256 and 1,024 answer tokens | Pi 5 | 2 | Table VII (200 replies replayed) | RESULTS §1 | `findings/stdbench/B-e2b/`, `findings/stdbench/tiny1024-e2b/` |
-| **replay** | prompt-lookup acceptance replayed on recorded replies | offline | — | Table VII; §III | — | `benchmark/replay_lookup.py` (reimplemented, tested); its token cache `findings/replay/` is not filled yet |
-| **Pi batch cost** | llama.cpp CPU cost of a 1–4 token batch | Pi 5 | — | §VII | — | `llama-batched-bench` output on the Pi — not yet in the repo |
+| **replay** | prompt-lookup acceptance replayed on recorded replies (`replay_lookup.py`, Pi tokenizer) | Pi 5 | 3 | Table VII; §III; §VII | — | `findings/runs/pi/replay-lookup-pi/`, `…/replay-lookup-lg-e2b/` (run 2026-10-21 on the committed little-gemma replies) |
+| **Pi batch cost** | llama.cpp CPU cost of a 1–4 token batch (`llama-bench`) | Pi 5 | 1 | §VII | — | `findings/runs/pi/pi-verify-cost-e2b/` |
 
 Every row with data in the repo is rebuilt and checked against the manuscript
 by `python3 benchmark/paper_tables.py`, and laid out as tables in
@@ -50,7 +50,7 @@ by `python3 benchmark/paper_tables.py`, and laid out as tables in
 | **Model cascade** | E2B→E4B cascade scored offline from S1 | offline | — | `findings/analyses/model-cascade.md` | `findings/export/` |
 | **Iso-accuracy** | budget capping and loop detection scored offline | offline | — | `findings/analyses/iso-accuracy.md` | `findings/export/` |
 | **S8** | llama.cpp TurboQuant fork, `-ctk turbo3 -ctv turbo3`, thinking off and on | Pi 5 + Jetson | 24 | RESULTS §7.5 | on the boards |
-| **Agent prompts** | IFEval and BFCL prompts replayed through llama.cpp, little-gemma and CoPR, for replies only (not scored) | Jetson | 4 | — | on the Jetson |
+| **Agent prompts** | IFEval and BFCL prompts replayed through llama.cpp, little-gemma and CoPR, for replies only (not scored) | Jetson | 4 | — | on the Jetson; their prompt-lookup replays (and BFCL's reference answers) are in `findings/runs/pi/replay-*` |
 | **Early engines** | little-gemma vs llama.cpp vs LiteRT-LM on one Pi, Sep 14 | Pi 5 | — | `findings/early-engine-benchmarks/README.md` | same folder |
 | **Superseded / failed** | the Jetson's S1 runs before `-rea off` (2026-09-22), LiteRT-LM (condition C) | both | — | RESULTS §7.1; §2 | on the boards (`stdbench/failed/`), `benchmark/results/` |
 

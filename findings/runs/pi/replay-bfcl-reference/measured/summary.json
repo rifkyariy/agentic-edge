@@ -1,0 +1,85 @@
+{
+ "label": "replay-bfcl-reference",
+ "model": "",
+ "command": "sh -c mkdir -p /home/mitlab/Research/stdbench/replay-bfcl-reference && ./replay_lookup.py --model /home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf --server /home/mitlab/llama.cpp/build/bin/llama-server --out /home/mitlab/Research/stdbench/replay-bfcl-reference/replay.json /home/mitlab/Research/stdbench-extra/bfcl-reference && touch /home/mitlab/Research/stdbench/replay-bfcl-reference/.done",
+ "samples": 98,
+ "wall_s": 99.3,
+ "work_s": 38.7,
+ "power": {
+  "idle_w": 1.65,
+  "idle_post_w": 1.76,
+  "work_mean_w": 2.17,
+  "work_peak_w": 3.6,
+  "generation_mean_w": null,
+  "energy_wh": 0.023,
+  "energy_j": 83.9,
+  "energy_above_idle_j": 20.0,
+  "_method": "sum of PMIC per-rail V*I, trapezoidal over 1Hz samples; board DC power, excludes PSU conversion loss"
+ },
+ "tokens": {
+  "requests": 0,
+  "prompt_tokens": 0,
+  "generated_tokens": 0,
+  "prefill_s": 0.0,
+  "decode_s": 0.0,
+  "prefill_tok_s": null,
+  "decode_tok_s": null
+ },
+ "efficiency": {
+  "j_per_generated_token": null,
+  "j_per_generated_token_above_idle": null,
+  "j_per_token_all": null,
+  "decode_tok_s_per_w": null,
+  "tokens_per_wh": 0.0
+ },
+ "thermal": {
+  "temp_c": {
+   "mean": 46.78,
+   "median": 46.3,
+   "min": 45.2,
+   "max": 49.6,
+   "n": 39
+  },
+  "throttled_nonzero_samples": 0,
+  "cpu_mhz_mean": 1746.15
+ },
+ "utilisation": {
+  "cpu_pct": {
+   "mean": 4.77,
+   "median": 0.7,
+   "min": 0.2,
+   "max": 43.7,
+   "n": 39
+  },
+  "gpu_pct": null,
+  "gpu_mhz": null,
+  "proc_cpu_pct": {
+   "mean": 11.38,
+   "median": 1.0,
+   "min": 0.0,
+   "max": 170.9,
+   "n": 38
+  },
+  "proc_rss_mb": {
+   "mean": 1654.64,
+   "median": 1518.95,
+   "min": 84.1,
+   "max": 3844.6,
+   "n": 38
+  },
+  "mem_used_mb": {
+   "mean": 786.33,
+   "median": 689.0,
+   "min": 351.0,
+   "max": 1967.0,
+   "n": 39
+  },
+  "swap_used_mb": {
+   "mean": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "max": 0.0,
+   "n": 39
+  }
+ }
+}

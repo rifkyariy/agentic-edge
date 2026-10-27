@@ -1,0 +1,97 @@
+{
+ "widths": [
+  2,
+  3,
+  4,
+  5
+ ],
+ "runs": [
+  {
+   "run": "/home/mitlab/Research/stdbench/mmlupro100-e4b-s1-think",
+   "thinking": true,
+   "replies": 100,
+   "reply_tokens": 82052,
+   "capped": 7,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.25,
+     "drafted_share": 0.455,
+     "accepted_per_drafted_step": 0.551
+    },
+    "3": {
+     "tokens_per_step": 1.352,
+     "drafted_share": 0.411,
+     "accepted_per_drafted_step": 0.857
+    },
+    "4": {
+     "tokens_per_step": 1.412,
+     "drafted_share": 0.385,
+     "accepted_per_drafted_step": 1.073
+    },
+    "5": {
+     "tokens_per_step": 1.443,
+     "drafted_share": 0.371,
+     "accepted_per_drafted_step": 1.194
+    }
+   }
+  },
+  {
+   "run": "/home/mitlab/Research/stdbench/mmlupro100-e4b-s2-think",
+   "thinking": true,
+   "replies": 100,
+   "reply_tokens": 82754,
+   "capped": 6,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.259,
+     "drafted_share": 0.464,
+     "accepted_per_drafted_step": 0.558
+    },
+    "3": {
+     "tokens_per_step": 1.366,
+     "drafted_share": 0.419,
+     "accepted_per_drafted_step": 0.875
+    },
+    "4": {
+     "tokens_per_step": 1.429,
+     "drafted_share": 0.392,
+     "accepted_per_drafted_step": 1.096
+    },
+    "5": {
+     "tokens_per_step": 1.464,
+     "drafted_share": 0.377,
+     "accepted_per_drafted_step": 1.231
+    }
+   }
+  },
+  {
+   "run": "/home/mitlab/Research/stdbench/mmlupro100-e4b-s3-think",
+   "thinking": true,
+   "replies": 100,
+   "reply_tokens": 84345,
+   "capped": 7,
+   "by_width": {
+    "2": {
+     "tokens_per_step": 1.254,
+     "drafted_share": 0.463,
+     "accepted_per_drafted_step": 0.55
+    },
+    "3": {
+     "tokens_per_step": 1.36,
+     "drafted_share": 0.417,
+     "accepted_per_drafted_step": 0.864
+    },
+    "4": {
+     "tokens_per_step": 1.42,
+     "drafted_share": 0.391,
+     "accepted_per_drafted_step": 1.074
+    },
+    "5": {
+     "tokens_per_step": 1.454,
+     "drafted_share": 0.377,
+     "accepted_per_drafted_step": 1.203
+    }
+   }
+  }
+ ]
+}

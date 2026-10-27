@@ -1,0 +1,5 @@
+{"by": "dashboard", "event": "queued", "job": "20260923-233627-e95e27", "label": "mmlupro-e2b-s3-think", "ts": 1790177787.4340014}
+{"event": "precheck_passed", "job": "20260923-233627-e95e27", "ts": 1790235707.2409797}
+{"command": "./run_measured.sh mmlupro-e2b-s3-think -- env SUBSET=s3 THINKING=on ./std_mmlupro.sh e2b", "event": "started", "job": "20260923-233627-e95e27", "ts": 1790235707.2584188}
+{"baseline": "mmlupro-thinking-on", "event": "fingerprint_ok", "job": "20260923-233627-e95e27", "ts": 1790235742.548424}
+{"event": "completed", "exit_code": 0, "job": "20260923-233627-e95e27", "ts": 1790249830.405215}

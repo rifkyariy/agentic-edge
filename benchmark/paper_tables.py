@@ -16,10 +16,11 @@ Inputs (see README.md, "Reproducing the paper"):
     findings/export/                 the Pi baseline runs (Table VIII)
     findings/phone/                  the iPhone runs (Table VIII)
 
-Not rebuilt here: Table VII and the Sec. III replay figures, which
-replay_lookup.py computes once its token cache is filled, and the Pi
-batched-verify costs of Sec. VII, whose llama-batched-bench output is still
-only on the Pi. Stdlib only.
+Table VII and the replay figures of Secs. III and VII come from
+replay_lookup.py's recorded outputs in findings/runs/pi/, and the Pi's
+batched-verify costs from its llama-bench output there. Not rebuilt: the
+"1.39 without the capped replies" aside of Sec. III, which no recorded output
+holds. Stdlib only.
 """
 import argparse
 import csv
@@ -32,6 +33,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RUNS = os.path.join(ROOT, "findings", "runs", "jetson")
+PI = os.path.join(ROOT, "findings", "runs", "pi")
 SUBSETS = ("s1", "s2", "s3")
 MODELS = ("e2b", "e4b")
 # Table columns -> the run-name row each engine writes (std_mmlupro_jetson.sh,
@@ -48,6 +50,8 @@ ERRATA = {
         "0.22447 J rounded twice (0.2245 -> 0.225); correct value 0.224",
     "mmlupro100-ae-full-e2b-s1: J/tok":
         "0.36947 J rounded twice (0.3695 -> 0.370); correct value 0.369",
+    "VII: Pi llama.cpp E2B replay at width 4, tokens per pass":
+        "1.495 over s1-s3 (mean or pooled alike) truncated to 1.49; correct value 1.50",
 }
 
 
@@ -368,6 +372,43 @@ def table8():
         check(tag + "iPhone minus Pi, points", d_pi, f(accuracy(ip) - acc, 1))
 
 
+def replay_runs(name):
+    """replay_lookup.py's output, by run directory name."""
+    with open(os.path.join(PI, name, "replay.json")) as fh:
+        return {os.path.basename(r["run"]): r for r in json.load(fh)["runs"]}
+
+
+def r2(v):
+    """Two decimals, half up, from replay.json's three: how the paper rounds."""
+    from decimal import Decimal, ROUND_HALF_UP
+    return str(Decimal(str(v)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+def pooled_replay(runs, width):
+    """Tokens per verify pass and drafted share, pooled over several runs."""
+    toks = sum(r["reply_tokens"] for r in runs)
+    steps = sum(r["reply_tokens"] / r["by_width"][str(width)]["tokens_per_step"] for r in runs)
+    drafted = sum(r["reply_tokens"] / r["by_width"][str(width)]["tokens_per_step"]
+                  * r["by_width"][str(width)]["drafted_share"] for r in runs)
+    return toks / steps, drafted / steps
+
+
+def table7():
+    print("\nTable VII — replayed prompt-lookup acceptance (tokens per verify pass), no device time")
+    pi, lg = replay_runs("replay-lookup-pi"), replay_runs("replay-lookup-lg-e2b")["lg-e2b-jetson"]
+    rows = [("E2B MMLU-Pro, no thinking, little-gemma (Orin Nano)", [lg], ("1.41", "1.48")),
+            ("E2B MMLU-Pro, no thinking, llama.cpp (Pi)", [pi["mmlupro100-e2b-s%d" % i] for i in (1, 2, 3)], ("1.41-1.44", "1.47-1.51")),
+            ("E2B MMLU-Pro, thinking, llama.cpp (Pi)", [pi["mmlupro100-e2b-s%d-think" % i] for i in (1, 2, 3)], ("1.40-1.43", "1.48-1.50")),
+            ("E4B MMLU-Pro, no thinking, llama.cpp (Pi)", [pi["mmlupro100-e4b-s%d" % i] for i in (1, 2, 3)], ("1.35-1.37", "1.41-1.43")),
+            ("E2B GSM8K (200 replies), llama.cpp (Pi)", [pi["tiny1024-e2b"]], ("1.34", "1.39"))]
+    for label, runs, (b3, b4) in rows:
+        for b, want in ((3, b3), (4, b4)):
+            v = [r["by_width"][str(b)]["tokens_per_step"] for r in runs]
+            got = r2(v[0]) if len(v) == 1 else "%s-%s" % (r2(min(v)), r2(max(v)))
+            check("%s, B=%d" % (label, b), want, got)
+    check("GSM8K replies replayed", "200", str(pi["tiny1024-e2b"]["replies"]))
+
+
 def text():
     print("\nIn-text figures")
     for m, x, y in (("e2b", "1.28", "1.15"), ("e4b", "1.52", "1.17")):
@@ -398,6 +439,21 @@ def text():
                 jj, tt = jj + j, tt + t
             got.append(f(jj / tt, 3))
         check("V %s: J/tok over request windows only, CoPR / llama.cpp" % m.upper(), "/".join(want), "/".join(got))
+    lg = replay_runs("replay-lookup-lg-e2b")["lg-e2b-jetson"]
+    check("III: little-gemma E2B replay, tokens per pass at widths 2-5", "1.29/1.41/1.48/1.52",
+          "/".join(r2(lg["by_width"][str(b)]["tokens_per_step"]) for b in (2, 3, 4, 5)))
+    check("III: little-gemma E2B replay, replies replayed", "300", str(lg["replies"]))
+    pi = replay_runs("replay-lookup-pi")
+    tpp, share = pooled_replay([pi["mmlupro100-e2b-s%d" % i] for i in (1, 2, 3)], 4)
+    check("VII: Pi llama.cpp E2B replay at width 4, tokens per pass", "1.49", f(tpp, 2))
+    check("VII: Pi llama.cpp E2B replay at width 4, lookup match %", "45", f(100 * share, 0))
+    # llama-bench on the Pi (E2B, 3 threads): pp<n> is the rate of an n-token batch
+    with open(os.path.join(PI, "pi-verify-cost-e2b", "bench.md")) as fh:
+        rate = {int(m.group(1)): float(m.group(2)) for m in re.finditer(r"\|\s*pp(\d)\s*\|\s*([\d.]+)", fh.read())}
+    ms = {n: 1000 * n / rate[n] for n in rate}
+    check("VII: Pi llama.cpp E2B, one token / a 4-token batch, ms", "132/140", "%.0f/%.0f" % (ms[1], ms[4]))
+    check("VII: Pi batch cost relative to one token, n=2/3/4", "1.30/1.58/1.06",
+          "/".join(f(ms[n] / ms[1], 2) for n in (2, 3, 4)))
     capped = 0
     for s in SUBSETS:
         with open(os.path.join(run_dir("lg-", "e2b", s), "measured", "requests.csv")) as fh:
@@ -440,7 +496,7 @@ def issues():
         print("       %-36s %-17s %8.0f %6.2f" % (run, stamp, sm["thermal"]["cpu_mhz_mean"], sm["power"]["idle_w"]))
 
 
-TABLES = {"1": table1, "3": table3, "4": table4, "5": table5, "6": table6, "8": table8, "text": text, "issues": issues}
+TABLES = {"1": table1, "3": table3, "4": table4, "5": table5, "6": table6, "7": table7, "8": table8, "text": text, "issues": issues}
 
 
 def main():
@@ -454,7 +510,7 @@ def main():
     if ERRATA:
         print("%d manuscript errata (the data is right, the paper's rounding is not): %s"
               % (len(ERRATA), "; ".join(ERRATA)))
-    print("not rebuilt here: Table VII and the Sec. III replay (replay_lookup.py), the Sec. VII Pi batch costs (on the Pi)")
+    print("not rebuilt: Sec. III's '1.39 without the capped replies' (no recorded output holds it)")
     return 1 if FAILS else 0
 
 

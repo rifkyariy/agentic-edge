@@ -1,0 +1,4 @@
+{"by": "queue_ctl", "event": "queued", "job": "20261008-203511-849491", "label": "replay-agentic-llama-bfcl", "ts": 1791462911.9840631}
+{"event": "precheck_passed", "job": "20261008-203511-849491", "ts": 1791462915.8140304}
+{"command": "./run_measured.sh replay-agentic-llama-bfcl -- sh -c \"mkdir -p /home/mitlab/Research/stdbench/replay-agentic-llama-bfcl && ./replay_lookup.py --model /home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf --server /home/mitlab/llama.cpp/build/bin/llama-server --out /home/mitlab/Research/stdbench/replay-agentic-llama-bfcl/replay.json /home/mitlab/Research/stdbench-extra/agentic-llama-e2b-bfcl && touch /home/mitlab/Research/stdbench/replay-agentic-llama-bfcl/.done\"", "event": "started", "job": "20261008-203511-849491", "ts": 1791462915.8340213}
+{"event": "completed", "exit_code": 0, "job": "20261008-203511-849491", "ts": 1791462983.9604244}

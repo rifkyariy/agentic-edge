@@ -1,0 +1,4 @@
+{"by": "queue_ctl", "event": "queued", "job": "20261008-213211-5bf431", "label": "replay-e4b-think", "ts": 1791466331.2586002}
+{"event": "precheck_passed", "job": "20261008-213211-5bf431", "ts": 1791466334.582355}
+{"command": "./run_measured.sh replay-e4b-think -- sh -c \"mkdir -p /home/mitlab/Research/stdbench/replay-e4b-think && ./replay_lookup.py --model /home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf --server /home/mitlab/llama.cpp/build/bin/llama-server --out /home/mitlab/Research/stdbench/replay-e4b-think/replay.json /home/mitlab/Research/stdbench/mmlupro100-e4b-s1-think:think /home/mitlab/Research/stdbench/mmlupro100-e4b-s2-think:think /home/mitlab/Research/stdbench/mmlupro100-e4b-s3-think:think && touch /home/mitlab/Research/stdbench/replay-e4b-think/.done\"", "event": "started", "job": "20261008-213211-5bf431", "ts": 1791466334.6009023}
+{"event": "completed", "exit_code": 0, "job": "20261008-213211-5bf431", "ts": 1791466735.5418053}

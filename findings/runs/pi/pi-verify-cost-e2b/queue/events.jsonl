@@ -1,0 +1,4 @@
+{"by": "queue_ctl", "event": "queued", "job": "20261005-002816-35f24c", "label": "pi-verify-cost-e2b", "ts": 1791131296.3871868}
+{"event": "precheck_passed", "job": "20261005-002816-35f24c", "ts": 1791131382.3158872}
+{"command": "./run_measured.sh pi-verify-cost-e2b -- sh -c \"mkdir -p /home/mitlab/Research/stdbench/pi-verify-cost-e2b && /home/mitlab/llama.cpp/build/bin/llama-bench -m /home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf -t 3 -p 1,2,3,4 -n 32 -r 5 -o md | tee /home/mitlab/Research/stdbench/pi-verify-cost-e2b/bench.md && touch /home/mitlab/Research/stdbench/pi-verify-cost-e2b/.done\"", "event": "started", "job": "20261005-002816-35f24c", "ts": 1791131382.3351312}
+{"event": "completed", "exit_code": 0, "job": "20261005-002816-35f24c", "ts": 1791131470.5531785}

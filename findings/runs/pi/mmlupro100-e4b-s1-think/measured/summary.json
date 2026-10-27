@@ -1,0 +1,85 @@
+{
+ "label": "mmlupro-e4b-s1-think",
+ "model": "/home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf",
+ "command": "env SUBSET=s1 THINKING=on ./std_mmlupro.sh e4b",
+ "samples": 25341,
+ "wall_s": 26536.4,
+ "work_s": 26475.3,
+ "power": {
+  "idle_w": 1.83,
+  "idle_post_w": 2.77,
+  "work_mean_w": 6.76,
+  "work_peak_w": 10.15,
+  "generation_mean_w": 6.68,
+  "energy_wh": 49.745,
+  "energy_j": 179080.3,
+  "energy_above_idle_j": 130630.5,
+  "_method": "sum of PMIC per-rail V*I, trapezoidal over 1Hz samples; board DC power, excludes PSU conversion loss"
+ },
+ "tokens": {
+  "requests": 100,
+  "prompt_tokens": 38116,
+  "generated_tokens": 82145,
+  "prefill_s": 1846.8,
+  "decode_s": 24530.0,
+  "prefill_tok_s": 20.64,
+  "decode_tok_s": 3.35
+ },
+ "efficiency": {
+  "j_per_generated_token": 2.18,
+  "j_per_generated_token_above_idle": 1.59,
+  "j_per_token_all": 1.489,
+  "decode_tok_s_per_w": 0.501,
+  "tokens_per_wh": 1651.3
+ },
+ "thermal": {
+  "temp_c": {
+   "mean": 66.46,
+   "median": 66.7,
+   "min": 50.1,
+   "max": 76.5,
+   "n": 25281
+  },
+  "throttled_nonzero_samples": 0,
+  "cpu_mhz_mean": 2398.25
+ },
+ "utilisation": {
+  "cpu_pct": {
+   "mean": 69.56,
+   "median": 69.6,
+   "min": 0.2,
+   "max": 94.5,
+   "n": 25281
+  },
+  "gpu_pct": null,
+  "gpu_mhz": null,
+  "proc_cpu_pct": {
+   "mean": 273.48,
+   "median": 273.6,
+   "min": 0.0,
+   "max": 306.9,
+   "n": 25281
+  },
+  "proc_rss_mb": {
+   "mean": 5554.46,
+   "median": 5580.5,
+   "min": 39.3,
+   "max": 5658.7,
+   "n": 25281
+  },
+  "mem_used_mb": {
+   "mean": 3816.25,
+   "median": 3841.0,
+   "min": 638.0,
+   "max": 3941.0,
+   "n": 25281
+  },
+  "swap_used_mb": {
+   "mean": 486.96,
+   "median": 481.0,
+   "min": 361.0,
+   "max": 1284.0,
+   "n": 25281
+  }
+ }
+}

@@ -1,0 +1,54 @@
+{
+ "baseline": "mmlupro-thinking-on",
+ "captured": {
+  "server_args": "/home/mitlab/llama.cpp/build/bin/llama-server -m /home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf -t 3 -c 8192 --host 127.0.0.1 --port 8080 -rea on --reasoning-budget 320 --cache-ram 0 --reasoning-format none",
+  "pids": [
+   1006412
+  ],
+  "model_path": "",
+  "governor": "ondemand",
+  "kernel": "Linux 6.18.34+rpt-rpi-2712",
+  "flags": {
+   "ctx": "8192",
+   "cache_ram": "0",
+   "reasoning": "on",
+   "reasoning_budget": "320",
+   "reasoning_format": "none",
+   "ngl": null,
+   "model": "/home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf"
+  }
+ },
+ "diff": [
+  {
+   "key": "cache_ram",
+   "expected": "0",
+   "actual": "0",
+   "ok": true
+  },
+  {
+   "key": "ctx",
+   "expected": "8192",
+   "actual": "8192",
+   "ok": true
+  },
+  {
+   "key": "reasoning",
+   "expected": "on",
+   "actual": "on",
+   "ok": true
+  },
+  {
+   "key": "reasoning_budget",
+   "expected": "320",
+   "actual": "320",
+   "ok": true
+  },
+  {
+   "key": "reasoning_format",
+   "expected": "none",
+   "actual": "none",
+   "ok": true
+  }
+ ],
+ "agrees": true
+}

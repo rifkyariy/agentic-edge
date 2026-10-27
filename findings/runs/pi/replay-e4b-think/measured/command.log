@@ -1,0 +1,3 @@
+/home/mitlab/Research/stdbench/mmlupro100-e4b-s1-think (think): 100 replies, 82052 tokens, B=2 1.25, B=3 1.35, B=4 1.41, B=5 1.44
+/home/mitlab/Research/stdbench/mmlupro100-e4b-s2-think (think): 100 replies, 82754 tokens, B=2 1.26, B=3 1.37, B=4 1.43, B=5 1.46
+/home/mitlab/Research/stdbench/mmlupro100-e4b-s3-think (think): 100 replies, 84345 tokens, B=2 1.25, B=3 1.36, B=4 1.42, B=5 1.45

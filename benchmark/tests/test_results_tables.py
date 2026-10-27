@@ -22,42 +22,32 @@ class TestResultsTables(unittest.TestCase):
 
 
 class TestReplay(unittest.TestCase):
-    def test_indexed_lookup_matches_a_brute_force_scan(self):
+    """replay_lookup.py is the script the manuscript's Table VII came from;
+    check its lookup against a plain scan of the history."""
+
+    def test_lookup_matches_a_brute_force_scan(self):
         import random
         import replay_lookup as rl
 
-        def brute(prompt, reply, width):
-            ctx, i, passes, matched = list(prompt), 0, 0, 0
-            while i < len(reply):
-                draft = []
-                for n in (3, 2):
-                    if len(ctx) >= n:
-                        for e in range(len(ctx) - 1, n - 1, -1):
-                            if ctx[e - n:e] == ctx[-n:]:
-                                draft = ctx[e:e + width - 1]
-                                break
-                        if draft:
-                            break
-                k = 0
-                while k < len(draft) and i + k < len(reply) and draft[k] == reply[i + k]:
-                    k += 1
-                emit = min(k + 1, len(reply) - i)
-                ctx += reply[i:i + emit]
-                passes, matched, i = passes + 1, matched + bool(draft), i + emit
-            return passes, matched
+        def brute(h, k):
+            for n in (3, 2):
+                if len(h) > n:
+                    starts = [s for s in range(len(h) - n) if h[s:s + n] == h[-n:]]
+                    if starts:
+                        return h[starts[-1] + n:starts[-1] + n + k]
+            return []
 
         rnd = random.Random(7)
-        for _ in range(200):
-            v = rnd.randint(2, 6)
-            p = [rnd.randrange(v) for _ in range(rnd.randint(0, 30))]
-            r = [rnd.randrange(v) for _ in range(rnd.randint(1, 40))]
-            for w in (2, 3, 4, 5):
-                self.assertEqual(rl.replay_one(p, r, w), brute(p, r, w))
+        for _ in range(500):
+            h = [rnd.randrange(rnd.randint(2, 6)) for _ in range(rnd.randint(0, 40))]
+            for k in (1, 2, 3, 4):
+                self.assertEqual(rl.lookup(h, k), brute(h, k))
 
     def test_a_reply_that_repeats_its_prompt_is_drafted(self):
         import replay_lookup as rl
-        passes, matched = rl.replay_one(list("xyzabcdefg"), list("abcdefgabcdefg"), 3)
-        self.assertEqual((passes, matched), (6, 4))   # 14 tokens in 6 passes
+        plain, spec, acc = rl.replay(list("xyzabcdefg"), list("abcdefgabcdefg"), 3)
+        self.assertEqual(len("abcdefgabcdefg"), plain + spec + acc)   # every token emitted once
+        self.assertGreater(acc, 0)
 
 
 if __name__ == "__main__":

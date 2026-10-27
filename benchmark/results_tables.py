@@ -204,6 +204,55 @@ def t6():
                        "width over all 300 questions (Table III).")
 
 
+def t7():
+    pi, lg = pt.replay_runs("replay-lookup-pi"), pt.replay_runs("replay-lookup-lg-e2b")["lg-e2b-jetson"]
+    spec = [("E2B MMLU-Pro, no thinking", "little-gemma (Orin Nano)", [lg]),
+            ("E2B MMLU-Pro, no thinking", "llama.cpp (Pi)", [pi["mmlupro100-e2b-s%d" % i] for i in (1, 2, 3)]),
+            ("E2B MMLU-Pro, thinking", "llama.cpp (Pi)", [pi["mmlupro100-e2b-s%d-think" % i] for i in (1, 2, 3)]),
+            ("E4B MMLU-Pro, no thinking", "llama.cpp (Pi)", [pi["mmlupro100-e4b-s%d" % i] for i in (1, 2, 3)]),
+            ("E2B GSM8K (200 replies)", "llama.cpp (Pi)", [pi["tiny1024-e2b"]])]
+    rows = []
+    for replies, engine, runs in spec:
+        cells = []
+        for b in (3, 4):
+            v = [r["by_width"][str(b)]["tokens_per_step"] for r in runs]
+            cells.append(pt.r2(v[0]) if len(v) == 1 else "%s–%s" % (pt.r2(min(v)), pt.r2(max(v))))
+        rows.append([replies, engine] + cells)
+    return Tab("table7", "Table VII — Replayed prompt-lookup acceptance (tokens per verify pass)",
+               ["Replies", "Engine", "B=3", "B=4"], rows, align=["l", "l", "r", "r"],
+               caption="Recorded greedy replies from other engines, modes and tasks, replayed through "
+                       "replay_lookup.py on the Pi's tokenizer; no device time. Ranges span the three MMLU-Pro "
+                       "subsets (n=100 each).")
+
+
+def t_replay_all():
+    rows = []
+    for name in ("replay-lookup-lg-e2b", "replay-lookup-pi", "replay-e4b-think", "replay-bfcl-reference",
+                 "replay-agentic-llama-bfcl", "replay-agentic-llama-ifeval"):
+        for run, r in pt.replay_runs(name).items():
+            w = r["by_width"]
+            rows.append([run + (" (think)" if r["thinking"] else ""), str(r["replies"]), pt.thousands(r["reply_tokens"]),
+                         str(r["capped"])] + [pt.r2(w[str(b)]["tokens_per_step"]) for b in (2, 3, 4, 5)]
+                        + ["%.0f%%" % (100 * w["4"]["drafted_share"])])
+    return Tab("replay-all", "Every prompt-lookup replay (tokens per verify pass by verify width B)",
+               ["Replies", "n", "Reply tokens", "Capped", "B=2", "B=3", "B=4", "B=5", "Lookup match at B=4"], rows,
+               caption="replay_lookup.py, 3-gram lookup falling back to 2, Gemma 4 tokenizer on the Pi. "
+                       "lg-e2b-jetson is little-gemma's 300 E2B replies (s1–s3); mmlupro100-* and tiny1024-e2b are "
+                       "llama.cpp on the Pi; bfcl-reference and agentic-* are tool-calling and instruction prompts, "
+                       "not in the paper. Capped: replies of 2,040 tokens or more.")
+
+
+def t_batch():
+    with open(os.path.join(pt.PI, "pi-verify-cost-e2b", "bench.md")) as fh:
+        rate = {int(m.group(1)): float(m.group(2)) for m in re.finditer(r"\|\s*pp(\d)\s*\|\s*([\d.]+)", fh.read())}
+    ms1 = 1000 / rate[1]
+    rows = [[str(n), f(rate[n], 2), f(1000 * n / rate[n], 0), f(1000 * n / rate[n] / ms1, 2)] for n in sorted(rate)]
+    return Tab("pi-batch-cost", "Batched verify cost on the Raspberry Pi 5 (llama.cpp CPU, E2B, 3 threads)",
+               ["Tokens in batch", "Batch tok/s", "ms per batch", "Cost vs one token"], rows, shade_rows=(3,),
+               caption="llama-bench -t 3 -p 1,2,3,4 -n 32 -r 5, llama.cpp 661643e. A 4-token batch costs about as "
+                       "much as one token (Q4_0 kernels work on 4-row tiles); 2 and 3 do not. Sec. VII.")
+
+
 def t8():
     export = json.load(gzip.open(os.path.join(F, "export", "experiment-full.json.gz")))
     pi = export["boards"]["pi"]["runs"]
@@ -274,6 +323,8 @@ def t_subsets():
                  "e4b": ["mmlupro100-e4b-s1", "mmlupro100-e4b-s2", "mmlupro100-e4b-s3"]}[m]
         per = [pi[n]["summary"]["score"] for n in names]
         rows.append(["Pi 5 · llama.cpp"] + ["%.0f" % x for x in per] + [pct(sum(per) / 300, 300)])
+        per = [pt.accuracy(pt.replies(os.path.join(pt.PI, "mmlupro100-%s-%s-think" % (m, s)))) for s in pt.SUBSETS]
+        rows.append(["Pi 5 · llama.cpp, thinking on"] + ["%.0f" % x for x in per] + [pct(sum(per) / 300, 300)])
         runs = [json.load(gzip.open(p)) for p in phone_current(m)]
         per = [100 * sum(bool(q.get("ok")) for q in d["questions"]) / len(d["questions"]) for d in runs]
         rows.append(["iPhone · MLX 4-bit"] + ["%.0f" % x for x in per] + [pct(sum(per) / 300, 300)])
@@ -386,19 +437,22 @@ def t_failed():
 
 
 def t_pi():
-    export = json.load(gzip.open(os.path.join(F, "export", "experiment-full.json.gz")))
     rows = []
-    for name, r in sorted(export["boards"]["pi"]["runs"].items()):
-        if name == "mmlupro100-e4b":
-            continue  # the same run as mmlupro100-e4b-s1, exported under its old name too
-        sj, tl = r["summary_json"], r["timeline"]
-        gt, gms = sum(t["gt"] for t in tl), sum(t["gms"] for t in tl)
-        rows.append([name, r.get("subset") or "s1", "%.0f" % r["summary"]["score"], str(r["summary"]["minutes"]),
-                     f(1000 * gt / gms, 2) if gms else "—", f(sj.get("mean_w"), 2), f(sj["energy_wh"], 2),
-                     f(sj["energy_wh"] * 3600 / gt, 3) if gt else "—", f(sj.get("temp_max"), 0)])
-    return Tab("pi-runs", "Raspberry Pi 5, llama.cpp 661643e (CPU): every MMLU-Pro baseline run",
-               ["Run", "Subset", "Acc %", "Minutes", "Decode tok/s", "Mean W", "Wh", "J / gen. token", "Peak °C"], rows,
-               caption="From findings/export/. Board DC power from the PMIC rails, not wall power.")
+    names = sorted(d for d in os.listdir(pt.PI) if d.startswith("mmlupro100-"))
+    for n in sorted(names, key=lambda x: ("think" in x, x)):
+        path = os.path.join(pt.PI, n)
+        sm, rep = pt.summary(path), pt.replies(path)
+        tk, pw, th = sm["tokens"], sm["power"], sm["thermal"]
+        g = tk["generated_tokens"]
+        rows.append([n[len("mmlupro100-"):], run_date(path), "%.0f" % pt.accuracy(rep), f(tk["decode_tok_s"], 2),
+                     f(tk["prefill_tok_s"], 0), pt.thousands(g), f(sm["wall_s"] / 60, 0), f(pw["generation_mean_w"], 2),
+                     f(pw["energy_j"] / g, 3), f(pw["idle_w"], 2), f(th["temp_c"]["max"], 1), fingerprint(path)])
+    return Tab("pi-runs", "Every Raspberry Pi 5 run in findings/runs/pi/ (llama.cpp 661643e, CPU)",
+               ["Run", "Started", "Acc %", "Decode tok/s", "Prefill tok/s", "Gen. tokens", "Wall min", "W gen.",
+                "J/tok", "Idle W", "Peak °C", "Fingerprint"], rows,
+               caption="Baseline (thinking off) and thinking-on (-rea on, budget 320, --reasoning-format none), "
+                       "s1–s3 for both models. Board DC power from the PMIC rails. The baseline runs predate the "
+                       "queue and were launched by hand; the thinking-on runs passed the serving-flag fingerprint.")
 
 
 def t_phone():
@@ -450,7 +504,8 @@ def issues():
 
 
 def tables():
-    return {"paper": [t1(), t3(), t4(), t5(), t6(), t8()],
+    return {"paper": [t1(), t3(), t4(), t5(), t6(), t7(), t8(), t_batch()],
+            "replay": [t_replay_all()],
             "identity": [t_identity("e2b"), t_identity("e4b")],
             "accuracy": [t_subsets(), t_paired(), t_subjects("e2b"), t_subjects("e4b")],
             "runs": [t_runs(), t_failed()],
@@ -478,13 +533,15 @@ def build():
         "**Names.** CoPR is the paper's name for the proposed engine; run names call it `ae` (S9). `lg` is "
         "little-gemma (S3), `ngram-n3m3` is llama.cpp's n-gram drafting at width 4 (S10), an empty row name is "
         "plain llama.cpp (S1). Power is board DC draw (INA3221 on the Jetson, PMIC on the Pi), not wall power.\n",
-        "**Contents.** 1 · the manuscript's tables — 2 · reply identity between engines — 3 · accuracy — "
+        "**Contents.** 1 · the manuscript's tables — 2 · reply identity between engines — 2b · every replay — 3 · accuracy — "
         "4 · every Jetson run — 5 · Pi and iPhone runs — 6 · tinyGSM8k — 7 · own suite — 8 · data vs manuscript\n",
         "## 1. The manuscript's tables, from the data\n",
-        "Rebuilt from `findings/runs/jetson/` by the functions `paper_tables.py` checks against the paper "
-        "(203 values match), in the paper's layout. Table VII (the replay) follows once its token cache is filled.\n",
+        "All eight, in the paper's layout, rebuilt by the functions `paper_tables.py` checks against the "
+        "paper: Tables I and III–VI from `findings/runs/jetson/`, Table VII and the Sec. VII batch costs from "
+        "the Pi's recorded outputs in `findings/runs/pi/`, Table VIII from both plus the iPhone's.\n",
         section(T["paper"]),
         "## 2. Which engines give the same replies\n", section(T["identity"]),
+        "## 2b. Every prompt-lookup replay\n", section(T["replay"]),
         "## 3. Accuracy\n", section(T["accuracy"]),
         "## 4. Every Jetson run\n", section(T["runs"]),
         "## 5. Pi 5 and iPhone, run by run\n", section(T["devices"]),

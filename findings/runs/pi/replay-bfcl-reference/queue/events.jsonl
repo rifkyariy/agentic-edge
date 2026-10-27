@@ -1,0 +1,4 @@
+{"by": "queue_ctl", "event": "queued", "job": "20261008-201915-fb0a3c", "label": "replay-bfcl-reference", "ts": 1791461955.1183732}
+{"event": "precheck_passed", "job": "20261008-201915-fb0a3c", "ts": 1791461959.7864356}
+{"command": "./run_measured.sh replay-bfcl-reference -- sh -c \"mkdir -p /home/mitlab/Research/stdbench/replay-bfcl-reference && ./replay_lookup.py --model /home/mitlab/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf --server /home/mitlab/llama.cpp/build/bin/llama-server --out /home/mitlab/Research/stdbench/replay-bfcl-reference/replay.json /home/mitlab/Research/stdbench-extra/bfcl-reference && touch /home/mitlab/Research/stdbench/replay-bfcl-reference/.done\"", "event": "started", "job": "20261008-201915-fb0a3c", "ts": 1791461959.810111}
+{"event": "completed", "exit_code": 0, "job": "20261008-201915-fb0a3c", "ts": 1791462060.4389622}
