@@ -12,6 +12,11 @@
 # Everything else — task, 5-shot CoT, greedy, max_gen_toks 2048, the question
 # subset, -c 8192, --cache-ram 0 — matches the Pi exactly, or the two devices
 # would not be comparable.
+#
+# SPEC=<cfg> adds llama.cpp's own n-gram speculative decoding, the baseline the
+# S9 engine must beat on equal terms, into mmlupro100-ngram-<cfg>-<model>-<subset>:
+#   default  --spec-type ngram-simple, every other knob at llama.cpp's default
+#   n3mK     3-token lookup, K-token drafts (K = verify width - 1), as S9 does
 set -uo pipefail
 cd "$(dirname "$0")"
 MODEL_KEY="${1:?usage: $0 e2b|e4b}"
@@ -38,19 +43,30 @@ case "$MODEL_KEY" in
   *) echo "unknown model key: $MODEL_KEY" >&2; exit 1 ;;
 esac
 OUT=$S/mmlupro100-$MODEL_KEY-$SUBSET
+SPEC="${SPEC:-}"
+SPECF=""
+if [ -n "$SPEC" ]; then
+  OUT=$S/mmlupro100-ngram-$SPEC-$MODEL_KEY-$SUBSET
+  case "$SPEC" in
+    default) SPECF="--spec-type ngram-simple" ;;
+    n3m[1-9]) K=${SPEC#n3m}
+              SPECF="--spec-type ngram-simple --spec-ngram-simple-size-n 3 --spec-ngram-simple-size-m $K --spec-draft-n-max $K" ;;
+    *) echo "unknown SPEC: $SPEC" >&2; exit 1 ;;
+  esac
+fi
 [ "$THINKING" = on ] && OUT=$OUT-think
 mkdir -p "$OUT"
 SRVLOG=$OUT/server.log
 
 pkill -f "llama-server -m" 2>/dev/null; sleep 2
-echo "$(date) starting llama.cpp (CUDA, -ngl $NGL) on $TAG"
+echo "$(date) starting llama.cpp (CUDA, -ngl $NGL) on $TAG spec='$SPECF'"
 # The reasoning flags must match the Pi. Left unset, -rea defaults to auto
 # (thinking on for Gemma) and --reasoning-format defaults to auto, so the
 # thoughts land in reasoning_content where lm-eval cannot see them: answers
 # come back truncated or entirely empty. That cost every Jetson MMLU-Pro run
 # before 2026-09-22, ~5 points pooled.
 nohup sh -c "$SERVER -m $M -c 8192 --host 127.0.0.1 --port 8080 \
-  -ngl $NGL -rea $THINKING --reasoning-budget $BUDGET $FMT --cache-ram 0 2>&1 | python3 $PWD/stamp.py" \
+  -ngl $NGL -rea $THINKING --reasoning-budget $BUDGET $FMT --cache-ram 0 $SPECF 2>&1 | python3 $PWD/stamp.py" \
   > "$SRVLOG" 2>&1 < /dev/null &
 for _ in $(seq 150); do curl -sf localhost:8080/health >/dev/null 2>&1 && break; sleep 2; done
 curl -s localhost:8080/props | grep -o '"model_path":"[^"]*"'

@@ -1,0 +1,5 @@
+{"by": "queue_ctl", "event": "queued", "job": "20261007-192958-11ae35", "label": "mmlupro-ae-full-r2-e2b-s1", "ts": 1791372598.099206}
+{"event": "precheck_passed", "job": "20261007-192958-11ae35", "ts": 1791372603.1704028}
+{"command": "./run_measured.sh mmlupro-ae-full-r2-e2b-s1 -- env SUBSET=s1 THINKING=off VARIANT=full-r2 ./std_mmlupro_lg_jetson.sh e2b", "event": "started", "job": "20261007-192958-11ae35", "ts": 1791372603.1897497}
+{"baseline": "ae-full", "event": "fingerprint_ok", "job": "20261007-192958-11ae35", "ts": 1791372638.7299643}
+{"event": "completed", "exit_code": 0, "job": "20261007-192958-11ae35", "ts": 1791375061.316521}

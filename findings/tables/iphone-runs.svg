@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="962" height="399" viewBox="0 0 962 399" role="img" aria-label="iPhone 15 Pro, MLX: every upload">
+<style>text{font-family:Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;font-variant-numeric:tabular-nums}.title{font-size:15px;font-weight:600}.head{font-size:12px;font-weight:600}.cell{font-size:13px}.cell.b{font-weight:700}.note{font-size:11.5px}.glabel{font-size:13px;font-weight:600;font-style:italic}.hair{stroke-width:0.6}.hair2{stroke-width:0.6}.bg{fill:#fcfcfb}.title{fill:#0b0b0b}.head{fill:#52514e}.cell{fill:#0b0b0b}.note{fill:#52514e}.glabel{fill:#52514e}.rule{stroke:#0b0b0b}.hair{stroke:#e4e3df}.hair2{stroke:#52514e}.tint{fill:#e8f0fa}.group{fill:#f3f2ee}@media (prefers-color-scheme:dark){.bg{fill:#1a1a19}.title{fill:#ffffff}.head{fill:#c3c2b7}.cell{fill:#ffffff}.note{fill:#c3c2b7}.glabel{fill:#c3c2b7}.rule{stroke:#c3c2b7}.hair{stroke:#34332f}.hair2{stroke:#c3c2b7}.tint{fill:#1d2a3b}.group{fill:#242321}}</style>
+<rect class="bg" width="100%" height="100%"/>
+<text class="title" x="20" y="35">iPhone 15 Pro, MLX: every upload</text>
+<text class="head" x="32.0" y="68.0">Run</text>
+<text class="head" x="285.6" y="68.0">Subset</text>
+<text class="head" x="349.6" y="68.0">Status</text>
+<text class="head" x="550.2" y="68.0" text-anchor="end">Correct</text>
+<text class="head" x="649.1" y="68.0" text-anchor="end">Decode tok/s</text>
+<text class="head" x="725.2" y="68.0" text-anchor="end">Wh (est.)</text>
+<text class="head" x="812.1" y="68.0" text-anchor="end">J/tok (est.)</text>
+<text class="head" x="930.3" y="68.0" text-anchor="end">iOS thermal max</text>
+<line class="rule" x1="20" x2="942.3" y1="49.0" y2="49.0" stroke-width="1.5"/>
+<line class="rule" x1="20" x2="942.3" y1="79.0" y2="79.0" stroke-width="0.8"/>
+<line class="rule" x1="20" x2="942.3" y1="349.0" y2="349.0" stroke-width="1.5"/>
+<text class="cell" x="32.0" y="97.0">mmlupro-e2b-s1-20261002-222849</text>
+<text class="cell" x="285.6" y="97.0">s1</text>
+<text class="cell" x="349.6" y="97.0">done</text>
+<text class="cell" x="550.2" y="97.0" text-anchor="end">51/100</text>
+<text class="cell" x="649.1" y="97.0" text-anchor="end">12.4</text>
+<text class="cell" x="725.2" y="97.0" text-anchor="end">—</text>
+<text class="cell" x="812.1" y="97.0" text-anchor="end">—</text>
+<text class="cell" x="930.3" y="97.0" text-anchor="end">3</text>
+<line class="hair" x1="20" x2="942.3" y1="106.0" y2="106.0"/>
+<text class="cell" x="32.0" y="124.0">mmlupro-e2b-s1-20261003-002005</text>
+<text class="cell" x="285.6" y="124.0">s1</text>
+<text class="cell" x="349.6" y="124.0">stopped (last snapshot)</text>
+<text class="cell" x="550.2" y="124.0" text-anchor="end">10/20</text>
+<text class="cell" x="649.1" y="124.0" text-anchor="end">15.0</text>
+<text class="cell" x="725.2" y="124.0" text-anchor="end">1.90</text>
+<text class="cell" x="812.1" y="124.0" text-anchor="end">0.467</text>
+<text class="cell" x="930.3" y="124.0" text-anchor="end">2</text>
+<line class="hair" x1="20" x2="942.3" y1="133.0" y2="133.0"/>
+<text class="cell" x="32.0" y="151.0">mmlupro-e2b-s1-20261003-150850</text>
+<text class="cell" x="285.6" y="151.0">s1</text>
+<text class="cell" x="349.6" y="151.0">done · current</text>
+<text class="cell" x="550.2" y="151.0" text-anchor="end">51/100</text>
+<text class="cell" x="649.1" y="151.0" text-anchor="end">14.0</text>
+<text class="cell" x="725.2" y="151.0" text-anchor="end">6.35</text>
+<text class="cell" x="812.1" y="151.0" text-anchor="end">0.347</text>
+<text class="cell" x="930.3" y="151.0" text-anchor="end">2</text>
+<line class="hair" x1="20" x2="942.3" y1="160.0" y2="160.0"/>
+<text class="cell" x="32.0" y="178.0">mmlupro-e2b-s2-20261003-212509</text>
+<text class="cell" x="285.6" y="178.0">s2</text>
+<text class="cell" x="349.6" y="178.0">stopped (last snapshot)</text>
+<text class="cell" x="550.2" y="178.0" text-anchor="end">22/40</text>
+<text class="cell" x="649.1" y="178.0" text-anchor="end">14.5</text>
+<text class="cell" x="725.2" y="178.0" text-anchor="end">3.68</text>
+<text class="cell" x="812.1" y="178.0" text-anchor="end">0.373</text>
+<text class="cell" x="930.3" y="178.0" text-anchor="end">3</text>
+<line class="hair" x1="20" x2="942.3" y1="187.0" y2="187.0"/>
+<text class="cell" x="32.0" y="205.0">mmlupro-e2b-s2-20261003-233936</text>
+<text class="cell" x="285.6" y="205.0">s2</text>
+<text class="cell" x="349.6" y="205.0">done · current</text>
+<text class="cell" x="550.2" y="205.0" text-anchor="end">47/100</text>
+<text class="cell" x="649.1" y="205.0" text-anchor="end">14.6</text>
+<text class="cell" x="725.2" y="205.0" text-anchor="end">6.98</text>
+<text class="cell" x="812.1" y="205.0" text-anchor="end">0.361</text>
+<text class="cell" x="930.3" y="205.0" text-anchor="end">3</text>
+<line class="hair" x1="20" x2="942.3" y1="214.0" y2="214.0"/>
+<text class="cell" x="32.0" y="232.0">mmlupro-e2b-s3-20261004-115841</text>
+<text class="cell" x="285.6" y="232.0">s3</text>
+<text class="cell" x="349.6" y="232.0">done · current</text>
+<text class="cell" x="550.2" y="232.0" text-anchor="end">55/100</text>
+<text class="cell" x="649.1" y="232.0" text-anchor="end">14.2</text>
+<text class="cell" x="725.2" y="232.0" text-anchor="end">6.99</text>
+<text class="cell" x="812.1" y="232.0" text-anchor="end">0.353</text>
+<text class="cell" x="930.3" y="232.0" text-anchor="end">3</text>
+<line class="hair" x1="20" x2="942.3" y1="241.0" y2="241.0"/>
+<text class="cell" x="32.0" y="259.0">mmlupro-e4b-oq4-s1-20261004-210658</text>
+<text class="cell" x="285.6" y="259.0">s1</text>
+<text class="cell" x="349.6" y="259.0">stopped (last snapshot)</text>
+<text class="cell" x="550.2" y="259.0" text-anchor="end">7/10</text>
+<text class="cell" x="649.1" y="259.0" text-anchor="end">10.4</text>
+<text class="cell" x="725.2" y="259.0" text-anchor="end">—</text>
+<text class="cell" x="812.1" y="259.0" text-anchor="end">—</text>
+<text class="cell" x="930.3" y="259.0" text-anchor="end">2</text>
+<line class="hair" x1="20" x2="942.3" y1="268.0" y2="268.0"/>
+<text class="cell" x="32.0" y="286.0">mmlupro-e4b-oq4-s1-20261004-211929</text>
+<text class="cell" x="285.6" y="286.0">s1</text>
+<text class="cell" x="349.6" y="286.0">done · current</text>
+<text class="cell" x="550.2" y="286.0" text-anchor="end">65/100</text>
+<text class="cell" x="649.1" y="286.0" text-anchor="end">9.2</text>
+<text class="cell" x="725.2" y="286.0" text-anchor="end">11.43</text>
+<text class="cell" x="812.1" y="286.0" text-anchor="end">0.598</text>
+<text class="cell" x="930.3" y="286.0" text-anchor="end">3</text>
+<line class="hair" x1="20" x2="942.3" y1="295.0" y2="295.0"/>
+<text class="cell" x="32.0" y="313.0">mmlupro-e4b-oq4-s2-20261005-112446</text>
+<text class="cell" x="285.6" y="313.0">s2</text>
+<text class="cell" x="349.6" y="313.0">done · current</text>
+<text class="cell" x="550.2" y="313.0" text-anchor="end">64/100</text>
+<text class="cell" x="649.1" y="313.0" text-anchor="end">8.9</text>
+<text class="cell" x="725.2" y="313.0" text-anchor="end">11.43</text>
+<text class="cell" x="812.1" y="313.0" text-anchor="end">0.598</text>
+<text class="cell" x="930.3" y="313.0" text-anchor="end">3</text>
+<line class="hair" x1="20" x2="942.3" y1="322.0" y2="322.0"/>
+<text class="cell" x="32.0" y="340.0">mmlupro-e4b-oq4-s3-20261005-152451</text>
+<text class="cell" x="285.6" y="340.0">s3</text>
+<text class="cell" x="349.6" y="340.0">done · current</text>
+<text class="cell" x="550.2" y="340.0" text-anchor="end">69/100</text>
+<text class="cell" x="649.1" y="340.0" text-anchor="end">9.4</text>
+<text class="cell" x="725.2" y="340.0" text-anchor="end">10.79</text>
+<text class="cell" x="812.1" y="340.0" text-anchor="end">0.582</text>
+<text class="cell" x="930.3" y="340.0" text-anchor="end">3</text>
+<text class="note" x="20" y="374.5">Energy is a whole-phone battery estimate, not board DC power. Stopped runs are kept as their last live snapshot.</text>
+</svg>

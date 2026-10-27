@@ -1,0 +1,5 @@
+upstream: https://github.com/cortexist/little-gemma @ aee759d7588ae0a066f76d0f00ddff5eef97af66
+patch:    agentic-edge.patch sha256 33acf2820d31e87b
+patch:    ae.patch sha256 021e910489def3e9
+arch:     sm_87, Build cuda_13.2.r13.2/compiler.37953736_0
+built:    2026-10-04T22:17:20+08:00

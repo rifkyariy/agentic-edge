@@ -1,0 +1,16 @@
+{
+ "label": "mmlupro-lg-e2b-s1",
+ "command": "env SUBSET=s1 THINKING=off ./std_mmlupro_lg_jetson.sh e2b",
+ "model_path": "",
+ "server_args": "",
+ "governor": "schedutil",
+ "kernel": "Linux 6.8.12-1021-tegra",
+ "host": "mitlab-orin-nano",
+ "cpus": 6,
+ "start_epoch": 1790347830.9984946,
+ "throttled_at_start": "",
+ "server_args_after": "/home/ari/build/little-gemma/build/run-cuda-i8 -m /home/ari/research/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf -raw -think -1 -s /tmp/lg-bench.sock | python3 /mnt/ssd-ex/research/agentic-edge/benchmark/lg_openai_shim.py --engine /home/ari/build/little-gemma/build/run-cuda-i8 -m /home/ari/research/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf --thinking off --think -1 --port 8080",
+ "work_start_epoch": 1790347861.0,
+ "work_end_epoch": 1790350631.0,
+ "exit_code": 0
+}

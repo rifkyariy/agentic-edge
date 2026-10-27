@@ -1,0 +1,5 @@
+{"by": "dashboard", "event": "queued", "job": "20260925-235943-533f8c", "label": "mmlupro-lg-e2b-s3", "ts": 1790351983.5459666}
+{"event": "precheck_passed", "job": "20260925-235943-533f8c", "ts": 1790354887.358034}
+{"command": "./run_measured.sh mmlupro-lg-e2b-s3 -- env SUBSET=s3 THINKING=off ./std_mmlupro_lg_jetson.sh e2b", "event": "started", "job": "20260925-235943-533f8c", "ts": 1790354887.3769805}
+{"baseline": "lg-baseline", "event": "fingerprint_ok", "job": "20260925-235943-533f8c", "ts": 1790354923.0023363}
+{"event": "completed", "exit_code": 0, "job": "20260925-235943-533f8c", "ts": 1790357638.1830897}

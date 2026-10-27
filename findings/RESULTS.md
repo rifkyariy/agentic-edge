@@ -11,6 +11,13 @@ before the Jetson joined. Raw run files: `benchmark/results/` (own suite),
 
 Paper 1 scope is **text + reasoning parameters only** — no voice, no multimodal.
 
+**The manuscript** (*Never Compute Twice: Exact-Output Speedups for Gemma 4 on
+Edge Devices*) draws on §7.1 (S1), §7.3 (iPhone), §7.4 (S3), §7.6 (S9, which
+the paper calls **CoPR**) and §7.8 (S10). Every one of its tables except
+Table VII is rebuilt from the committed runs in `findings/runs/jetson/` by
+`python3 benchmark/paper_tables.py`; the README's "Reproducing the paper"
+walks through it. Which experiments ran at all: `docs/experiments.md`.
+
 ---
 
 ## 1. Standard benchmarks (lm-evaluation-harness)
@@ -24,7 +31,7 @@ Paper 1 scope is **text + reasoning parameters only** — no voice, no multimoda
 
 Protocol: lm-eval `mmlu_pro`, 5-shot CoT, greedy, `max_gen_toks` 2048, extraction
 `answer is (X)`. Subset: proportional stratification over all 14 subjects, seed
-20260918, question ids in `findings/stdbench/mmlupro_subset100_ids.json`.
+20260918, question ids in `findings/stdbench/mmlupro_subset100_s1_ids.json`.
 Server: llama.cpp, `-c 8192` (the longest prompt is 2362 tokens, so the
 deployed 4096 would truncate), `--cache-ram 0`, and
 **`-rea off --reasoning-budget -1`** — the baseline, thinking-off serving
@@ -426,8 +433,7 @@ answer cap; AGENTS.md §5). It runs the same GGUFs, subsets, prompts and caps,
 with thinking off (`--thinking off`, engine `-think -1`) and on (`--thinking
 on`, `-think 320`, the §7.2 budget). Jetson only: on the Pi's CPU little-gemma
 decodes ~6× slower and prefills 41–43× slower than llama.cpp. That would put
-the six Pi runs at ~110 h, so they were not run
-(`docs/experiment-matrix.md`). All 12 runs passed the serving-flag
+the six Pi runs at ~110 h, so they were not run. All 12 runs passed the serving-flag
 fingerprint (`lg-baseline` / `lg-thinking-on`).
 
 | Jetson | llama.cpp (S1 / S2) | little-gemma (S3 / S3t) | Δ | both / neither / llama.cpp only / lg only | McNemar |
@@ -545,7 +551,9 @@ It adds two switches, each designed to change speed only:
 
 No MTP head is used, since neither baseline ran speculative decoding. The task is
 S3's (thinking off), on the Jetson. Variants: `full` = both switches,
-`ngram`, `reuse`, `base` = neither.
+`ngram` and `reuse`. A `base` variant (neither switch) exists in the script but
+was never run as a full grid; the gate's no-switch sweeps (28/28 on both
+models) stand in for it.
 
 **The gate, before any full run** (`ae_gate.py`, 2026-10-04). Each switch set
 replays 28 already-answered S3 questions (2 per category) and must return every
@@ -616,9 +624,6 @@ speed. S3 ran before the lock. So the +4% / ±0% energy does not show that
 The time saving is real. It comes from prefill: E2B s1 spent 29 s prefilling
 against S3's 86 s. It is small next to `-ngram`'s, as `full` against `ngram`
 already showed.
-
-**`base`** (neither switch) is still not queued. The gate's no-switch sweeps
-(28/28 on both models) are its only evidence so far.
 
 **Repeatability.** `full` was rerun on E2B s1 on 2026-10-07 (`-r2`), three days
 after the first run and under the locked clocks. All 100 replies are
@@ -728,20 +733,13 @@ entry exists for `mmlupro-ngram`.
 
 ## 8. Capability coverage
 
-Paper 1 claims three capability areas. Only one is covered so far.
-
 | Capability | Benchmark | Pi 5 | Jetson | iPhone |
 |---|---|---|---|---|
-| a. General knowledge / reasoning | MMLU-Pro, GSM8K | MMLU-Pro done: llama.cpp (S1/S2), TurboQuant (S8), thinking off and on; GSM8K done | MMLU-Pro done: llama.cpp, little-gemma (S3), TurboQuant (S8), thinking off and on; the proposed engine (S9) and llama.cpp n-gram (S10) thinking off | MMLU-Pro done, thinking off |
-| b. Instruction following + tool calling | own 10-case suite + classifier audit; **no standard benchmark run** | partial | not started | not started |
-| c. Safety / security | none chosen | — | — | — |
+| a. General knowledge / reasoning | MMLU-Pro, GSM8K | MMLU-Pro: llama.cpp (S1/S2), TurboQuant (S8), thinking off and on; GSM8K | MMLU-Pro: llama.cpp, little-gemma (S3), TurboQuant (S8), thinking off and on; CoPR (S9) and llama.cpp n-gram (S10), thinking off | MMLU-Pro, thinking off |
+| b. Instruction following + tool calling | own 10-case suite + classifier audit | done (§2) | — | — |
 
-MMLU-Pro does not touch tool calling, so (b) currently rests on the custom
-suite. IFEval (541 prompts, rule-graded) and BFCL (AST-graded, with an
-`irrelevance` split that maps onto the over-triggering finding) are installed on
-the box and deliberately **kept** for that reason — BFCL can score condition D
-directly; condition E needs its prompts replayed through the classifier, as in
-§2.3, because the orchestrator executes tools rather than returning them.
+MMLU-Pro does not touch tool calling, so (b) rests on the custom suite and the
+classifier audit of §2.3.
 
 ## 9. Machine state (2026-09-20)
 
@@ -756,7 +754,7 @@ Deleted, 21GB: `~/.litert-lm` and `~/litert-venv` (condition C dropped),
 `~/.cache/pip`, an unrelated Qwen3-4B GGUF. The raw Sep-14 engine comparison
 scratch files were archived to `findings/early-engine-benchmarks/` first.
 
-## 10. Status (2026-10-08)
+## 10. Status (2026-10-14)
 
 **Written up here:**
 - MMLU-Pro both models · tinyGSM8k E2B (256/1024) and E4B (256) · Tier 1–3
@@ -785,27 +783,20 @@ Headline, n = 300 per model:
 | proposed engine (S9 `full`) | 53.0% (= S3, byte-identical) | 65.3% (= S3) | **6.8 / 12.6** |
 | llama.cpp n-gram (S10 `n3m3`) | 53.3% (not byte-identical to S1) | 65.0% | 8.0 / 16.8 (locked clocks, §7.7) |
 
-**Open:**
-- **The Jetson's clocks are still locked** (§7.7). Either restore them
-  (`sudo jetson_clocks --restore` or a reboot; needs the password) before the
-  next run, or accept the locked state and rerun the controls needed for
-  same-clock energy: S1 E4B and S3 on both models.
-- S9 `base` is not queued.
-- Eight stale Jetson jobs still sit blocked: `mmlupro-e4b-s2-think` and
-  `-s3-think` from 2026-09-23 (false-positive memory check; their cells were
-  completed on 2026-09-24), and the six original `reuse` jobs, since rerun.
-  All eight can be cancelled.
-- The S9 and S10 code (`job_kinds.json` `mmlupro-ae` and `mmlupro-ngram`,
-  `SPEC=` in `std_mmlupro_jetson.sh`, the queue and run scripts) is modified on
-  the Jetson but not committed. `ae_gate.py` is committed (2026-10-04).
-  `replay_lookup.py` exists only on the Pi, untracked.
-- The S3/S8/S9/S10 per-question samples live on the boards. Unlike S1/S2's,
-  they are not yet copied into `findings/stdbench/`.
+**Where the data is.** Every run the manuscript uses is committed under
+`findings/runs/jetson/` (collected 2026-10-13 with `benchmark/collect_runs.py
+--paper`), including the six failed `-reuse` runs and the queue's serving-flag
+fingerprints; `paper_tables.py` rebuilds Tables I, III–VI and VIII and the
+in-text figures from it and matches the manuscript everywhere except two
+third-decimal rounding errata. Every result is also laid out as tables in
+`findings/TABLES.md`, generated from the same data. Table VII and the §III
+replay are reimplemented in `benchmark/replay_lookup.py`, pending a one-off
+tokenization on a board; the Pi's thinking-on replies (one Table VII row) and
+its `llama-batched-bench` output (§VII) are still only on the Pi. Runs outside the
+manuscript (S2 on the Jetson, S3t, S4, S8) keep their samples on the boards.
 
-**Not started**, in rough priority order: capability (b) standard benchmark
-(IFEval and BFCL installed but unrun) · capability (c) safety and security (no
-benchmark chosen) · precision control (S7: E4B Q5_K_M, the highest precision
-both boards fit; `docs/experiment-matrix.md`).
-
-**No further GSM8K runs.** Its results stay as the methodological appendix on
-generation caps (§1).
+**Two things the data says that the manuscript does not** (`paper_tables.py
+--table issues`): Table IV's "llama.cpp n-gram, width 3" run (`n3m2`) never
+drafted (§7.8), so it is a plain llama.cpp rerun and cannot show that width-3
+drafting is exact; and the Oct 7–8 rows ran under the clock lock of §7.7, which
+the paper's cross-day energy band does not name.

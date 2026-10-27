@@ -1,0 +1,5 @@
+{"by": "queue_ctl", "event": "queued", "job": "20261007-193009-0bfb8e", "label": "mmlupro-ae-reuse-e4b-s3", "ts": 1791372609.0943127}
+{"event": "precheck_passed", "job": "20261007-193009-0bfb8e", "ts": 1791400756.8157175}
+{"command": "./run_measured.sh mmlupro-ae-reuse-e4b-s3 -- env SUBSET=s3 THINKING=off VARIANT=reuse ./std_mmlupro_lg_jetson.sh e4b", "event": "started", "job": "20261007-193009-0bfb8e", "ts": 1791400756.8391044}
+{"baseline": "ae-reuse", "event": "fingerprint_ok", "job": "20261007-193009-0bfb8e", "ts": 1791400792.4261296}
+{"event": "completed", "exit_code": 0, "job": "20261007-193009-0bfb8e", "ts": 1791405539.1000657}

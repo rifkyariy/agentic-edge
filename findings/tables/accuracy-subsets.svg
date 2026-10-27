@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="509" height="534" viewBox="0 0 509 534" role="img" aria-label="MMLU-Pro accuracy by subset (%), every device">
+<style>text{font-family:Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;font-variant-numeric:tabular-nums}.title{font-size:15px;font-weight:600}.head{font-size:12px;font-weight:600}.cell{font-size:13px}.cell.b{font-weight:700}.note{font-size:11.5px}.glabel{font-size:13px;font-weight:600;font-style:italic}.hair{stroke-width:0.6}.hair2{stroke-width:0.6}.bg{fill:#fcfcfb}.title{fill:#0b0b0b}.head{fill:#52514e}.cell{fill:#0b0b0b}.note{fill:#52514e}.glabel{fill:#52514e}.rule{stroke:#0b0b0b}.hair{stroke:#e4e3df}.hair2{stroke:#52514e}.tint{fill:#e8f0fa}.group{fill:#f3f2ee}@media (prefers-color-scheme:dark){.bg{fill:#1a1a19}.title{fill:#ffffff}.head{fill:#c3c2b7}.cell{fill:#ffffff}.note{fill:#c3c2b7}.glabel{fill:#c3c2b7}.rule{stroke:#c3c2b7}.hair{stroke:#34332f}.hair2{stroke:#c3c2b7}.tint{fill:#1d2a3b}.group{fill:#242321}}</style>
+<rect class="bg" width="100%" height="100%"/>
+<text class="title" x="20" y="35">MMLU-Pro accuracy by subset (%), every device</text>
+<rect class="group" x="20" y="79.0" width="469.7" height="24"/>
+<text class="glabel" x="32.0" y="95.5">Gemma 4 E2B</text>
+<rect class="tint" x="20" y="184.0" width="469.7" height="27"/>
+<rect class="group" x="20" y="265.0" width="469.7" height="24"/>
+<text class="glabel" x="32.0" y="281.5">Gemma 4 E4B</text>
+<rect class="tint" x="20" y="370.0" width="469.7" height="27"/>
+<text class="head" x="32.0" y="68.0"></text>
+<text class="head" x="285.6" y="68.0" text-anchor="end">s1</text>
+<text class="head" x="324.0" y="68.0" text-anchor="end">s2</text>
+<text class="head" x="362.5" y="68.0" text-anchor="end">s3</text>
+<text class="head" x="477.7" y="68.0" text-anchor="end">pooled (95% CI)</text>
+<line class="rule" x1="20" x2="489.7" y1="49.0" y2="49.0" stroke-width="1.5"/>
+<line class="rule" x1="20" x2="489.7" y1="79.0" y2="79.0" stroke-width="0.8"/>
+<line class="rule" x1="20" x2="489.7" y1="451.0" y2="451.0" stroke-width="1.5"/>
+<text class="cell" x="32.0" y="121.0">Jetson · llama.cpp</text>
+<text class="cell" x="285.6" y="121.0" text-anchor="end">56</text>
+<text class="cell" x="324.0" y="121.0" text-anchor="end">47</text>
+<text class="cell" x="362.5" y="121.0" text-anchor="end">55</text>
+<text class="cell" x="477.7" y="121.0" text-anchor="end">52.7 ± 5.6</text>
+<line class="hair" x1="20" x2="489.7" y1="130.0" y2="130.0"/>
+<text class="cell" x="32.0" y="148.0">Jetson · llama.cpp + n-gram (width 4)</text>
+<text class="cell" x="285.6" y="148.0" text-anchor="end">56</text>
+<text class="cell" x="324.0" y="148.0" text-anchor="end">51</text>
+<text class="cell" x="362.5" y="148.0" text-anchor="end">53</text>
+<text class="cell" x="477.7" y="148.0" text-anchor="end">53.3 ± 5.6</text>
+<line class="hair" x1="20" x2="489.7" y1="157.0" y2="157.0"/>
+<text class="cell" x="32.0" y="175.0">Jetson · little-gemma</text>
+<text class="cell" x="285.6" y="175.0" text-anchor="end">54</text>
+<text class="cell" x="324.0" y="175.0" text-anchor="end">51</text>
+<text class="cell" x="362.5" y="175.0" text-anchor="end">54</text>
+<text class="cell" x="477.7" y="175.0" text-anchor="end">53.0 ± 5.6</text>
+<line class="hair" x1="20" x2="489.7" y1="184.0" y2="184.0"/>
+<text class="cell" x="32.0" y="202.0">Jetson · CoPR (ours)</text>
+<text class="cell" x="285.6" y="202.0" text-anchor="end">54</text>
+<text class="cell" x="324.0" y="202.0" text-anchor="end">51</text>
+<text class="cell" x="362.5" y="202.0" text-anchor="end">54</text>
+<text class="cell" x="477.7" y="202.0" text-anchor="end">53.0 ± 5.6</text>
+<line class="hair" x1="20" x2="489.7" y1="211.0" y2="211.0"/>
+<text class="cell" x="32.0" y="229.0">Pi 5 · llama.cpp</text>
+<text class="cell" x="285.6" y="229.0" text-anchor="end">56</text>
+<text class="cell" x="324.0" y="229.0" text-anchor="end">51</text>
+<text class="cell" x="362.5" y="229.0" text-anchor="end">48</text>
+<text class="cell" x="477.7" y="229.0" text-anchor="end">51.7 ± 5.7</text>
+<line class="hair" x1="20" x2="489.7" y1="238.0" y2="238.0"/>
+<text class="cell" x="32.0" y="256.0">iPhone · MLX 4-bit</text>
+<text class="cell" x="285.6" y="256.0" text-anchor="end">51</text>
+<text class="cell" x="324.0" y="256.0" text-anchor="end">47</text>
+<text class="cell" x="362.5" y="256.0" text-anchor="end">55</text>
+<text class="cell" x="477.7" y="256.0" text-anchor="end">51.0 ± 5.7</text>
+<text class="cell" x="32.0" y="307.0">Jetson · llama.cpp</text>
+<text class="cell" x="285.6" y="307.0" text-anchor="end">67</text>
+<text class="cell" x="324.0" y="307.0" text-anchor="end">66</text>
+<text class="cell" x="362.5" y="307.0" text-anchor="end">65</text>
+<text class="cell" x="477.7" y="307.0" text-anchor="end">66.0 ± 5.4</text>
+<line class="hair" x1="20" x2="489.7" y1="316.0" y2="316.0"/>
+<text class="cell" x="32.0" y="334.0">Jetson · llama.cpp + n-gram (width 4)</text>
+<text class="cell" x="285.6" y="334.0" text-anchor="end">62</text>
+<text class="cell" x="324.0" y="334.0" text-anchor="end">66</text>
+<text class="cell" x="362.5" y="334.0" text-anchor="end">67</text>
+<text class="cell" x="477.7" y="334.0" text-anchor="end">65.0 ± 5.4</text>
+<line class="hair" x1="20" x2="489.7" y1="343.0" y2="343.0"/>
+<text class="cell" x="32.0" y="361.0">Jetson · little-gemma</text>
+<text class="cell" x="285.6" y="361.0" text-anchor="end">64</text>
+<text class="cell" x="324.0" y="361.0" text-anchor="end">67</text>
+<text class="cell" x="362.5" y="361.0" text-anchor="end">65</text>
+<text class="cell" x="477.7" y="361.0" text-anchor="end">65.3 ± 5.4</text>
+<line class="hair" x1="20" x2="489.7" y1="370.0" y2="370.0"/>
+<text class="cell" x="32.0" y="388.0">Jetson · CoPR (ours)</text>
+<text class="cell" x="285.6" y="388.0" text-anchor="end">64</text>
+<text class="cell" x="324.0" y="388.0" text-anchor="end">67</text>
+<text class="cell" x="362.5" y="388.0" text-anchor="end">65</text>
+<text class="cell" x="477.7" y="388.0" text-anchor="end">65.3 ± 5.4</text>
+<line class="hair" x1="20" x2="489.7" y1="397.0" y2="397.0"/>
+<text class="cell" x="32.0" y="415.0">Pi 5 · llama.cpp</text>
+<text class="cell" x="285.6" y="415.0" text-anchor="end">64</text>
+<text class="cell" x="324.0" y="415.0" text-anchor="end">66</text>
+<text class="cell" x="362.5" y="415.0" text-anchor="end">67</text>
+<text class="cell" x="477.7" y="415.0" text-anchor="end">65.7 ± 5.4</text>
+<line class="hair" x1="20" x2="489.7" y1="424.0" y2="424.0"/>
+<text class="cell" x="32.0" y="442.0">iPhone · MLX 4-bit</text>
+<text class="cell" x="285.6" y="442.0" text-anchor="end">65</text>
+<text class="cell" x="324.0" y="442.0" text-anchor="end">64</text>
+<text class="cell" x="362.5" y="442.0" text-anchor="end">69</text>
+<text class="cell" x="477.7" y="442.0" text-anchor="end">66.0 ± 5.4</text>
+<text class="note" x="20" y="476.5">5-shot chain of thought, greedy, thinking off, n=100 per subset. ± is the 95% interval</text>
+<text class="note" x="20" y="493.0">from question sampling; repeating the same questions moves a score by about one</text>
+<text class="note" x="20" y="509.5">point.</text>
+</svg>

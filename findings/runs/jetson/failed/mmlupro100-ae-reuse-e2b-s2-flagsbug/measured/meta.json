@@ -1,0 +1,12 @@
+{
+ "label": "mmlupro-ae-reuse-e2b-s2",
+ "command": "env SUBSET=s2 THINKING=off VARIANT=reuse ./std_mmlupro_lg_jetson.sh e2b",
+ "model_path": "",
+ "server_args": "",
+ "governor": "schedutil",
+ "kernel": "Linux 6.8.12-1021-tegra",
+ "host": "mitlab-orin-nano",
+ "cpus": 6,
+ "start_epoch": 1791151648.2582362,
+ "throttled_at_start": ""
+}
