@@ -115,12 +115,13 @@ export function cell(box, model, subset, thinking = "off", queue = null,
   if (!d) return { status: "unknown" };
 
   // progress comes from parsing the newest lm_eval.log, which keeps reading
-  // 100/100 long after the run ended — so it only means "running" while the
-  // box actually has the processes to match. Without this a finished run
-  // sits at a blue 100% instead of showing its score.
+  // 100/100 long after the run ended — so it only means "running" while
+  // lm_eval itself is alive, the rule the device card uses. run_measured and
+  // telemetry are not enough: they wrap any measured job, and on 2026-10-13 an
+  // edge-grader run on the Pi painted the finished TQ E4B s3 thinking cell
+  // (log 9 days old) as a blue 100%, 00:00 left.
   const procs = d.procs || {};
-  const live = procs.lm_eval || procs.run_measured || procs.telemetry;
-  if (live && d.progress && is(d.progress.run)) {
+  if (procs.lm_eval && d.progress && is(d.progress.run)) {
     return { status: "running", pct: d.progress.pct, eta: d.progress.eta,
              run: d.progress.run };
   }

@@ -183,3 +183,24 @@ test("failed means moved to failed/ or a failed queue job, not unfinished", () =
   assert.ok(!isFailedRun({ status: "done" }));
   assert.ok(isFailedJob({ state: "failed" }) && !isFailedJob({ state: "blocked" }));
 });
+
+test("another project's measured run does not revive a finished cell", () => {
+  // 2026-10-13: an edge-grader run (run_measured + telemetry, no lm_eval) while
+  // the newest lm_eval.log was a TQ run finished nine days earlier.
+  const run = "mmlupro100-tq-e4b-s3-think";
+  const box = { data: {
+    procs: { run_measured: { pid: 1 }, telemetry: { pid: 2 }, llama_server: { pid: 3 } },
+    progress: { run, pct: 100, eta: "00:00", age_s: 808397 },
+    completed: [{ task: "mmlu_pro", run, score: 61, stderr: 4.6, at: "2026-10-04 07:53" }],
+  } };
+  const c = cell(box, "e4b", "s3", "on", null, "turboquant");
+  assert.equal(c.status, "done");
+  assert.equal(c.score, 61);
+});
+
+test("a live lm_eval still shows its run as running", () => {
+  const run = "mmlupro100-tq-e4b-s3-think";
+  const box = { data: { procs: { lm_eval: { pid: 1 } },
+                        progress: { run, pct: 40, eta: "05:00" }, completed: [] } };
+  assert.equal(cell(box, "e4b", "s3", "on", null, "turboquant").status, "running");
+});
