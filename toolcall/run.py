@@ -6,7 +6,7 @@ One model call per task: T0's BFCL categories are single-turn, parallel JSON
 calls arrive together in one response, and Code Mode writes one script (D3a).
 Resumable: tasks already in the results file are skipped.
 
-    python3 run.py tasks/t0.jsonl runs/<name>/results.jsonl [--interface json|code] [--url ...] [--limit N]
+    python3 run.py tasks/t0.jsonl runs/<name>/results.jsonl [--interface json|code|code-lenient] [--url ...] [--limit N]
 """
 import argparse, json, time, urllib.error, urllib.request
 from pathlib import Path
@@ -24,7 +24,7 @@ def ask(url, messages, tools, max_tokens, timeout):
         return json.load(r)
 
 
-def run_code(task, tool_calls):
+def run_code(task, tool_calls, lenient=False):
     """Execute each execute_typescript call; any failure scores zero calls."""
     scripts = [c for c in tool_calls if c["name"] == codemode.CODE_TOOL]
     if not scripts:
@@ -33,7 +33,7 @@ def run_code(task, tool_calls):
     for s in scripts:
         if not isinstance(s["args"].get("code"), str):
             return {"outcome": "bad_tool_args", "calls": [], "runs": runs}
-        runs.append(codemode.execute(task["tools"], s["args"]["code"]))
+        runs.append(codemode.execute(task["tools"], s["args"]["code"], lenient=lenient))
     bad = next((r["outcome"] for r in runs if r["outcome"] != "ok"), None)
     return {"outcome": bad or "ok", "calls": [] if bad else [c for r in runs for c in r["calls"]],
             "runs": [{**r, "code": s["args"]["code"]} for r, s in zip(runs, scripts)]}
@@ -42,7 +42,7 @@ def run_code(task, tool_calls):
 def run_one(url, task, interface, max_tokens, timeout):
     t0 = time.time()
     rec = {"id": task["id"]}
-    tools = task["tools"] if interface == "json" else [codemode.code_tool(task["tools"])]
+    tools = task["tools"] if interface == "json" else [codemode.code_tool(task["tools"])]  # same prompt for both code modes
     try:
         resp = ask(url, task["messages"], tools, max_tokens, timeout)
     except TimeoutError:
@@ -61,8 +61,8 @@ def run_one(url, task, interface, max_tokens, timeout):
     except (json.JSONDecodeError, KeyError, TypeError) as e:
         rec.update(outcome="parse_error", error=str(e), raw_tool_calls=msg.get("tool_calls"))
         return rec
-    if interface == "code":
-        rec["code"] = run_code(task, rec["calls"])
+    if interface != "json":
+        rec["code"] = run_code(task, rec["calls"], lenient=interface == "code-lenient")
         rec["calls"] = rec["code"].pop("calls")  # the stubs' record is what gets scored (plan §5.3)
         rec["wall_s"] = round(time.time() - t0, 3)
     return rec
@@ -72,7 +72,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("tasks", type=Path)
     ap.add_argument("out", type=Path)
-    ap.add_argument("--interface", choices=["json", "code"], default="json")
+    ap.add_argument("--interface", choices=["json", "code", "code-lenient"], default="json")
     ap.add_argument("--url", default="http://127.0.0.1:8090")
     ap.add_argument("--max-tokens", type=int, default=1024)
     ap.add_argument("--timeout", type=float, default=300)

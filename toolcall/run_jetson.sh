@@ -3,7 +3,7 @@
 # thinking off, one interface, one KV type, one model.
 #
 #   ./run_jetson.sh e2b                  # IFACE=json KV=q8_0
-#   IFACE=code ./run_jetson.sh e2b       # Code Mode
+#   IFACE=code ./run_jetson.sh e2b       # Code Mode (or IFACE=code-lenient)
 #   KV=turbo3 LIMIT=20 ./run_jetson.sh e4b
 #   TAG=r2 ./run_jetson.sh e2b           # a repeat, in its own folder
 #

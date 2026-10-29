@@ -42,4 +42,11 @@ assert execute(TOOLS, "await tools.no_such_tool({});")["outcome"] == "runtime_er
 assert execute(TOOLS, 'await Deno.readTextFile("/etc/hostname");')["outcome"] == "runtime_error"
 assert execute(TOOLS, 'await fetch("http://example.com");')["outcome"] == "runtime_error"
 assert execute(TOOLS, "while (true) {}", timeout=2)["outcome"] == "timeout"
+# lenient: bare names and a top-level return work; strict rejects both
+for src in ("await get_user_info({ user_id: 4 });", "await tools.get_user_info({ user_id: 4 });\nreturn;"):
+    assert execute(TOOLS, src)["outcome"] != "ok", src
+    r = execute(TOOLS, src, lenient=True)
+    assert r["outcome"] == "ok" and r["calls"] == [{"name": "get_user_info", "args": {"user_id": 4}}], (src, r)
+assert execute(TOOLS, "let x = ;", lenient=True)["outcome"] == "syntax_error"
+assert execute(TOOLS, 'throw new Error("boom");', lenient=True)["outcome"] == "runtime_error"
 print("codemode.py self-check: all passed")

@@ -298,6 +298,7 @@ Answers H6.
 | D9  | Part A context `C_A` per model        | —                                                          | Measured at M1                                                            |
 | D10 | Reasoning format with thinking on     | `none` (as S8), or a format that separates the thoughts    | Chosen in the pilot by whether JSON tool calls still parse                |
 | D11 | Jetson time budget per stage          | —                                                          | Agree with the supervisor before M4                                       |
+| D12 | Code Mode script leniency             | strict (only `tools.fn(...)`, no top-level `return`), or lenient (bare `fn(...)` too, script wrapped in an async function) | **Resolved:** lenient (`code-lenient`), closer to the paper's plain Python stubs; the prompt is the same. On T0 strict cost E2B 9.3 points (69.1% vs 78.4%) and E4B 1.3 (79.1% vs 80.4%); strict runs are kept for reference |
 
 ***
 

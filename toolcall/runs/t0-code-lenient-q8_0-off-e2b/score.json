@@ -1,0 +1,92 @@
+{
+  "all": {
+    "n": 301,
+    "pass": 236,
+    "strict": 233,
+    "outcomes": {
+      "ok": 301
+    },
+    "acc": 0.7841,
+    "acc_strict": 0.7741
+  },
+  "live_multiple": {
+    "n": 96,
+    "pass": 67,
+    "strict": 66,
+    "outcomes": {
+      "ok": 96
+    },
+    "acc": 0.6979,
+    "acc_strict": 0.6875
+  },
+  "live_parallel": {
+    "n": 16,
+    "pass": 11,
+    "strict": 11,
+    "outcomes": {
+      "ok": 16
+    },
+    "acc": 0.6875,
+    "acc_strict": 0.6875
+  },
+  "live_parallel_multiple": {
+    "n": 24,
+    "pass": 16,
+    "strict": 16,
+    "outcomes": {
+      "ok": 24
+    },
+    "acc": 0.6667,
+    "acc_strict": 0.6667
+  },
+  "live_simple": {
+    "n": 25,
+    "pass": 17,
+    "strict": 17,
+    "outcomes": {
+      "ok": 25
+    },
+    "acc": 0.68,
+    "acc_strict": 0.68
+  },
+  "multiple": {
+    "n": 20,
+    "pass": 19,
+    "strict": 19,
+    "outcomes": {
+      "ok": 20
+    },
+    "acc": 0.95,
+    "acc_strict": 0.95
+  },
+  "parallel": {
+    "n": 40,
+    "pass": 34,
+    "strict": 34,
+    "outcomes": {
+      "ok": 40
+    },
+    "acc": 0.85,
+    "acc_strict": 0.85
+  },
+  "parallel_multiple": {
+    "n": 40,
+    "pass": 34,
+    "strict": 32,
+    "outcomes": {
+      "ok": 40
+    },
+    "acc": 0.85,
+    "acc_strict": 0.8
+  },
+  "simple_python": {
+    "n": 40,
+    "pass": 38,
+    "strict": 38,
+    "outcomes": {
+      "ok": 40
+    },
+    "acc": 0.95,
+    "acc_strict": 0.95
+  }
+}

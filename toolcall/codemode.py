@@ -65,8 +65,10 @@ def code_tool(tools):
                        "properties": {"code": {"type": "string", "description": "TypeScript source to run."}}}}}
 
 
-def prelude(tools):
+def prelude(tools, lenient=False):
     names = json.dumps([t["function"]["name"] for t in tools])
+    # lenient: bare `fn(...)` works too, as the paper's Python stubs were plain functions
+    exposed = "Object.assign(globalThis, tools);\n" if lenient else ""
     # an object-literal argument is recorded as the call's arguments; anything else cannot match a schema
     return (f"const __calls: unknown[] = [];\n"
             f"const tools: any = Object.fromEntries({names}.map((name) => [name, (...a: any[]) => {{\n"
@@ -74,14 +76,19 @@ def prelude(tools):
             f"  __calls.push({{ name, args }});\n"
             f"  return Promise.resolve(args);\n"
             f"}}]));\n"
+            + exposed +
             # unload fires once the event loop is empty, so un-awaited async work is recorded too
             f"globalThis.addEventListener('unload', () => console.log('\\n{MARK}' + JSON.stringify(__calls)));\n")
 
 
-def execute(tools, code, timeout=10.0):
-    """Run one script. Returns outcome (ok | syntax_error | runtime_error | timeout), calls, sandbox peak RSS."""
+def execute(tools, code, timeout=10.0, lenient=False):
+    """Run one script. Returns outcome (ok | syntax_error | runtime_error | timeout), calls, sandbox peak RSS.
+    lenient also exposes the tools as globals and wraps the script in an async function, so a
+    top-level `return` is legal; the model's prompt is the same either way."""
+    if lenient:
+        code = f"await (async () => {{\n{code}\n}})();"
     with tempfile.TemporaryDirectory() as d:
-        Path(d, "main.ts").write_text(prelude(tools) + code + "\n")
+        Path(d, "main.ts").write_text(prelude(tools, lenient) + code + "\n")
         out, err = Path(d, "out"), Path(d, "err")
         t0 = time.time()
         with out.open("w") as o, err.open("w") as e:
