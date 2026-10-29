@@ -4,6 +4,7 @@
 #
 #   ./run_jetson.sh e2b                  # KV=q8_0
 #   KV=turbo3 LIMIT=20 ./run_jetson.sh e4b
+#   TAG=r2 ./run_jetson.sh e2b           # a repeat, in its own folder
 #
 # Stops the voice agent's units (they hold the GPU) and leaves them stopped:
 #   systemctl --user start va-llm va-asr va-tts va-tools va-orchestrator va-web
@@ -19,7 +20,7 @@ case "$MODEL_KEY" in
   e4b) M=~/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf ;;
   *) echo "unknown model key: $MODEL_KEY" >&2; exit 1 ;;
 esac
-OUT=runs/t0-json-$KV-off-$MODEL_KEY${LIMIT:+-smoke$LIMIT}
+OUT=runs/t0-json-$KV-off-$MODEL_KEY${LIMIT:+-smoke$LIMIT}${TAG:+-$TAG}
 mkdir -p "$OUT"
 
 systemctl --user stop va-web va-orchestrator va-tools va-tts va-asr va-llm 2>/dev/null || true
