@@ -1,0 +1,23 @@
+{
+  "power_source": "tegrastats VDD_IN (board input, INA3221; excludes PSU loss)",
+  "window": "whole tegrastats log (no per-task epochs)",
+  "idle_w": null,
+  "idle_post_w": null,
+  "work_s": 1052.0,
+  "work_mean_w": 10.4,
+  "energy_wh": 3.04,
+  "energy_j": 10942.4,
+  "energy_above_idle_j": null,
+  "tasks": 301,
+  "j_per_task": 36.35,
+  "j_per_task_above_idle": null,
+  "generated_tokens": 17332,
+  "prompt_tokens": 150692,
+  "j_per_generated_token": 0.631,
+  "j_per_generated_token_above_idle": null,
+  "tokens_per_wh": 5702.1,
+  "peak_ram_mb": 2509,
+  "mean_gpu_load_pct": 95.7,
+  "peak_tj_c": 62.562,
+  "per_task": null
+}

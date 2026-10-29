@@ -85,7 +85,10 @@ def main():
     print(f"{len(done)} done, {len(todo)} to run", flush=True)
     with a.out.open("a") as f:
         for i, t in enumerate(todo, 1):
+            start = time.time()
             rec = run_one(a.url, t, a.interface, a.max_tokens, a.timeout)
+            # epochs let energy.py integrate board power per task
+            rec.update(start_epoch=round(start, 3), end_epoch=round(time.time(), 3))
             f.write(json.dumps(rec) + "\n")
             f.flush()
             extra = f" code={rec['code']['outcome']}" if "code" in rec else ""

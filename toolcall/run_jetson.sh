@@ -65,11 +65,15 @@ json.dump({
                           cat("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq")],
     "tasks_sha256": sha("tasks/t0.jsonl"),
     "sandbox_runtime": sh(codemode.DENO, "--version").split("\n")[0],
-    "harness_sha256": {f: sha(f) for f in ("run.py", "codemode.py", "score.py", "run_jetson.sh")},
+    "harness_sha256": {f: sha(f) for f in ("run.py", "codemode.py", "score.py", "energy.py", "run_jetson.sh")},
 }, open(out, "w"), indent=2)
 EOF
 
 python3 run.py tasks/t0.jsonl "$OUT/warmup.jsonl" --interface $IFACE --url http://127.0.0.1:$PORT --limit 1 >/dev/null
 tegrastats --interval 1000 --logfile "$OUT/tegrastats.log" & TEGRA=$!
+sleep 30  # idle baseline, model resident (energy.py --idle)
 python3 run.py tasks/t0.jsonl "$OUT/results.jsonl" --interface $IFACE --url http://127.0.0.1:$PORT ${LIMIT:+--limit $LIMIT}
+sleep 30
+kill "$TEGRA"; wait "$TEGRA" 2>/dev/null || true; TEGRA=""
 python3 score.py tasks/t0.jsonl "$OUT/results.jsonl"
+python3 energy.py "$OUT"

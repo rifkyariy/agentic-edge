@@ -1,0 +1,64 @@
+{
+  "power_source": "tegrastats VDD_IN (board input, INA3221; excludes PSU loss)",
+  "window": "first task start to last task end",
+  "idle_w": 4.95,
+  "idle_post_w": 4.93,
+  "work_s": 15.9,
+  "work_mean_w": 10.38,
+  "energy_wh": 0.046,
+  "energy_j": 164.9,
+  "energy_above_idle_j": 86.3,
+  "tasks": 10,
+  "j_per_task": 16.49,
+  "j_per_task_above_idle": 8.63,
+  "generated_tokens": 292,
+  "prompt_tokens": 1577,
+  "j_per_generated_token": 0.565,
+  "j_per_generated_token_above_idle": 0.295,
+  "tokens_per_wh": 6374.5,
+  "peak_ram_mb": 2447,
+  "mean_gpu_load_pct": 94.3,
+  "peak_tj_c": 55.625,
+  "per_task": {
+    "simple_python_6": {
+      "j": 12.7,
+      "j_above_idle": 6.5
+    },
+    "simple_python_10": {
+      "j": 14.13,
+      "j_above_idle": 7.41
+    },
+    "simple_python_21": {
+      "j": 12.95,
+      "j_above_idle": 6.85
+    },
+    "simple_python_48": {
+      "j": 11.52,
+      "j_above_idle": 5.97
+    },
+    "simple_python_62": {
+      "j": 26.9,
+      "j_above_idle": 14.25
+    },
+    "simple_python_85": {
+      "j": 22.14,
+      "j_above_idle": 11.68
+    },
+    "simple_python_94": {
+      "j": 27.33,
+      "j_above_idle": 14.46
+    },
+    "simple_python_97": {
+      "j": 7.93,
+      "j_above_idle": 4.18
+    },
+    "simple_python_99": {
+      "j": 18.96,
+      "j_above_idle": 9.96
+    },
+    "simple_python_111": {
+      "j": 10.35,
+      "j_above_idle": 5.01
+    }
+  }
+}
