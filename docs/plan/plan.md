@@ -94,12 +94,12 @@ Context length is **not** a factor in Part A. The `-c` value only reserves KV me
 
 | Tier   | Source                                                                       | Size (approx.)       | Context pressure               | Purpose                                         |
 | ------ | ---------------------------------------------------------------------------- | -------------------- | ------------------------------ | ----------------------------------------------- |
-| **T0** | Bitter Lesson BFCL v4 main subset                                            | 309 tasks            | Low                            | Comparability with the paper                    |
+| **T0** | Bitter Lesson BFCL v4 main subset, rebuilt                                   | 301 tasks            | Low                            | Comparability with the paper                    |
 | **T1** | Bitter Lesson chaining (chain length 2–20) and fan-out (7–48 parallel calls) | 52 + 32 tasks        | Medium                         | Code Mode advantage on composition              |
 | **T2** | Bitter Lesson context-rot set, flooded with distractor schemas               | 31 tasks × 4 bands   | High, scaling                  | Large tool sets; TurboQuant capacity            |
 | **T3** | New: chaining with large stub outputs                                        | \~50 tasks × 4 bands | High in JSON, low in Code Mode | Key interaction between TurboQuant and interface |
 
-Task ID lists for T0–T2 come from the Bitter Lesson release; the counts above are taken from the paper and must be checked against the release at M2. T2's larger levels and all of T3 are new and must be generated (Section 5.2).
+**T0–T2 are rebuilt, not copied.** The paper says its entry ID lists are "released with the evaluation harness" but gives no link, and none could be found (checked 2026-10-29). T0 is therefore sampled from BFCL v4 (`bfcl-eval` 2026.3.23) with the paper's per-category counts (Table 6) and a fixed seed, by `toolcall/build_t0.py`. One count cannot be met: `live_parallel` holds only 16 entries, not 24, so it is taken whole and T0 has **301 tasks, not 309**. The sample matches the paper's composition, not its exact entries. T1 and T2 are rebuilt the same way from the paper's descriptions. T2's larger levels and all of T3 are new and must be generated (Section 5.2).
 
 **T2 and T3 are sized by tokens, not by item count.** A BFCL schema is roughly 100–250 tokens, so 512–1,024 schemas would need 50–250K tokens, and 20 tool outputs of 20 KB each exceed 100K tokens in JSON. Both overflow an 8 GB board. Instead, the generators choose the schema count (T2) and stub payload size (T3) so that each task lands in a target band: about **4K, 8K, 16K and 32K tokens**, plus 64K if M1 shows the Jetson can hold it. Token counts are measured with Gemma's own chat template, not estimated.
 
@@ -110,11 +110,11 @@ For T3, the same task falls in a different band per interface, because Code Mode
 * **T0–T2:** echo stubs that return their arguments, matching the paper.
 * **T3:** stubs return realistic, deterministic payloads, generated from a seed. Later calls depend on values inside earlier outputs, so the model must actually read the tool results.
 * Every stub is deterministic. The same input always gives the same output.
-* **Both interfaces see the same output description.** Code Mode's TypeScript API declares each tool's return type, and a single-turn script needs it to read earlier outputs it never sees. JSON tool schemas have no return type, so the same output description is added to each JSON tool's description text, generated from the same function definition.
+* **In T3, both interfaces see the same output description.** Code Mode's TypeScript API declares each tool's return type, and a single-turn script needs it to read earlier outputs it never sees. JSON tool schemas have no return type, so in T3 the same output description is added to each JSON tool's description text, generated from the same function definition. T0–T2 use echo stubs, so their JSON schemas stay exactly as BFCL gives them, keeping T0 comparable with the paper.
 
 ### 5.3 Scoring
 
-* Use the paper's deterministic scorer: lowercase and strip punctuation, then require every expected call to be present with correct arguments.
+* Use the paper's deterministic rule: every expected call present with correct arguments. Strings are compared with BFCL's own `standardize_string` (drop spaces and `,./-_*^`, lowercase), the "benchmark's normalized string comparison" the paper names. Numbers compare by value, booleans exactly, and an argument whose acceptable values include `""` or `None` may be left out. The primary score allows extra calls, as the paper's rule does; a strict score that also rejects extra calls (BFCL's rule) is reported beside it (`toolcall/score.py`).
 * Score Code Mode from the calls the stubs recorded, not from the model's printed text.
 * Syntax or runtime errors in Code Mode count as zero correct calls.
 * For fan-out tasks, report **enumeration accuracy** (were all N calls actually made?) as the primary metric, as in the paper.
@@ -332,7 +332,7 @@ Answers H6.
 | #   | Milestone                 | Exit criterion                                                                                  |
 | --- | ------------------------- | ----------------------------------------------------------------------------------------------- |
 | M1  | Environment locked        | Fork builds on the Jetson; GGUF hashes match; manifest writer works; `C_A` measured per model   |
-| M2  | Harness ready             | Task counts checked against the Bitter Lesson release; T0 tasks score identically to the paper's scorer for both interfaces on a small sample |
+| M2  | Harness ready             | T0 rebuilt (done: 301 tasks); scorer passes BFCL's own answers on every T0 task (done); both interfaces run T0 end to end |
 | M3  | Generators ready          | T2 and T3 generated to their token bands, counted with the chat template, and hand-reviewed     |
 | M4  | Pilot                     | \~20 tasks per tier; D3, D6, D7, D8 and D10 resolved; each stage's run time projected against D11 |
 | M5  | Stage 1 complete          | Core matrix on the Jetson                                                                       |

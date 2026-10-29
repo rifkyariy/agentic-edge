@@ -1,0 +1,66 @@
+{
+  "source": "bfcl-eval (PyPI) data/",
+  "seed": 0,
+  "files": {
+    "BFCL_v4_simple_python.json": "82dd63ba502eb2520c6b5d1d9a5c4b590e03ff261565175561f6228a367d1991",
+    "possible_answer/BFCL_v4_simple_python.json": "90cd5bc653690ee8e459b5b3f3fc9458606f7f3fcbf795bb51b7dc581f8c86dc",
+    "BFCL_v4_multiple.json": "aef168155ebd74b7ac2401198b201343bc7d16d7a3d7e0d4e6d8ee82c6969b2a",
+    "possible_answer/BFCL_v4_multiple.json": "244e00ce9395df948bcafc7bee64e8f9c87ef70887587d83cae45b13699f3047",
+    "BFCL_v4_parallel.json": "19f51a82eff42e5d62541aa500115a056eb78f437c2ba1f10415fd7c8e5dda84",
+    "possible_answer/BFCL_v4_parallel.json": "8a6aa19c1adddc6a5a2f7e40f9dbf30cc7e95815e7b830c90589ab318229e0f0",
+    "BFCL_v4_parallel_multiple.json": "8863ea8433239f55c5f016154cf0830853c89f693c6ea270396a2fa121960579",
+    "possible_answer/BFCL_v4_parallel_multiple.json": "5ebf24f458c1f16300c05505d83d6f0a1b68b79be273a033febd0d4f840507e3",
+    "BFCL_v4_live_simple.json": "1af2ac87dca47556db7b7e37e51e28b459a38b594e3c7b3c792b4903598ca0c4",
+    "possible_answer/BFCL_v4_live_simple.json": "fec9cfa9744a936f9126981e85a2023da1e63e273eafebc81923a1162fad70ce",
+    "BFCL_v4_live_multiple.json": "fd8ccfad4d911420d0e3341dbe2fff77d1d341da934248b9bb2bda24ab3a10c8",
+    "possible_answer/BFCL_v4_live_multiple.json": "97e90d59c5bd76c55a2920ce93e5566e9046307d3f558578f085f9d3a56c3084",
+    "BFCL_v4_live_parallel.json": "6c26e9fdc3350cf596e6d1ea9c179cbff834761bccf562f4141ed29a839ca421",
+    "possible_answer/BFCL_v4_live_parallel.json": "8a9f189ff0e832ebbbbdade1fd95a7dbcc67406e9177df3f0aad76f59ab00350",
+    "BFCL_v4_live_parallel_multiple.json": "21d4b9319c1faac431e22757b367ea28917fe467364c3a4b17f16ec06d4f6e79",
+    "possible_answer/BFCL_v4_live_parallel_multiple.json": "f5b5f360556c5feb51db46fb9f56ee4b304f4b45b161599bbb14161c98a2873f"
+  },
+  "counts": {
+    "simple_python": {
+      "paper": 40,
+      "taken": 40,
+      "available": 400
+    },
+    "multiple": {
+      "paper": 20,
+      "taken": 20,
+      "available": 200
+    },
+    "parallel": {
+      "paper": 40,
+      "taken": 40,
+      "available": 200
+    },
+    "parallel_multiple": {
+      "paper": 40,
+      "taken": 40,
+      "available": 200
+    },
+    "live_simple": {
+      "paper": 25,
+      "taken": 25,
+      "available": 258
+    },
+    "live_multiple": {
+      "paper": 96,
+      "taken": 96,
+      "available": 1053
+    },
+    "live_parallel": {
+      "paper": 24,
+      "taken": 16,
+      "available": 16
+    },
+    "live_parallel_multiple": {
+      "paper": 24,
+      "taken": 24,
+      "available": 24
+    }
+  },
+  "source_version": "bfcl_eval-2026.3.23.dist-info",
+  "total": 301
+}
