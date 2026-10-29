@@ -1,0 +1,22 @@
+{
+  "all": {
+    "n": 20,
+    "pass": 16,
+    "strict": 16,
+    "outcomes": {
+      "ok": 20
+    },
+    "acc": 0.8,
+    "acc_strict": 0.8
+  },
+  "simple_python": {
+    "n": 20,
+    "pass": 16,
+    "strict": 16,
+    "outcomes": {
+      "ok": 20
+    },
+    "acc": 0.8,
+    "acc_strict": 0.8
+  }
+}

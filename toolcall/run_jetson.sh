@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# T0 JSON tool-calling baseline on the Jetson (plan §8): the TurboQuant fork,
-# thinking off, one KV type, one model.
+# T0 tool-calling baseline on the Jetson (plan §8): the TurboQuant fork,
+# thinking off, one interface, one KV type, one model.
 #
-#   ./run_jetson.sh e2b                  # KV=q8_0
+#   ./run_jetson.sh e2b                  # IFACE=json KV=q8_0
+#   IFACE=code ./run_jetson.sh e2b       # Code Mode
 #   KV=turbo3 LIMIT=20 ./run_jetson.sh e4b
 #   TAG=r2 ./run_jetson.sh e2b           # a repeat, in its own folder
 #
@@ -12,6 +13,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 MODEL_KEY="${1:?usage: $0 e2b|e4b}"
 KV="${KV:-q8_0}"
+IFACE="${IFACE:-json}"
 TQ="${TQ_COMMIT:-bcb85fc}"
 PORT=8090
 SERVER=~/build/engines/llama.cpp-turboquant-$TQ/build/bin/llama-server
@@ -20,7 +22,7 @@ case "$MODEL_KEY" in
   e4b) M=~/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf ;;
   *) echo "unknown model key: $MODEL_KEY" >&2; exit 1 ;;
 esac
-OUT=runs/t0-json-$KV-off-$MODEL_KEY${LIMIT:+-smoke$LIMIT}${TAG:+-$TAG}
+OUT=runs/t0-$IFACE-$KV-off-$MODEL_KEY${LIMIT:+-smoke$LIMIT}${TAG:+-$TAG}
 mkdir -p "$OUT"
 
 systemctl --user stop va-web va-orchestrator va-tools va-tts va-asr va-llm 2>/dev/null || true
@@ -42,6 +44,7 @@ curl -sf localhost:$PORT/health >/dev/null || { echo "server did not come up:" >
 # captured from the running process, not from this script (the meta.json lesson)
 python3 - "$OUT/manifest.json" "$SRV" "$M" "$PORT" "$(dirname "$SERVER")/../.." <<'EOF'
 import hashlib, json, subprocess, sys, time, urllib.request
+import codemode
 out, pid, model, port, src = sys.argv[1:]
 sh = lambda *c: subprocess.run(c, capture_output=True, text=True).stdout.strip()
 # streamed: reading a 4 GB GGUF whole beside a loaded E4B server OOM-killed this step
@@ -61,11 +64,12 @@ json.dump({
     "cpu0_freq_min_max": [cat("/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq"),
                           cat("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq")],
     "tasks_sha256": sha("tasks/t0.jsonl"),
-    "harness_sha256": {f: sha(f) for f in ("run_json.py", "score.py", "run_jetson.sh")},
+    "sandbox_runtime": sh(codemode.DENO, "--version").split("\n")[0],
+    "harness_sha256": {f: sha(f) for f in ("run.py", "codemode.py", "score.py", "run_jetson.sh")},
 }, open(out, "w"), indent=2)
 EOF
 
-python3 run_json.py tasks/t0.jsonl "$OUT/warmup.jsonl" --url http://127.0.0.1:$PORT --limit 1 >/dev/null
+python3 run.py tasks/t0.jsonl "$OUT/warmup.jsonl" --interface $IFACE --url http://127.0.0.1:$PORT --limit 1 >/dev/null
 tegrastats --interval 1000 --logfile "$OUT/tegrastats.log" & TEGRA=$!
-python3 run_json.py tasks/t0.jsonl "$OUT/results.jsonl" --url http://127.0.0.1:$PORT ${LIMIT:+--limit $LIMIT}
+python3 run.py tasks/t0.jsonl "$OUT/results.jsonl" --interface $IFACE --url http://127.0.0.1:$PORT ${LIMIT:+--limit $LIMIT}
 python3 score.py tasks/t0.jsonl "$OUT/results.jsonl"
