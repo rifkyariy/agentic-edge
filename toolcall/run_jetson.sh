@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# T0 tool-calling baseline on the Jetson (plan §8): the TurboQuant fork,
-# thinking off, one interface, one KV type, one model.
+# One tool-calling run on the Jetson (plan §8): the TurboQuant fork, thinking
+# off, one task tier, one interface, one KV type, one model.
 #
 #   ./run_jetson.sh e2b                  # IFACE=json KV=q8_0
 #   IFACE=code ./run_jetson.sh e2b       # Code Mode (or IFACE=code-lenient)
 #   KV=turbo3 LIMIT=20 ./run_jetson.sh e4b
 #   TAG=r2 ./run_jetson.sh e2b           # a repeat, in its own folder
+#   TIER=t1 ./run_jetson.sh e2b          # T1 chaining + fan-out (default t0)
 #
 # Stops the voice agent's units (they hold the GPU) and leaves them stopped:
 #   systemctl --user start va-llm va-asr va-tts va-tools va-orchestrator va-web
@@ -14,6 +15,10 @@ cd "$(dirname "$0")"
 MODEL_KEY="${1:?usage: $0 e2b|e4b}"
 KV="${KV:-q8_0}"
 IFACE="${IFACE:-json}"
+TIER="${TIER:-t0}"
+TASKS=tasks/$TIER.jsonl
+# 4096: a 48-call JSON fan-out needs ~1.7K tokens; T0 never reached the old 1024
+MAX_NEW=4096
 TQ="${TQ_COMMIT:-bcb85fc}"
 PORT=8090
 SERVER=~/build/engines/llama.cpp-turboquant-$TQ/build/bin/llama-server
@@ -22,7 +27,7 @@ case "$MODEL_KEY" in
   e4b) M=~/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf ;;
   *) echo "unknown model key: $MODEL_KEY" >&2; exit 1 ;;
 esac
-OUT=runs/t0-$IFACE-$KV-off-$MODEL_KEY${LIMIT:+-smoke$LIMIT}${TAG:+-$TAG}
+OUT=runs/$TIER-$IFACE-$KV-off-$MODEL_KEY${LIMIT:+-smoke$LIMIT}${TAG:+-$TAG}
 mkdir -p "$OUT"
 
 systemctl --user stop va-web va-orchestrator va-tools va-tts va-asr va-llm 2>/dev/null || true
@@ -32,7 +37,7 @@ fi
 
 "$SERVER" -m "$M" --jinja -c 8192 -ngl 99 -ctk "$KV" -ctv "$KV" -fa on \
   -np 1 -b 512 -ub 512 --cache-ram 0 -rea off --reasoning-budget -1 \
-  --temp 0 --top-k 1 --seed 42 -n 1024 --host 127.0.0.1 --port $PORT \
+  --temp 0 --top-k 1 --seed 42 -n $MAX_NEW --host 127.0.0.1 --port $PORT \
   > "$OUT/server.log" 2>&1 < /dev/null &
 SRV=$!
 TEGRA=""
@@ -42,10 +47,10 @@ for _ in $(seq 150); do curl -sf localhost:$PORT/health >/dev/null 2>&1 && break
 curl -sf localhost:$PORT/health >/dev/null || { echo "server did not come up:" >&2; tail -20 "$OUT/server.log" >&2; exit 1; }
 
 # captured from the running process, not from this script (the meta.json lesson)
-python3 - "$OUT/manifest.json" "$SRV" "$M" "$PORT" "$(dirname "$SERVER")/../.." <<'EOF'
+python3 - "$OUT/manifest.json" "$SRV" "$M" "$PORT" "$(dirname "$SERVER")/../.." "$TASKS" <<'EOF'
 import hashlib, json, subprocess, sys, time, urllib.request
 import codemode
-out, pid, model, port, src = sys.argv[1:]
+out, pid, model, port, src, tasks = sys.argv[1:]
 sh = lambda *c: subprocess.run(c, capture_output=True, text=True).stdout.strip()
 # streamed: reading a 4 GB GGUF whole beside a loaded E4B server OOM-killed this step
 sha = lambda p: hashlib.file_digest(open(p, "rb"), "sha256").hexdigest()
@@ -63,17 +68,19 @@ json.dump({
     "gpu_freq_min_max": [cat(gpu + "min_freq"), cat(gpu + "max_freq")],
     "cpu0_freq_min_max": [cat("/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq"),
                           cat("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq")],
-    "tasks_sha256": sha("tasks/t0.jsonl"),
+    "tasks": tasks,
+    "tasks_sha256": sha(tasks),
     "sandbox_runtime": sh(codemode.DENO, "--version").split("\n")[0],
     "harness_sha256": {f: sha(f) for f in ("run.py", "codemode.py", "score.py", "energy.py", "run_jetson.sh")},
 }, open(out, "w"), indent=2)
 EOF
 
-python3 run.py tasks/t0.jsonl "$OUT/warmup.jsonl" --interface $IFACE --url http://127.0.0.1:$PORT --limit 1 >/dev/null
+RUN="python3 run.py $TASKS --interface $IFACE --url http://127.0.0.1:$PORT --max-tokens $MAX_NEW"
+$RUN "$OUT/warmup.jsonl" --limit 1 >/dev/null
 tegrastats --interval 1000 --logfile "$OUT/tegrastats.log" & TEGRA=$!
 sleep 30  # idle baseline, model resident (energy.py --idle)
-python3 run.py tasks/t0.jsonl "$OUT/results.jsonl" --interface $IFACE --url http://127.0.0.1:$PORT ${LIMIT:+--limit $LIMIT}
+$RUN "$OUT/results.jsonl" ${LIMIT:+--limit $LIMIT}
 sleep 30
 kill "$TEGRA"; wait "$TEGRA" 2>/dev/null || true; TEGRA=""
-python3 score.py tasks/t0.jsonl "$OUT/results.jsonl"
-python3 energy.py "$OUT"
+python3 score.py $TASKS "$OUT/results.jsonl"
+python3 energy.py "$OUT" --tasks $TASKS

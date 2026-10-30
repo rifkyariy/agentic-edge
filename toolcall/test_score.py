@@ -29,8 +29,8 @@ assert not score_task(t, [call("github_star", repos="a/b", aligned=1)])["pass"]
 t = task([{"spotify.play": {"artist": ["Taylor Swift"], "duration": [20]}},
           {"spotify.play": {"artist": ["Maroon 5"], "duration": [15]}}], {"spotify_play": "spotify.play"})
 two = [call("spotify_play", artist="Maroon 5", duration=15), call("spotify_play", artist="Taylor Swift", duration=20)]
-assert score_task(t, two) == {"pass": True, "strict": True}
-assert score_task(t, two + [two[0]]) == {"pass": True, "strict": False}
+assert score_task(t, two) == {"pass": True, "strict": True, "enum": True}
+assert score_task(t, two + [two[0]]) == {"pass": True, "strict": False, "enum": True}
 assert not score_task(t, two[:1])["pass"]
 assert not score_task(t, [two[0], two[0]])["pass"]
 
@@ -45,5 +45,14 @@ assert score_task(t, [call("get_headway", ego_info={"position": {"lateral": 10.5
 t = task([{"poker_game_winner": {"cards": [{"Alex": [["A of spades", "K of spades"]]}]}}])
 assert score_task(t, [call("poker_game_winner", cards={"Alex": ["a of spades", "k of spades"]})])["pass"]
 assert not score_task(t, [call("poker_game_winner", cards={"Alex": ["K of spades", "A of spades"]})])["pass"]
+
+# enum: every required call issued, arguments aside (fan-out); duplicates don't backtrack forever
+t = task([{"get_population": {"country": [f"C{i}"]}} for i in range(48)])
+right = [call("get_population", country=f"C{i}") for i in range(48)]
+assert score_task(t, right) == {"pass": True, "strict": True, "enum": True}
+wrong = right[:47] + [call("get_population", country="nowhere")]
+assert score_task(t, wrong) == {"pass": False, "strict": False, "enum": True}
+assert score_task(t, right[:47])["enum"] is False
+assert score_task(t, right[:47] * 2 + [right[0]] * 10)["pass"] is False  # returns at once
 
 print("score.py self-check: all passed")
