@@ -12,7 +12,8 @@ only loosely, so both are generated here from a fixed seed:
   JSON runs these as a multi-turn loop (run.py), as the paper does.
 * fanout (32): one request that needs N calls, N in the paper's sizes
   7, 9, 11, 13, 15, 20, 30, 48, four tasks per size (one per template).
-  Invented entity names, so nothing can be answered from memory.
+  Invented entity names, so nothing can be answered from memory; they are
+  codenames, people and product codes, kinds of names that are made up anyway.
 
     python3 build_t1.py [--seed 0]
 
@@ -31,6 +32,9 @@ SYL = ["ka", "lo", "mir", "ven", "tor", "sa", "bel", "quo", "dri", "nax", "pel",
 
 
 def fn(name, desc, props, required=None):
+    # JSON sees each echo as the tool result; Code Mode never does, and a pilot script used the
+    # return value as the new score. Stating it gives both interfaces the same information.
+    desc += " Returns the arguments it was called with."
     return {"type": "function", "function": {"name": name, "description": desc, "parameters": {
         "type": "object", "properties": props, "required": required or list(props)}}}
 
@@ -97,10 +101,6 @@ def chain_task(i, length, rng):
 
 
 # --- fan-out: template -> tool, prompt, one item per call
-def country(rng):
-    return word(rng) + rng.choice(["ia", "stan", "land", "ora"])
-
-
 def person(rng):
     return f"{word(rng)} {word(rng)}"
 
@@ -110,10 +110,11 @@ def sku(rng):
 
 
 FANOUT = [
-    (fn("get_population", "Look up the current population of a country.",
-        {"country": {"type": "string", "description": "Country name."}}),
-     lambda rng, items: (f"Look up the current population of each of these countries: {', '.join(items)}.", {}),
-     country, "country"),
+    # internal codenames, not countries: E4B refused invented country names as "not real" (T1 pilot)
+    (fn("get_project_status", "Get the current status of an internal project.",
+        {"project": {"type": "string", "description": "Project codename."}}),
+     lambda rng, items: (f"Get the current status of each of these internal projects: {', '.join(items)}.", {}),
+     lambda rng: word(rng, 3), "project"),
     (fn("send_reminder", "Send a meeting reminder to one person.",
         {"recipient": {"type": "string", "description": "Full name of the person to remind."},
          "date": {"type": "string", "description": "Meeting date, YYYY-MM-DD."}}),

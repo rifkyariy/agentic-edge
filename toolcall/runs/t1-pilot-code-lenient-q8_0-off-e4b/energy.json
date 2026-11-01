@@ -1,0 +1,215 @@
+{
+  "power_source": "tegrastats VDD_IN (board input, INA3221; excludes PSU loss)",
+  "window": "first task start to last task end",
+  "idle_w": 5.01,
+  "idle_post_w": 4.94,
+  "work_s": 466.9,
+  "work_mean_w": 10.97,
+  "energy_wh": 1.422,
+  "energy_j": 5120.3,
+  "energy_above_idle_j": 2781.2,
+  "tasks": 19,
+  "j_per_task": 269.49,
+  "j_per_task_above_idle": 146.38,
+  "generated_tokens": 4960,
+  "prompt_tokens": 6576,
+  "j_per_generated_token": 1.032,
+  "j_per_generated_token_above_idle": 0.561,
+  "tokens_per_wh": 3487.3,
+  "j_per_token_all": 0.444,
+  "work_peak_w": 12.122,
+  "generation_mean_w": 11.27,
+  "model_calls": 19,
+  "prefill_s": 42.3,
+  "decode_s": 421.3,
+  "prefill_tok_s": 155.59,
+  "decode_tok_s": 11.77,
+  "decode_tok_s_per_w": 1.045,
+  "peak_ram_mb": 4233,
+  "mean_gpu_load_pct": 90.0,
+  "peak_tj_c": 64.187,
+  "by_group": {
+    "chain": {
+      "tasks": 11,
+      "acc": 0.9091,
+      "j_per_task": 292.1,
+      "j_per_task_above_idle": 161.71,
+      "s_per_task": 26.03,
+      "passes_per_wh": 11.2
+    },
+    "chain_len02-05": {
+      "tasks": 7,
+      "acc": 1.0,
+      "j_per_task": 182.48,
+      "j_per_task_above_idle": 98.66,
+      "s_per_task": 16.73,
+      "passes_per_wh": 19.73
+    },
+    "chain_len06-12": {
+      "tasks": 2,
+      "acc": 1.0,
+      "j_per_task": 364.46,
+      "j_per_task_above_idle": 204.42,
+      "s_per_task": 31.95,
+      "passes_per_wh": 9.88
+    },
+    "chain_len13-20": {
+      "tasks": 2,
+      "acc": 0.5,
+      "j_per_task": 603.39,
+      "j_per_task_above_idle": 339.65,
+      "s_per_task": 52.64,
+      "passes_per_wh": 2.98
+    },
+    "fanout": {
+      "tasks": 8,
+      "acc": 0.875,
+      "j_per_task": 238.36,
+      "j_per_task_above_idle": 125.3,
+      "s_per_task": 22.57,
+      "passes_per_wh": 13.22
+    },
+    "fanout_n07": {
+      "tasks": 1,
+      "acc": 1.0,
+      "j_per_task": 172.7,
+      "j_per_task_above_idle": 58.68,
+      "s_per_task": 22.76,
+      "passes_per_wh": 20.85
+    },
+    "fanout_n09": {
+      "tasks": 1,
+      "acc": 1.0,
+      "j_per_task": 184.61,
+      "j_per_task_above_idle": 82.69,
+      "s_per_task": 20.34,
+      "passes_per_wh": 19.5
+    },
+    "fanout_n11": {
+      "tasks": 1,
+      "acc": 1.0,
+      "j_per_task": 148.23,
+      "j_per_task_above_idle": 81.88,
+      "s_per_task": 13.24,
+      "passes_per_wh": 24.29
+    },
+    "fanout_n13": {
+      "tasks": 1,
+      "acc": 1.0,
+      "j_per_task": 168.07,
+      "j_per_task_above_idle": 93.88,
+      "s_per_task": 14.81,
+      "passes_per_wh": 21.42
+    },
+    "fanout_n15": {
+      "tasks": 1,
+      "acc": 1.0,
+      "j_per_task": 215.91,
+      "j_per_task_above_idle": 120.75,
+      "s_per_task": 18.99,
+      "passes_per_wh": 16.67
+    },
+    "fanout_n20": {
+      "tasks": 1,
+      "acc": 0.0,
+      "j_per_task": 249.48,
+      "j_per_task_above_idle": 134.13,
+      "s_per_task": 23.02,
+      "passes_per_wh": 0.0
+    },
+    "fanout_n30": {
+      "tasks": 1,
+      "acc": 1.0,
+      "j_per_task": 355.03,
+      "j_per_task_above_idle": 198.86,
+      "s_per_task": 31.17,
+      "passes_per_wh": 10.14
+    },
+    "fanout_n48": {
+      "tasks": 1,
+      "acc": 1.0,
+      "j_per_task": 412.84,
+      "j_per_task_above_idle": 231.5,
+      "s_per_task": 36.2,
+      "passes_per_wh": 8.72
+    }
+  },
+  "per_task": {
+    "chain_01": {
+      "j": 147.78,
+      "j_above_idle": 81.93
+    },
+    "chain_06": {
+      "j": 131.94,
+      "j_above_idle": 61.31
+    },
+    "chain_11": {
+      "j": 156.86,
+      "j_above_idle": 86.49
+    },
+    "chain_16": {
+      "j": 148.16,
+      "j_above_idle": 80.12
+    },
+    "chain_21": {
+      "j": 216.0,
+      "j_above_idle": 122.58
+    },
+    "chain_26": {
+      "j": 190.17,
+      "j_above_idle": 103.54
+    },
+    "chain_31": {
+      "j": 286.42,
+      "j_above_idle": 154.68
+    },
+    "chain_36": {
+      "j": 240.42,
+      "j_above_idle": 134.78
+    },
+    "chain_41": {
+      "j": 488.51,
+      "j_above_idle": 274.05
+    },
+    "chain_46": {
+      "j": 560.82,
+      "j_above_idle": 314.21
+    },
+    "chain_51": {
+      "j": 645.97,
+      "j_above_idle": 365.09
+    },
+    "fanout_00": {
+      "j": 172.7,
+      "j_above_idle": 58.68
+    },
+    "fanout_05": {
+      "j": 184.61,
+      "j_above_idle": 82.69
+    },
+    "fanout_10": {
+      "j": 148.23,
+      "j_above_idle": 81.88
+    },
+    "fanout_15": {
+      "j": 168.07,
+      "j_above_idle": 93.88
+    },
+    "fanout_16": {
+      "j": 215.91,
+      "j_above_idle": 120.75
+    },
+    "fanout_21": {
+      "j": 249.48,
+      "j_above_idle": 134.13
+    },
+    "fanout_26": {
+      "j": 355.03,
+      "j_above_idle": 198.86
+    },
+    "fanout_31": {
+      "j": 412.84,
+      "j_above_idle": 231.5
+    }
+  }
+}
