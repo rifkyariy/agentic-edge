@@ -2,7 +2,7 @@
 """Self-check for codemode.py. The execution checks need Deno (DENO=<path>, default
 ~/build/deno-2.9.8/deno) and are skipped without it. Run: python3 test_codemode.py"""
 import os
-from codemode import DENO, execute, ts_api
+from codemode import DENO, execute, repair_iife, ts_api
 
 TOOLS = [{"type": "function", "function": {
     "name": "get_user_info", "description": "Retrieve details for a user.",
@@ -49,4 +49,11 @@ for src in ("await get_user_info({ user_id: 4 });", "await tools.get_user_info({
     assert r["outcome"] == "ok" and r["calls"] == [{"name": "get_user_info", "args": {"user_id": 4}}], (src, r)
 assert execute(TOOLS, "let x = ;", lenient=True)["outcome"] == "syntax_error"
 assert execute(TOOLS, 'throw new Error("boom");', lenient=True)["outcome"] == "runtime_error"
+# repair_iife fixes only an arrow function called without its parentheses
+bad = "async () => {\n  await tools.get_user_info({ user_id: 6 });\n}();"
+assert execute(TOOLS, bad, lenient=True)["outcome"] == "syntax_error"
+r = execute(TOOLS, repair_iife(bad), lenient=True)
+assert r["outcome"] == "ok" and r["calls"] == [{"name": "get_user_info", "args": {"user_id": 6}}], r
+for src in ("async () => {\n  await tools.get_user_info({ user_id: 6 });\n}", "await tools.get_user_info({ user_id: 6 });"):
+    assert repair_iife(src) == src
 print("codemode.py self-check: all passed")

@@ -5,12 +5,19 @@ runs in Deno with no permissions; echo stubs record each call.
 T0–T2 stubs echo their arguments (the paper's design), so the API declares
 no return types beyond Promise<unknown>.
 """
-import json, os, signal, subprocess, tempfile, time
+import json, os, re, signal, subprocess, tempfile, time
 from pathlib import Path
 
 DENO = os.environ.get("DENO", str(Path.home() / "build/deno-2.9.8/deno"))
 MARK = "@@CALLS@@"
 CODE_TOOL = "execute_typescript"
+IIFE = re.compile(r"\A\s*(async\s*\(\s*\)\s*=>\s*\{.*\})\s*\(\s*\)\s*;?\s*\Z", re.S)
+
+
+def repair_iife(code):
+    """`async () => {...}();` does not parse; `(async () => {...})();` is what the model meant.
+    Sensitivity checks only (reexec.py --repair-iife); no live harness applies it."""
+    return IIFE.sub(r"(\1)();", code)
 
 
 def ts_type(s, indent="  "):
