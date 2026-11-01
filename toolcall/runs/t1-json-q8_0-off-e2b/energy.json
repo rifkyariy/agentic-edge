@@ -1,0 +1,475 @@
+{
+  "power_source": "tegrastats VDD_IN (board input, INA3221; excludes PSU loss)",
+  "window": "first task start to last task end",
+  "idle_w": 4.46,
+  "idle_post_w": 4.47,
+  "work_s": 1195.9,
+  "work_mean_w": 9.67,
+  "energy_wh": 3.211,
+  "energy_j": 11561.3,
+  "energy_above_idle_j": 6227.5,
+  "tasks": 84,
+  "j_per_task": 137.63,
+  "j_per_task_above_idle": 74.14,
+  "generated_tokens": 24145,
+  "prompt_tokens": 169457,
+  "j_per_generated_token": 0.479,
+  "j_per_generated_token_above_idle": 0.258,
+  "tokens_per_wh": 7518.4,
+  "j_per_token_all": 0.06,
+  "work_peak_w": 10.306,
+  "generation_mean_w": 9.7,
+  "model_calls": 324,
+  "prefill_s": 89.6,
+  "decode_s": 1083.7,
+  "prefill_tok_s": 403.81,
+  "decode_tok_s": 22.28,
+  "decode_tok_s_per_w": 2.297,
+  "peak_ram_mb": 2534,
+  "mean_gpu_load_pct": 91.8,
+  "peak_tj_c": 60.656,
+  "by_group": {
+    "chain": {
+      "tasks": 52,
+      "acc": 0.5385,
+      "j_per_task": 77.22,
+      "j_per_task_above_idle": 40.7,
+      "s_per_task": 8.19,
+      "passes_per_wh": 25.1
+    },
+    "chain_len02-05": {
+      "tasks": 35,
+      "acc": 0.7714,
+      "j_per_task": 40.11,
+      "j_per_task_above_idle": 21.13,
+      "s_per_task": 4.26,
+      "passes_per_wh": 69.24
+    },
+    "chain_len06-12": {
+      "tasks": 7,
+      "acc": 0.1429,
+      "j_per_task": 116.82,
+      "j_per_task_above_idle": 61.79,
+      "s_per_task": 12.34,
+      "passes_per_wh": 4.4
+    },
+    "chain_len13-20": {
+      "tasks": 10,
+      "acc": 0.0,
+      "j_per_task": 179.39,
+      "j_per_task_above_idle": 94.47,
+      "s_per_task": 19.04,
+      "passes_per_wh": 0.0
+    },
+    "fanout": {
+      "tasks": 32,
+      "acc": 1.0,
+      "j_per_task": 235.8,
+      "j_per_task_above_idle": 128.46,
+      "s_per_task": 24.07,
+      "passes_per_wh": 15.27
+    },
+    "fanout_n07": {
+      "tasks": 4,
+      "acc": 1.0,
+      "j_per_task": 86.24,
+      "j_per_task_above_idle": 46.89,
+      "s_per_task": 8.82,
+      "passes_per_wh": 41.75
+    },
+    "fanout_n09": {
+      "tasks": 4,
+      "acc": 1.0,
+      "j_per_task": 111.11,
+      "j_per_task_above_idle": 60.55,
+      "s_per_task": 11.34,
+      "passes_per_wh": 32.4
+    },
+    "fanout_n11": {
+      "tasks": 4,
+      "acc": 1.0,
+      "j_per_task": 135.91,
+      "j_per_task_above_idle": 74.3,
+      "s_per_task": 13.81,
+      "passes_per_wh": 26.49
+    },
+    "fanout_n13": {
+      "tasks": 4,
+      "acc": 1.0,
+      "j_per_task": 160.18,
+      "j_per_task_above_idle": 87.3,
+      "s_per_task": 16.34,
+      "passes_per_wh": 22.47
+    },
+    "fanout_n15": {
+      "tasks": 4,
+      "acc": 1.0,
+      "j_per_task": 183.67,
+      "j_per_task_above_idle": 100.2,
+      "s_per_task": 18.72,
+      "passes_per_wh": 19.6
+    },
+    "fanout_n20": {
+      "tasks": 4,
+      "acc": 1.0,
+      "j_per_task": 246.7,
+      "j_per_task_above_idle": 134.57,
+      "s_per_task": 25.14,
+      "passes_per_wh": 14.59
+    },
+    "fanout_n30": {
+      "tasks": 4,
+      "acc": 1.0,
+      "j_per_task": 369.0,
+      "j_per_task_above_idle": 200.66,
+      "s_per_task": 37.75,
+      "passes_per_wh": 9.76
+    },
+    "fanout_n48": {
+      "tasks": 4,
+      "acc": 1.0,
+      "j_per_task": 593.58,
+      "j_per_task_above_idle": 323.24,
+      "s_per_task": 60.61,
+      "passes_per_wh": 6.06
+    }
+  },
+  "per_task": {
+    "chain_00": {
+      "j": 24.25,
+      "j_above_idle": 12.64
+    },
+    "chain_01": {
+      "j": 23.59,
+      "j_above_idle": 12.43
+    },
+    "chain_02": {
+      "j": 26.23,
+      "j_above_idle": 13.76
+    },
+    "chain_03": {
+      "j": 23.95,
+      "j_above_idle": 12.75
+    },
+    "chain_04": {
+      "j": 23.02,
+      "j_above_idle": 11.78
+    },
+    "chain_05": {
+      "j": 26.33,
+      "j_above_idle": 14.19
+    },
+    "chain_06": {
+      "j": 33.57,
+      "j_above_idle": 17.82
+    },
+    "chain_07": {
+      "j": 24.75,
+      "j_above_idle": 13.14
+    },
+    "chain_08": {
+      "j": 23.37,
+      "j_above_idle": 12.03
+    },
+    "chain_09": {
+      "j": 33.49,
+      "j_above_idle": 17.87
+    },
+    "chain_10": {
+      "j": 43.75,
+      "j_above_idle": 23.32
+    },
+    "chain_11": {
+      "j": 33.33,
+      "j_above_idle": 17.67
+    },
+    "chain_12": {
+      "j": 32.12,
+      "j_above_idle": 16.24
+    },
+    "chain_13": {
+      "j": 34.58,
+      "j_above_idle": 18.24
+    },
+    "chain_14": {
+      "j": 42.11,
+      "j_above_idle": 22.04
+    },
+    "chain_15": {
+      "j": 30.93,
+      "j_above_idle": 16.33
+    },
+    "chain_16": {
+      "j": 31.71,
+      "j_above_idle": 16.04
+    },
+    "chain_17": {
+      "j": 34.63,
+      "j_above_idle": 18.35
+    },
+    "chain_18": {
+      "j": 52.98,
+      "j_above_idle": 27.59
+    },
+    "chain_19": {
+      "j": 41.08,
+      "j_above_idle": 21.86
+    },
+    "chain_20": {
+      "j": 43.71,
+      "j_above_idle": 22.73
+    },
+    "chain_21": {
+      "j": 43.48,
+      "j_above_idle": 23.05
+    },
+    "chain_22": {
+      "j": 52.97,
+      "j_above_idle": 27.68
+    },
+    "chain_23": {
+      "j": 42.4,
+      "j_above_idle": 22.53
+    },
+    "chain_24": {
+      "j": 43.83,
+      "j_above_idle": 23.25
+    },
+    "chain_25": {
+      "j": 44.25,
+      "j_above_idle": 23.47
+    },
+    "chain_26": {
+      "j": 53.28,
+      "j_above_idle": 27.78
+    },
+    "chain_27": {
+      "j": 51.11,
+      "j_above_idle": 27.3
+    },
+    "chain_28": {
+      "j": 53.46,
+      "j_above_idle": 28.11
+    },
+    "chain_29": {
+      "j": 51.28,
+      "j_above_idle": 27.44
+    },
+    "chain_30": {
+      "j": 64.72,
+      "j_above_idle": 34.02
+    },
+    "chain_31": {
+      "j": 50.92,
+      "j_above_idle": 27.12
+    },
+    "chain_32": {
+      "j": 52.84,
+      "j_above_idle": 27.52
+    },
+    "chain_33": {
+      "j": 51.66,
+      "j_above_idle": 27.67
+    },
+    "chain_34": {
+      "j": 64.18,
+      "j_above_idle": 33.64
+    },
+    "chain_35": {
+      "j": 60.76,
+      "j_above_idle": 32.65
+    },
+    "chain_36": {
+      "j": 71.63,
+      "j_above_idle": 37.29
+    },
+    "chain_37": {
+      "j": 91.91,
+      "j_above_idle": 48.5
+    },
+    "chain_38": {
+      "j": 107.56,
+      "j_above_idle": 56.39
+    },
+    "chain_39": {
+      "j": 91.42,
+      "j_above_idle": 49.27
+    },
+    "chain_40": {
+      "j": 108.67,
+      "j_above_idle": 55.39
+    },
+    "chain_41": {
+      "j": 285.79,
+      "j_above_idle": 153.03
+    },
+    "chain_42": {
+      "j": 158.25,
+      "j_above_idle": 82.51
+    },
+    "chain_43": {
+      "j": 154.4,
+      "j_above_idle": 80.63
+    },
+    "chain_44": {
+      "j": 151.26,
+      "j_above_idle": 78.44
+    },
+    "chain_45": {
+      "j": 185.45,
+      "j_above_idle": 96.06
+    },
+    "chain_46": {
+      "j": 204.86,
+      "j_above_idle": 106.62
+    },
+    "chain_47": {
+      "j": 166.44,
+      "j_above_idle": 90.38
+    },
+    "chain_48": {
+      "j": 200.3,
+      "j_above_idle": 103.3
+    },
+    "chain_49": {
+      "j": 200.02,
+      "j_above_idle": 108.45
+    },
+    "chain_50": {
+      "j": 186.22,
+      "j_above_idle": 97.19
+    },
+    "chain_51": {
+      "j": 186.69,
+      "j_above_idle": 101.13
+    },
+    "fanout_00": {
+      "j": 58.85,
+      "j_above_idle": 31.99
+    },
+    "fanout_01": {
+      "j": 103.46,
+      "j_above_idle": 56.16
+    },
+    "fanout_02": {
+      "j": 83.79,
+      "j_above_idle": 45.57
+    },
+    "fanout_03": {
+      "j": 98.84,
+      "j_above_idle": 53.83
+    },
+    "fanout_04": {
+      "j": 75.1,
+      "j_above_idle": 40.84
+    },
+    "fanout_05": {
+      "j": 132.75,
+      "j_above_idle": 72.51
+    },
+    "fanout_06": {
+      "j": 110.43,
+      "j_above_idle": 60.15
+    },
+    "fanout_07": {
+      "j": 126.16,
+      "j_above_idle": 68.68
+    },
+    "fanout_08": {
+      "j": 95.14,
+      "j_above_idle": 52.37
+    },
+    "fanout_09": {
+      "j": 162.97,
+      "j_above_idle": 89.12
+    },
+    "fanout_10": {
+      "j": 130.92,
+      "j_above_idle": 71.52
+    },
+    "fanout_11": {
+      "j": 154.62,
+      "j_above_idle": 84.18
+    },
+    "fanout_12": {
+      "j": 108.54,
+      "j_above_idle": 59.16
+    },
+    "fanout_13": {
+      "j": 191.29,
+      "j_above_idle": 104.08
+    },
+    "fanout_14": {
+      "j": 159.43,
+      "j_above_idle": 86.78
+    },
+    "fanout_15": {
+      "j": 181.46,
+      "j_above_idle": 99.19
+    },
+    "fanout_16": {
+      "j": 126.01,
+      "j_above_idle": 68.96
+    },
+    "fanout_17": {
+      "j": 219.62,
+      "j_above_idle": 120.04
+    },
+    "fanout_18": {
+      "j": 178.16,
+      "j_above_idle": 97.14
+    },
+    "fanout_19": {
+      "j": 210.91,
+      "j_above_idle": 114.65
+    },
+    "fanout_20": {
+      "j": 167.82,
+      "j_above_idle": 91.49
+    },
+    "fanout_21": {
+      "j": 295.31,
+      "j_above_idle": 161.65
+    },
+    "fanout_22": {
+      "j": 245.56,
+      "j_above_idle": 133.8
+    },
+    "fanout_23": {
+      "j": 278.11,
+      "j_above_idle": 151.36
+    },
+    "fanout_24": {
+      "j": 247.16,
+      "j_above_idle": 134.33
+    },
+    "fanout_25": {
+      "j": 443.79,
+      "j_above_idle": 241.01
+    },
+    "fanout_26": {
+      "j": 366.0,
+      "j_above_idle": 198.98
+    },
+    "fanout_27": {
+      "j": 419.06,
+      "j_above_idle": 228.3
+    },
+    "fanout_28": {
+      "j": 399.49,
+      "j_above_idle": 217.6
+    },
+    "fanout_29": {
+      "j": 708.14,
+      "j_above_idle": 386.06
+    },
+    "fanout_30": {
+      "j": 591.34,
+      "j_above_idle": 321.99
+    },
+    "fanout_31": {
+      "j": 675.34,
+      "j_above_idle": 367.3
+    }
+  }
+}

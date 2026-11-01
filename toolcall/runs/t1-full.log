@@ -1,0 +1,913 @@
+=== Sun Nov  1 09:41:57 PM CST 2026 t1 json q8_0 e2b ===
+0 done, 84 to run
+[1/84] chain_00 ok 2.603s calls=2
+[2/84] chain_01 ok 2.502s calls=2
+[3/84] chain_02 ok 2.797s calls=2
+[4/84] chain_03 ok 2.511s calls=2
+[5/84] chain_04 ok 2.522s calls=2
+[6/84] chain_05 ok 2.723s calls=2
+[7/84] chain_06 ok 3.531s calls=2
+[8/84] chain_07 ok 2.602s calls=2
+[9/84] chain_08 ok 2.542s calls=2
+[10/84] chain_09 ok 3.501s calls=3
+[11/84] chain_10 ok 4.581s calls=3
+[12/84] chain_11 ok 3.512s calls=3
+[13/84] chain_12 ok 3.559s calls=3
+[14/84] chain_13 ok 3.663s calls=3
+[15/84] chain_14 ok 4.5s calls=3
+[16/84] chain_15 ok 3.273s calls=3
+[17/84] chain_16 ok 3.513s calls=3
+[18/84] chain_17 ok 3.651s calls=3
+[19/84] chain_18 ok 5.691s calls=4
+[20/84] chain_19 ok 4.31s calls=4
+[21/84] chain_20 ok 4.705s calls=4
+[22/84] chain_21 ok 4.58s calls=4
+[23/84] chain_22 ok 5.672s calls=4
+[24/84] chain_23 ok 4.455s calls=4
+[25/84] chain_24 ok 4.614s calls=4
+[26/84] chain_25 ok 4.659s calls=4
+[27/84] chain_26 ok 5.718s calls=4
+[28/84] chain_27 ok 5.339s calls=5
+[29/84] chain_28 ok 5.683s calls=5
+[30/84] chain_29 ok 5.345s calls=5
+[31/84] chain_30 ok 6.886s calls=5
+[32/84] chain_31 ok 5.335s calls=5
+[33/84] chain_32 ok 5.677s calls=5
+[34/84] chain_33 ok 5.38s calls=5
+[35/84] chain_34 ok 6.846s calls=5
+[36/84] chain_35 ok 6.303s calls=6
+[37/84] chain_36 ok 7.701s calls=7
+[38/84] chain_37 ok 9.734s calls=8
+[39/84] chain_38 ok 11.472s calls=9
+[40/84] chain_39 ok 9.45s calls=10
+[41/84] chain_40 ok 11.948s calls=11
+[42/84] chain_41 ok 29.768s calls=12
+[43/84] chain_42 ok 16.982s calls=13
+[44/84] chain_43 ok 16.54s calls=14
+[45/84] chain_44 ok 16.328s calls=15
+[46/84] chain_45 ok 20.044s calls=16
+[47/84] chain_46 ok 22.027s calls=17
+[48/84] chain_47 ok 17.054s calls=18
+[49/84] chain_48 ok 21.748s calls=19
+[50/84] chain_49 ok 20.531s calls=20
+[51/84] chain_50 ok 19.96s calls=15
+[52/84] chain_51 ok 19.185s calls=20
+[53/84] fanout_00 ok 6.022s calls=7
+[54/84] fanout_01 ok 10.605s calls=7
+[55/84] fanout_02 ok 8.57s calls=7
+[56/84] fanout_03 ok 10.091s calls=7
+[57/84] fanout_04 ok 7.682s calls=9
+[58/84] fanout_05 ok 13.505s calls=9
+[59/84] fanout_06 ok 11.272s calls=9
+[60/84] fanout_07 ok 12.887s calls=9
+[61/84] fanout_08 ok 9.589s calls=11
+[62/84] fanout_09 ok 16.557s calls=11
+[63/84] fanout_10 ok 13.318s calls=11
+[64/84] fanout_11 ok 15.794s calls=11
+[65/84] fanout_12 ok 11.071s calls=13
+[66/84] fanout_13 ok 19.552s calls=13
+[67/84] fanout_14 ok 16.287s calls=13
+[68/84] fanout_15 ok 18.444s calls=13
+[69/84] fanout_16 ok 12.791s calls=15
+[70/84] fanout_17 ok 22.327s calls=15
+[71/84] fanout_18 ok 18.168s calls=15
+[72/84] fanout_19 ok 21.58s calls=15
+[73/84] fanout_20 ok 17.114s calls=20
+[74/84] fanout_21 ok 29.968s calls=20
+[75/84] fanout_22 ok 25.058s calls=20
+[76/84] fanout_23 ok 28.419s calls=20
+[77/84] fanout_24 ok 25.297s calls=30
+[78/84] fanout_25 ok 45.465s calls=30
+[79/84] fanout_26 ok 37.448s calls=30
+[80/84] fanout_27 ok 42.772s calls=30
+[81/84] fanout_28 ok 40.784s calls=48
+[82/84] fanout_29 ok 72.213s calls=48
+[83/84] fanout_30 ok 60.392s calls=48
+[84/84] fanout_31 ok 69.067s calls=48
+all                      n= 84  acc=0.714  strict=0.714  enum=1.000  {'ok': 84}
+chain                    n= 52  acc=0.538  strict=0.538  enum=1.000  {'ok': 52}
+chain_len02-05           n= 35  acc=0.771  strict=0.771  enum=1.000  {'ok': 35}
+chain_len06-12           n=  7  acc=0.143  strict=0.143  enum=1.000  {'ok': 7}
+chain_len13-20           n= 10  acc=0.000  strict=0.000  enum=1.000  {'ok': 10}
+fanout                   n= 32  acc=1.000  strict=1.000  enum=1.000  {'ok': 32}
+fanout_n07               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n09               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n11               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n13               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n15               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n20               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n30               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n48               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+idle_w=4.46 idle_post_w=4.47 work_s=1195.9 work_mean_w=9.67 energy_wh=3.211 energy_j=11561.3 energy_above_idle_j=6227.5 tasks=84 j_per_task=137.63 j_per_task_above_idle=74.14 generated_tokens=24145 prompt_tokens=169457 j_per_generated_token=0.479 j_per_generated_token_above_idle=0.258 tokens_per_wh=7518.4 j_per_token_all=0.06 work_peak_w=10.306 generation_mean_w=9.7 model_calls=324 prefill_s=89.6 decode_s=1083.7 prefill_tok_s=403.81 decode_tok_s=22.28 decode_tok_s_per_w=2.297 peak_ram_mb=2534 mean_gpu_load_pct=91.8 peak_tj_c=60.656
+  chain                tasks=52 acc=0.5385 j_per_task=77.22 j_per_task_above_idle=40.7 s_per_task=8.19 passes_per_wh=25.1
+  chain_len02-05       tasks=35 acc=0.7714 j_per_task=40.11 j_per_task_above_idle=21.13 s_per_task=4.26 passes_per_wh=69.24
+  chain_len06-12       tasks=7 acc=0.1429 j_per_task=116.82 j_per_task_above_idle=61.79 s_per_task=12.34 passes_per_wh=4.4
+  chain_len13-20       tasks=10 acc=0.0 j_per_task=179.39 j_per_task_above_idle=94.47 s_per_task=19.04 passes_per_wh=0.0
+  fanout               tasks=32 acc=1.0 j_per_task=235.8 j_per_task_above_idle=128.46 s_per_task=24.07 passes_per_wh=15.27
+  fanout_n07           tasks=4 acc=1.0 j_per_task=86.24 j_per_task_above_idle=46.89 s_per_task=8.82 passes_per_wh=41.75
+  fanout_n09           tasks=4 acc=1.0 j_per_task=111.11 j_per_task_above_idle=60.55 s_per_task=11.34 passes_per_wh=32.4
+  fanout_n11           tasks=4 acc=1.0 j_per_task=135.91 j_per_task_above_idle=74.3 s_per_task=13.81 passes_per_wh=26.49
+  fanout_n13           tasks=4 acc=1.0 j_per_task=160.18 j_per_task_above_idle=87.3 s_per_task=16.34 passes_per_wh=22.47
+  fanout_n15           tasks=4 acc=1.0 j_per_task=183.67 j_per_task_above_idle=100.2 s_per_task=18.72 passes_per_wh=19.6
+  fanout_n20           tasks=4 acc=1.0 j_per_task=246.7 j_per_task_above_idle=134.57 s_per_task=25.14 passes_per_wh=14.59
+  fanout_n30           tasks=4 acc=1.0 j_per_task=369.0 j_per_task_above_idle=200.66 s_per_task=37.75 passes_per_wh=9.76
+  fanout_n48           tasks=4 acc=1.0 j_per_task=593.58 j_per_task_above_idle=323.24 s_per_task=60.61 passes_per_wh=6.06
+=== Sun Nov  1 10:03:09 PM CST 2026 t1 code-lenient q8_0 e2b ===
+0 done, 84 to run
+[1/84] chain_00 ok 9.692s calls=2 code=ok
+[2/84] chain_01 ok 10.013s calls=2 code=ok
+[3/84] chain_02 ok 8.413s calls=2 code=ok
+[4/84] chain_03 ok 11.021s calls=2 code=ok
+[5/84] chain_04 ok 10.015s calls=2 code=ok
+[6/84] chain_05 ok 15.261s calls=2 code=ok
+[7/84] chain_06 ok 7.103s calls=2 code=ok
+[8/84] chain_07 ok 8.778s calls=2 code=ok
+[9/84] chain_08 ok 10.943s calls=2 code=ok
+[10/84] chain_09 ok 9.808s calls=3 code=ok
+[11/84] chain_10 ok 10.112s calls=3 code=ok
+[12/84] chain_11 ok 9.283s calls=3 code=ok
+[13/84] chain_12 ok 13.445s calls=3 code=ok
+[14/84] chain_13 ok 15.556s calls=3 code=ok
+[15/84] chain_14 ok 9.477s calls=3 code=ok
+[16/84] chain_15 ok 14.759s calls=3 code=ok
+[17/84] chain_16 ok 15.063s calls=3 code=ok
+[18/84] chain_17 ok 16.84s calls=3 code=ok
+[19/84] chain_18 ok 7.171s calls=4 code=ok
+[20/84] chain_19 ok 16.009s calls=4 code=ok
+[21/84] chain_20 ok 14.248s calls=4 code=ok
+[22/84] chain_21 ok 18.859s calls=4 code=ok
+[23/84] chain_22 ok 12.417s calls=4 code=ok
+[24/84] chain_23 ok 16.113s calls=4 code=ok
+[25/84] chain_24 ok 12.621s calls=4 code=ok
+[26/84] chain_25 ok 14.432s calls=4 code=ok
+[27/84] chain_26 ok 12.629s calls=4 code=ok
+[28/84] chain_27 ok 19.109s calls=5 code=ok
+[29/84] chain_28 ok 13.787s calls=5 code=ok
+[30/84] chain_29 ok 13.073s calls=5 code=ok
+[31/84] chain_30 ok 14.974s calls=5 code=ok
+[32/84] chain_31 ok 19.055s calls=5 code=ok
+[33/84] chain_32 ok 15.2s calls=5 code=ok
+[34/84] chain_33 ok 16.075s calls=5 code=ok
+[35/84] chain_34 ok 14.702s calls=5 code=ok
+[36/84] chain_35 ok 12.829s calls=6 code=ok
+[37/84] chain_36 ok 14.724s calls=7 code=ok
+[38/84] chain_37 ok 14.658s calls=8 code=ok
+[39/84] chain_38 ok 22.885s calls=9 code=ok
+[40/84] chain_39 ok 30.155s calls=10 code=ok
+[41/84] chain_40 ok 16.813s calls=11 code=ok
+[42/84] chain_41 ok 21.981s calls=12 code=ok
+[43/84] chain_42 ok 23.571s calls=13 code=ok
+[44/84] chain_43 ok 17.95s calls=14 code=ok
+[45/84] chain_44 ok 105.258s calls=15 code=ok
+[46/84] chain_45 ok 21.096s calls=16 code=ok
+[47/84] chain_46 ok 42.267s calls=17 code=ok
+[48/84] chain_47 ok 20.495s calls=18 code=ok
+[49/84] chain_48 ok 19.808s calls=19 code=ok
+[50/84] chain_49 ok 24.77s calls=20 code=ok
+[51/84] chain_50 ok 42.2s calls=15 code=ok
+[52/84] chain_51 ok 22.007s calls=20 code=ok
+[53/84] fanout_00 ok 5.149s calls=7 code=ok
+[54/84] fanout_01 ok 6.957s calls=7 code=ok
+[55/84] fanout_02 ok 5.847s calls=7 code=ok
+[56/84] fanout_03 ok 6.447s calls=7 code=ok
+[57/84] fanout_04 ok 5.668s calls=9 code=ok
+[58/84] fanout_05 ok 7.7s calls=9 code=ok
+[59/84] fanout_06 ok 6.598s calls=9 code=ok
+[60/84] fanout_07 ok 6.943s calls=9 code=ok
+[61/84] fanout_08 ok 7.362s calls=11 code=ok
+[62/84] fanout_09 ok 8.567s calls=11 code=ok
+[63/84] fanout_10 ok 8.397s calls=11 code=ok
+[64/84] fanout_11 ok 7.35s calls=11 code=ok
+[65/84] fanout_12 ok 7.022s calls=13 code=ok
+[66/84] fanout_13 ok 9.143s calls=13 code=ok
+[67/84] fanout_14 ok 9.338s calls=13 code=ok
+[68/84] fanout_15 ok 7.852s calls=13 code=ok
+[69/84] fanout_16 ok 7.845s calls=15 code=ok
+[70/84] fanout_17 ok 9.946s calls=15 code=ok
+[71/84] fanout_18 ok 10.27s calls=15 code=ok
+[72/84] fanout_19 ok 8.648s calls=15 code=ok
+[73/84] fanout_20 ok 9.555s calls=20 code=ok
+[74/84] fanout_21 ok 12.049s calls=20 code=ok
+[75/84] fanout_22 ok 11.171s calls=20 code=ok
+[76/84] fanout_23 ok 9.791s calls=20 code=ok
+[77/84] fanout_24 ok 12.838s calls=30 code=ok
+[78/84] fanout_25 ok 16.22s calls=30 code=ok
+[79/84] fanout_26 ok 15.083s calls=30 code=ok
+[80/84] fanout_27 ok 12.388s calls=30 code=ok
+[81/84] fanout_28 ok 15.386s calls=48 code=ok
+[82/84] fanout_29 ok 18.674s calls=48 code=ok
+[83/84] fanout_30 ok 24.669s calls=48 code=ok
+[84/84] fanout_31 ok 17.845s calls=48 code=ok
+all                      n= 84  acc=0.607  strict=0.607  enum=1.000  {'ok': 84}
+chain                    n= 52  acc=0.365  strict=0.365  enum=1.000  {'ok': 52}
+chain_len02-05           n= 35  acc=0.314  strict=0.314  enum=1.000  {'ok': 35}
+chain_len06-12           n=  7  acc=0.429  strict=0.429  enum=1.000  {'ok': 7}
+chain_len13-20           n= 10  acc=0.500  strict=0.500  enum=1.000  {'ok': 10}
+fanout                   n= 32  acc=1.000  strict=1.000  enum=1.000  {'ok': 32}
+fanout_n07               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n09               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n11               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n13               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n15               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n20               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n30               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n48               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+idle_w=4.45 idle_post_w=4.47 work_s=1258.3 work_mean_w=9.73 energy_wh=3.402 energy_j=12247.1 energy_above_idle_j=6647.8 tasks=84 j_per_task=145.8 j_per_task_above_idle=79.14 generated_tokens=26437 prompt_tokens=29985 j_per_generated_token=0.463 j_per_generated_token_above_idle=0.251 tokens_per_wh=7771.1 j_per_token_all=0.217 work_peak_w=9.99 generation_mean_w=9.76 model_calls=84 prefill_s=54.6 decode_s=1195.6 prefill_tok_s=549.15 decode_tok_s=22.11 decode_tok_s_per_w=2.266 peak_ram_mb=2461 mean_gpu_load_pct=93.5 peak_tj_c=60.718
+  chain                tasks=52 acc=0.3654 j_per_task=174.14 j_per_task_above_idle=94.59 s_per_task=17.88 passes_per_wh=7.55
+  chain_len02-05       tasks=35 acc=0.3143 j_per_task=126.48 j_per_task_above_idle=68.5 s_per_task=13.03 passes_per_wh=8.95
+  chain_len06-12       tasks=7 acc=0.4286 j_per_task=186.83 j_per_task_above_idle=101.62 s_per_task=19.15 passes_per_wh=8.26
+  chain_len13-20       tasks=10 acc=0.5 j_per_task=332.06 j_per_task_above_idle=181.02 s_per_task=33.94 passes_per_wh=5.42
+  fanout               tasks=32 acc=1.0 j_per_task=99.74 j_per_task_above_idle=54.02 s_per_task=10.27 passes_per_wh=36.09
+  fanout_n07           tasks=4 acc=1.0 j_per_task=58.9 j_per_task_above_idle=31.76 s_per_task=6.1 passes_per_wh=61.12
+  fanout_n09           tasks=4 acc=1.0 j_per_task=64.88 j_per_task_above_idle=34.94 s_per_task=6.73 passes_per_wh=55.49
+  fanout_n11           tasks=4 acc=1.0 j_per_task=77.01 j_per_task_above_idle=41.77 s_per_task=7.92 passes_per_wh=46.75
+  fanout_n13           tasks=4 acc=1.0 j_per_task=80.96 j_per_task_above_idle=43.85 s_per_task=8.34 passes_per_wh=44.47
+  fanout_n15           tasks=4 acc=1.0 j_per_task=89.22 j_per_task_above_idle=48.39 s_per_task=9.18 passes_per_wh=40.35
+  fanout_n20           tasks=4 acc=1.0 j_per_task=103.22 j_per_task_above_idle=55.86 s_per_task=10.64 passes_per_wh=34.88
+  fanout_n30           tasks=4 acc=1.0 j_per_task=137.73 j_per_task_above_idle=74.84 s_per_task=14.13 passes_per_wh=26.14
+  fanout_n48           tasks=4 acc=1.0 j_per_task=185.97 j_per_task_above_idle=100.78 s_per_task=19.14 passes_per_wh=19.36
+=== Sun Nov  1 10:25:29 PM CST 2026 t1 json turbo3 e2b ===
+0 done, 84 to run
+[1/84] chain_00 ok 2.687s calls=2
+[2/84] chain_01 ok 2.579s calls=2
+[3/84] chain_02 ok 2.864s calls=2
+[4/84] chain_03 ok 2.596s calls=2
+[5/84] chain_04 ok 2.616s calls=2
+[6/84] chain_05 ok 2.829s calls=2
+[7/84] chain_06 ok 3.642s calls=2
+[8/84] chain_07 ok 2.657s calls=2
+[9/84] chain_08 ok 2.61s calls=2
+[10/84] chain_09 ok 3.669s calls=3
+[11/84] chain_10 ok 4.735s calls=3
+[12/84] chain_11 ok 3.633s calls=3
+[13/84] chain_12 ok 3.697s calls=3
+[14/84] chain_13 ok 3.767s calls=3
+[15/84] chain_14 ok 4.221s calls=3
+[16/84] chain_15 ok 3.383s calls=3
+[17/84] chain_16 ok 3.634s calls=3
+[18/84] chain_17 ok 3.771s calls=3
+[19/84] chain_18 ok 5.85s calls=4
+[20/84] chain_19 ok 4.468s calls=4
+[21/84] chain_20 ok 4.861s calls=4
+[22/84] chain_21 ok 4.76s calls=4
+[23/84] chain_22 ok 5.342s calls=4
+[24/84] chain_23 ok 4.618s calls=4
+[25/84] chain_24 ok 4.773s calls=4
+[26/84] chain_25 ok 4.823s calls=4
+[27/84] chain_26 ok 5.913s calls=4
+[28/84] chain_27 ok 5.546s calls=5
+[29/84] chain_28 ok 5.872s calls=5
+[30/84] chain_29 ok 5.56s calls=5
+[31/84] chain_30 ok 7.102s calls=5
+[32/84] chain_31 ok 5.439s calls=5
+[33/84] chain_32 ok 5.921s calls=5
+[34/84] chain_33 ok 5.612s calls=5
+[35/84] chain_34 ok 7.108s calls=5
+[36/84] chain_35 ok 6.54s calls=6
+[37/84] chain_36 ok 7.946s calls=7
+[38/84] chain_37 ok 10.152s calls=8
+[39/84] chain_38 ok 11.988s calls=9
+[40/84] chain_39 ok 9.807s calls=10
+[41/84] chain_40 ok 12.477s calls=11
+[42/84] chain_41 ok 31.796s calls=12
+[43/84] chain_42 ok 17.699s calls=13
+[44/84] chain_43 ok 17.184s calls=14
+[45/84] chain_44 ok 16.937s calls=15
+[46/84] chain_45 ok 20.894s calls=16
+[47/84] chain_46 ok 22.968s calls=17
+[48/84] chain_47 ok 17.82s calls=18
+[49/84] chain_48 ok 23.081s calls=19
+[50/84] chain_49 ok 21.396s calls=20
+[51/84] chain_50 ok 20.841s calls=15
+[52/84] chain_51 ok 25.317s calls=20
+[53/84] fanout_00 ok 6.274s calls=7
+[54/84] fanout_01 ok 11.11s calls=7
+[55/84] fanout_02 ok 8.875s calls=7
+[56/84] fanout_03 ok 10.511s calls=7
+[57/84] fanout_04 ok 7.962s calls=9
+[58/84] fanout_05 ok 14.019s calls=9
+[59/84] fanout_06 ok 11.736s calls=9
+[60/84] fanout_07 ok 13.367s calls=9
+[61/84] fanout_08 ok 9.927s calls=11
+[62/84] fanout_09 ok 17.223s calls=11
+[63/84] fanout_10 ok 13.824s calls=11
+[64/84] fanout_11 ok 16.3s calls=11
+[65/84] fanout_12 ok 11.396s calls=13
+[66/84] fanout_13 ok 20.156s calls=13
+[67/84] fanout_14 ok 16.817s calls=13
+[68/84] fanout_15 ok 19.216s calls=13
+[69/84] fanout_16 ok 13.285s calls=15
+[70/84] fanout_17 ok 23.322s calls=15
+[71/84] fanout_18 ok 18.708s calls=15
+[72/84] fanout_19 ok 22.309s calls=15
+[73/84] fanout_20 ok 17.641s calls=20
+[74/84] fanout_21 ok 31.318s calls=20
+[75/84] fanout_22 ok 26.069s calls=20
+[76/84] fanout_23 ok 29.581s calls=20
+[77/84] fanout_24 ok 26.282s calls=30
+[78/84] fanout_25 ok 47.696s calls=30
+[79/84] fanout_26 ok 39.625s calls=30
+[80/84] fanout_27 ok 45.503s calls=30
+[81/84] fanout_28 ok 43.386s calls=48
+[82/84] fanout_29 ok 76.775s calls=48
+[83/84] fanout_30 ok 64.169s calls=48
+[84/84] fanout_31 ok 73.399s calls=48
+all                      n= 84  acc=0.702  strict=0.702  enum=1.000  {'ok': 84}
+chain                    n= 52  acc=0.519  strict=0.519  enum=1.000  {'ok': 52}
+chain_len02-05           n= 35  acc=0.714  strict=0.714  enum=1.000  {'ok': 35}
+chain_len06-12           n=  7  acc=0.143  strict=0.143  enum=1.000  {'ok': 7}
+chain_len13-20           n= 10  acc=0.100  strict=0.100  enum=1.000  {'ok': 10}
+fanout                   n= 32  acc=1.000  strict=1.000  enum=1.000  {'ok': 32}
+fanout_n07               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n09               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n11               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n13               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n15               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n20               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n30               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n48               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+idle_w=4.48 idle_post_w=4.46 work_s=1255.8 work_mean_w=9.5 energy_wh=3.316 energy_j=11936.2 energy_above_idle_j=6310.1 tasks=84 j_per_task=142.1 j_per_task_above_idle=75.12 generated_tokens=24160 prompt_tokens=185056 j_per_generated_token=0.494 j_per_generated_token_above_idle=0.261 tokens_per_wh=7286.8 j_per_token_all=0.057 work_peak_w=9.95 generation_mean_w=9.54 model_calls=343 prefill_s=93.3 decode_s=1137.6 prefill_tok_s=388.95 decode_tok_s=21.24 decode_tok_s_per_w=2.226 peak_ram_mb=2634 mean_gpu_load_pct=92.0 peak_tj_c=60.406
+  chain                tasks=52 acc=0.5192 j_per_task=80.24 j_per_task_above_idle=41.64 s_per_task=8.62 passes_per_wh=23.29
+  chain_len02-05       tasks=35 acc=0.7143 j_per_task=40.89 j_per_task_above_idle=21.29 s_per_task=4.38 passes_per_wh=62.88
+  chain_len06-12       tasks=7 acc=0.1429 j_per_task=121.95 j_per_task_above_idle=63.89 s_per_task=12.96 passes_per_wh=4.22
+  chain_len13-20       tasks=10 acc=0.1 j_per_task=188.77 j_per_task_above_idle=97.32 s_per_task=20.41 passes_per_wh=1.91
+  fanout               tasks=32 acc=1.0 j_per_task=242.6 j_per_task_above_idle=129.51 s_per_task=25.24 passes_per_wh=14.84
+  fanout_n07           tasks=4 acc=1.0 j_per_task=87.95 j_per_task_above_idle=46.77 s_per_task=9.19 passes_per_wh=40.93
+  fanout_n09           tasks=4 acc=1.0 j_per_task=113.24 j_per_task_above_idle=60.51 s_per_task=11.77 passes_per_wh=31.79
+  fanout_n11           tasks=4 acc=1.0 j_per_task=137.69 j_per_task_above_idle=73.54 s_per_task=14.32 passes_per_wh=26.15
+  fanout_n13           tasks=4 acc=1.0 j_per_task=162.5 j_per_task_above_idle=86.8 s_per_task=16.9 passes_per_wh=22.15
+  fanout_n15           tasks=4 acc=1.0 j_per_task=186.88 j_per_task_above_idle=99.94 s_per_task=19.41 passes_per_wh=19.26
+  fanout_n20           tasks=4 acc=1.0 j_per_task=251.72 j_per_task_above_idle=134.55 s_per_task=26.15 passes_per_wh=14.3
+  fanout_n30           tasks=4 acc=1.0 j_per_task=382.41 j_per_task_above_idle=204.21 s_per_task=39.78 passes_per_wh=9.41
+  fanout_n48           tasks=4 acc=1.0 j_per_task=618.45 j_per_task_above_idle=329.79 s_per_task=64.43 passes_per_wh=5.82
+=== Sun Nov  1 10:47:39 PM CST 2026 t1 code-lenient turbo3 e2b ===
+0 done, 84 to run
+[1/84] chain_00 ok 10.295s calls=2 code=ok
+[2/84] chain_01 ok 13.158s calls=2 code=ok
+[3/84] chain_02 ok 9.325s calls=2 code=ok
+[4/84] chain_03 ok 11.528s calls=2 code=ok
+[5/84] chain_04 ok 9.617s calls=2 code=ok
+[6/84] chain_05 ok 12.24s calls=2 code=ok
+[7/84] chain_06 ok 9.342s calls=2 code=ok
+[8/84] chain_07 ok 9.36s calls=2 code=ok
+[9/84] chain_08 ok 9.994s calls=2 code=ok
+[10/84] chain_09 ok 16.43s calls=3 code=ok
+[11/84] chain_10 ok 12.868s calls=3 code=ok
+[12/84] chain_11 ok 14.214s calls=3 code=ok
+[13/84] chain_12 ok 14.094s calls=3 code=ok
+[14/84] chain_13 ok 18.276s calls=3 code=ok
+[15/84] chain_14 ok 9.999s calls=3 code=ok
+[16/84] chain_15 ok 14.305s calls=3 code=ok
+[17/84] chain_16 ok 14.268s calls=3 code=ok
+[18/84] chain_17 ok 18.293s calls=3 code=ok
+[19/84] chain_18 ok 13.046s calls=4 code=ok
+[20/84] chain_19 ok 17.402s calls=4 code=ok
+[21/84] chain_20 ok 18.225s calls=4 code=ok
+[22/84] chain_21 ok 21.332s calls=4 code=ok
+[23/84] chain_22 ok 16.177s calls=4 code=ok
+[24/84] chain_23 ok 20.676s calls=4 code=ok
+[25/84] chain_24 ok 17.489s calls=4 code=ok
+[26/84] chain_25 ok 17.929s calls=4 code=ok
+[27/84] chain_26 ok 15.657s calls=4 code=ok
+[28/84] chain_27 ok 21.14s calls=5 code=ok
+[29/84] chain_28 ok 16.405s calls=5 code=ok
+[30/84] chain_29 ok 18.478s calls=5 code=ok
+[31/84] chain_30 ok 15.605s calls=5 code=ok
+[32/84] chain_31 ok 20.053s calls=5 code=ok
+[33/84] chain_32 ok 16.422s calls=5 code=ok
+[34/84] chain_33 ok 19.713s calls=5 code=ok
+[35/84] chain_34 ok 9.189s calls=5 code=ok
+[36/84] chain_35 ok 17.769s calls=6 code=ok
+[37/84] chain_36 ok 17.644s calls=7 code=ok
+[38/84] chain_37 ok 19.978s calls=8 code=ok
+[39/84] chain_38 ok 16.927s calls=9 code=ok
+[40/84] chain_39 ok 58.163s calls=10 code=ok
+[41/84] chain_40 ok 14.835s calls=11 code=ok
+[42/84] chain_41 ok 16.984s calls=12 code=ok
+[43/84] chain_42 ok 20.008s calls=13 code=ok
+[44/84] chain_43 ok 19.247s calls=14 code=ok
+[45/84] chain_44 ok 21.179s calls=21 code=ok
+[46/84] chain_45 ok 20.24s calls=16 code=ok
+[47/84] chain_46 ok 30.8s calls=17 code=ok
+[48/84] chain_47 ok 21.604s calls=18 code=ok
+[49/84] chain_48 ok 24.661s calls=19 code=ok
+[50/84] chain_49 ok 23.781s calls=20 code=ok
+[51/84] chain_50 ok 26.473s calls=15 code=ok
+[52/84] chain_51 ok 49.579s calls=20 code=ok
+[53/84] fanout_00 ok 4.585s calls=7 code=ok
+[54/84] fanout_01 ok 6.894s calls=7 code=ok
+[55/84] fanout_02 ok 6.2s calls=7 code=ok
+[56/84] fanout_03 ok 6.668s calls=7 code=ok
+[57/84] fanout_04 ok 5.135s calls=9 code=ok
+[58/84] fanout_05 ok 8.048s calls=9 code=ok
+[59/84] fanout_06 ok 9.348s calls=9 code=ok
+[60/84] fanout_07 ok 7.22s calls=9 code=ok
+[61/84] fanout_08 ok 7.083s calls=11 code=ok
+[62/84] fanout_09 ok 9.891s calls=11 code=ok
+[63/84] fanout_10 ok 7.618s calls=11 code=ok
+[64/84] fanout_11 ok 7.859s calls=11 code=ok
+[65/84] fanout_12 ok 7.437s calls=13 code=ok
+[66/84] fanout_13 ok 9.648s calls=13 code=ok
+[67/84] fanout_14 ok 9.533s calls=13 code=ok
+[68/84] fanout_15 ok 8.264s calls=13 code=ok
+[69/84] fanout_16 ok 10.66s calls=15 code=ok
+[70/84] fanout_17 ok 10.344s calls=15 code=ok
+[71/84] fanout_18 ok 11.137s calls=15 code=ok
+[72/84] fanout_19 ok 8.969s calls=15 code=ok
+[73/84] fanout_20 ok 9.955s calls=20 code=ok
+[74/84] fanout_21 ok 12.583s calls=20 code=ok
+[75/84] fanout_22 ok 14.126s calls=20 code=ok
+[76/84] fanout_23 ok 10.225s calls=20 code=ok
+[77/84] fanout_24 ok 13.358s calls=30 code=ok
+[78/84] fanout_25 ok 16.987s calls=30 code=ok
+[79/84] fanout_26 ok 16.468s calls=30 code=ok
+[80/84] fanout_27 ok 13.31s calls=30 code=ok
+[81/84] fanout_28 ok 15.719s calls=48 code=ok
+[82/84] fanout_29 ok 19.676s calls=48 code=ok
+[83/84] fanout_30 ok 24.096s calls=48 code=ok
+[84/84] fanout_31 ok 18.799s calls=48 code=ok
+all                      n= 84  acc=0.667  strict=0.667  enum=1.000  {'ok': 84}
+chain                    n= 52  acc=0.462  strict=0.462  enum=1.000  {'ok': 52}
+chain_len02-05           n= 35  acc=0.429  strict=0.429  enum=1.000  {'ok': 35}
+chain_len06-12           n=  7  acc=0.571  strict=0.571  enum=1.000  {'ok': 7}
+chain_len13-20           n= 10  acc=0.500  strict=0.500  enum=1.000  {'ok': 10}
+fanout                   n= 32  acc=1.000  strict=1.000  enum=1.000  {'ok': 32}
+fanout_n07               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n09               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n11               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n13               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n15               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n20               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n30               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n48               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+idle_w=4.47 idle_post_w=4.49 work_s=1290.3 work_mean_w=9.61 energy_wh=3.444 energy_j=12400.0 energy_above_idle_j=6632.3 tasks=84 j_per_task=147.62 j_per_task_above_idle=78.96 generated_tokens=25859 prompt_tokens=29985 j_per_generated_token=0.48 j_per_generated_token_above_idle=0.256 tokens_per_wh=7507.5 j_per_token_all=0.222 work_peak_w=10.108 generation_mean_w=9.64 model_calls=84 prefill_s=55.4 decode_s=1223.5 prefill_tok_s=541.49 decode_tok_s=21.14 decode_tok_s_per_w=2.192 peak_ram_mb=2539 mean_gpu_load_pct=93.5 peak_tj_c=60.812
+  chain                tasks=52 acc=0.4615 j_per_task=174.15 j_per_task_above_idle=93.14 s_per_task=18.12 passes_per_wh=9.54
+  chain_len02-05       tasks=35 acc=0.4286 j_per_task=143.3 j_per_task_above_idle=76.56 s_per_task=14.93 passes_per_wh=10.77
+  chain_len06-12       tasks=7 acc=0.5714 j_per_task=223.42 j_per_task_above_idle=119.78 s_per_task=23.19 passes_per_wh=9.21
+  chain_len13-20       tasks=10 acc=0.5 j_per_task=247.67 j_per_task_above_idle=132.53 s_per_task=25.76 passes_per_wh=7.27
+  fanout               tasks=32 acc=1.0 j_per_task=104.49 j_per_task_above_idle=55.9 s_per_task=10.87 passes_per_wh=34.45
+  fanout_n07           tasks=4 acc=1.0 j_per_task=58.33 j_per_task_above_idle=31.12 s_per_task=6.09 passes_per_wh=61.72
+  fanout_n09           tasks=4 acc=1.0 j_per_task=71.16 j_per_task_above_idle=37.91 s_per_task=7.44 passes_per_wh=50.59
+  fanout_n11           tasks=4 acc=1.0 j_per_task=77.49 j_per_task_above_idle=41.23 s_per_task=8.11 passes_per_wh=46.46
+  fanout_n13           tasks=4 acc=1.0 j_per_task=83.92 j_per_task_above_idle=44.95 s_per_task=8.72 passes_per_wh=42.9
+  fanout_n15           tasks=4 acc=1.0 j_per_task=99.2 j_per_task_above_idle=53.26 s_per_task=10.28 passes_per_wh=36.29
+  fanout_n20           tasks=4 acc=1.0 j_per_task=112.75 j_per_task_above_idle=60.34 s_per_task=11.72 passes_per_wh=31.93
+  fanout_n30           tasks=4 acc=1.0 j_per_task=144.81 j_per_task_above_idle=77.61 s_per_task=15.03 passes_per_wh=24.86
+  fanout_n48           tasks=4 acc=1.0 j_per_task=188.27 j_per_task_above_idle=100.77 s_per_task=19.57 passes_per_wh=19.12
+=== Sun Nov  1 11:10:30 PM CST 2026 t1 json q8_0 e4b ===
+0 done, 84 to run
+[1/84] chain_00 ok 4.613s calls=2
+[2/84] chain_01 ok 6.27s calls=2
+[3/84] chain_02 ok 11.415s calls=2
+[4/84] chain_03 ok 5.382s calls=2
+[5/84] chain_04 ok 5.917s calls=2
+[6/84] chain_05 ok 4.914s calls=2
+[7/84] chain_06 ok 5.364s calls=2
+[8/84] chain_07 ok 4.647s calls=2
+[9/84] chain_08 ok 4.571s calls=2
+[10/84] chain_09 ok 6.425s calls=3
+[11/84] chain_10 ok 8.297s calls=3
+[12/84] chain_11 ok 6.391s calls=3
+[13/84] chain_12 ok 7.858s calls=3
+[14/84] chain_13 ok 7.203s calls=3
+[15/84] chain_14 ok 8.174s calls=3
+[16/84] chain_15 ok 5.978s calls=3
+[17/84] chain_16 ok 6.299s calls=3
+[18/84] chain_17 ok 6.677s calls=3
+[19/84] chain_18 ok 10.202s calls=4
+[20/84] chain_19 ok 7.9s calls=4
+[21/84] chain_20 ok 8.471s calls=4
+[22/84] chain_21 ok 9.205s calls=4
+[23/84] chain_22 ok 10.223s calls=4
+[24/84] chain_23 ok 8.28s calls=4
+[25/84] chain_24 ok 8.35s calls=4
+[26/84] chain_25 ok 9.327s calls=4
+[27/84] chain_26 ok 10.362s calls=4
+[28/84] chain_27 ok 9.808s calls=5
+[29/84] chain_28 ok 10.262s calls=5
+[30/84] chain_29 ok 9.868s calls=5
+[31/84] chain_30 ok 12.459s calls=5
+[32/84] chain_31 ok 9.83s calls=5
+[33/84] chain_32 ok 10.181s calls=5
+[34/84] chain_33 ok 11.076s calls=5
+[35/84] chain_34 ok 11.597s calls=5
+[36/84] chain_35 ok 11.648s calls=6
+[37/84] chain_36 ok 13.847s calls=7
+[38/84] chain_37 ok 15.657s calls=8
+[39/84] chain_38 ok 20.55s calls=9
+[40/84] chain_39 ok 17.474s calls=10
+[41/84] chain_40 ok 21.332s calls=11
+[42/84] chain_41 ok 22.319s calls=12
+[43/84] chain_42 ok 30.263s calls=13
+[44/84] chain_43 ok 24.978s calls=14
+[45/84] chain_44 ok 28.832s calls=15
+[46/84] chain_45 ok 30.234s calls=16
+[47/84] chain_46 ok 38.982s calls=17
+[48/84] chain_47 ok 31.587s calls=18
+[49/84] chain_48 ok 37.194s calls=19
+[50/84] chain_49 ok 37.892s calls=20
+[51/84] chain_50 ok 35.518s calls=15
+[52/84] chain_51 ok 35.472s calls=20
+[53/84] fanout_00 ok 14.587s calls=7
+[54/84] fanout_01 ok 19.719s calls=7
+[55/84] fanout_02 ok 15.93s calls=7
+[56/84] fanout_03 ok 18.724s calls=7
+[57/84] fanout_04 ok 14.366s calls=9
+[58/84] fanout_05 ok 25.157s calls=9
+[59/84] fanout_06 ok 21.113s calls=9
+[60/84] fanout_07 ok 24.0s calls=9
+[61/84] fanout_08 ok 17.793s calls=11
+[62/84] fanout_09 ok 30.872s calls=11
+[63/84] fanout_10 ok 24.633s calls=11
+[64/84] fanout_11 ok 29.137s calls=11
+[65/84] fanout_12 ok 20.476s calls=13
+[66/84] fanout_13 ok 36.087s calls=13
+[67/84] fanout_14 ok 30.157s calls=13
+[68/84] fanout_15 ok 34.404s calls=13
+[69/84] fanout_16 ok 23.848s calls=15
+[70/84] fanout_17 ok 41.678s calls=15
+[71/84] fanout_18 ok 34.597s calls=15
+[72/84] fanout_19 ok 39.79s calls=15
+[73/84] fanout_20 ok 31.608s calls=20
+[74/84] fanout_21 ok 55.706s calls=20
+[75/84] fanout_22 ok 46.604s calls=20
+[76/84] fanout_23 ok 52.514s calls=20
+[77/84] fanout_24 ok 46.877s calls=30
+[78/84] fanout_25 ok 84.189s calls=30
+[79/84] fanout_26 ok 69.729s calls=30
+[80/84] fanout_27 ok 79.624s calls=30
+[81/84] fanout_28 ok 75.917s calls=48
+[82/84] fanout_29 ok 134.069s calls=48
+[83/84] fanout_30 ok 112.117s calls=48
+[84/84] fanout_31 ok 128.172s calls=48
+all                      n= 84  acc=0.941  strict=0.941  enum=1.000  {'ok': 84}
+chain                    n= 52  acc=0.923  strict=0.923  enum=1.000  {'ok': 52}
+chain_len02-05           n= 35  acc=1.000  strict=1.000  enum=1.000  {'ok': 35}
+chain_len06-12           n=  7  acc=0.857  strict=0.857  enum=1.000  {'ok': 7}
+chain_len13-20           n= 10  acc=0.700  strict=0.700  enum=1.000  {'ok': 10}
+fanout                   n= 32  acc=0.969  strict=0.969  enum=1.000  {'ok': 32}
+fanout_n07               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n09               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n11               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n13               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n15               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n20               n=  4  acc=0.750  strict=0.750  enum=1.000  {'ok': 4}
+fanout_n30               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n48               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+idle_w=4.52 idle_post_w=4.54 work_s=2171.8 work_mean_w=10.42 energy_wh=6.288 energy_j=22637.3 energy_above_idle_j=12820.7 tasks=84 j_per_task=269.49 j_per_task_above_idle=152.63 generated_tokens=23792 prompt_tokens=144426 j_per_generated_token=0.951 j_per_generated_token_above_idle=0.539 tokens_per_wh=3783.6 j_per_token_all=0.135 work_peak_w=11.038 generation_mean_w=10.49 model_calls=290 prefill_s=164.0 decode_s=1988.4 prefill_tok_s=219.4 decode_tok_s=11.97 decode_tok_s_per_w=1.141 peak_ram_mb=3863 mean_gpu_load_pct=94.5 peak_tj_c=61.937
+  chain                tasks=52 acc=0.9231 j_per_task=144.68 j_per_task_above_idle=80.56 s_per_task=14.18 passes_per_wh=22.97
+  chain_len02-05       tasks=35 acc=1.0 j_per_task=81.25 j_per_task_above_idle=44.6 s_per_task=8.11 passes_per_wh=44.31
+  chain_len06-12       tasks=7 acc=0.8571 j_per_task=180.63 j_per_task_above_idle=101.32 s_per_task=17.55 passes_per_wh=17.08
+  chain_len13-20       tasks=10 acc=0.7 j_per_task=341.51 j_per_task_above_idle=191.92 s_per_task=33.1 passes_per_wh=7.38
+  fanout               tasks=32 acc=0.9688 j_per_task=472.31 j_per_task_above_idle=269.73 s_per_task=44.82 passes_per_wh=7.38
+  fanout_n07           tasks=4 acc=1.0 j_per_task=176.29 j_per_task_above_idle=98.37 s_per_task=17.24 passes_per_wh=20.42
+  fanout_n09           tasks=4 acc=1.0 j_per_task=222.49 j_per_task_above_idle=126.85 s_per_task=21.16 passes_per_wh=16.18
+  fanout_n11           tasks=4 acc=1.0 j_per_task=269.79 j_per_task_above_idle=154.04 s_per_task=25.61 passes_per_wh=13.34
+  fanout_n13           tasks=4 acc=1.0 j_per_task=318.78 j_per_task_above_idle=181.91 s_per_task=30.28 passes_per_wh=11.29
+  fanout_n15           tasks=4 acc=1.0 j_per_task=366.32 j_per_task_above_idle=208.22 s_per_task=34.98 passes_per_wh=9.83
+  fanout_n20           tasks=4 acc=0.75 j_per_task=491.93 j_per_task_above_idle=281.26 s_per_task=46.61 passes_per_wh=5.49
+  fanout_n30           tasks=4 acc=1.0 j_per_task=742.52 j_per_task_above_idle=425.65 s_per_task=70.11 passes_per_wh=4.85
+  fanout_n48           tasks=4 acc=1.0 j_per_task=1190.34 j_per_task_above_idle=681.53 s_per_task=112.57 passes_per_wh=3.02
+=== Sun Nov  1 11:51:54 PM CST 2026 t1 code-lenient q8_0 e4b ===
+0 done, 84 to run
+[1/84] chain_00 ok 9.523s calls=2 code=ok
+[2/84] chain_01 ok 14.819s calls=2 code=ok
+[3/84] chain_02 ok 9.31s calls=2 code=ok
+[4/84] chain_03 ok 6.709s calls=2 code=ok
+[5/84] chain_04 ok 10.439s calls=2 code=ok
+[6/84] chain_05 ok 11.852s calls=2 code=ok
+[7/84] chain_06 ok 9.527s calls=2 code=ok
+[8/84] chain_07 ok 10.2s calls=2 code=ok
+[9/84] chain_08 ok 9.536s calls=2 code=ok
+[10/84] chain_09 ok 13.093s calls=3 code=ok
+[11/84] chain_10 ok 13.106s calls=3 code=ok
+[12/84] chain_11 ok 14.482s calls=3 code=ok
+[13/84] chain_12 ok 12.449s calls=3 code=ok
+[14/84] chain_13 ok 18.127s calls=3 code=ok
+[15/84] chain_14 ok 12.452s calls=3 code=ok
+[16/84] chain_15 ok 17.676s calls=3 code=ok
+[17/84] chain_16 ok 12.744s calls=3 code=ok
+[18/84] chain_17 ok 16.142s calls=3 code=ok
+[19/84] chain_18 ok 16.409s calls=4 code=ok
+[20/84] chain_19 ok 22.055s calls=4 code=ok
+[21/84] chain_20 ok 14.666s calls=4 code=ok
+[22/84] chain_21 ok 19.018s calls=4 code=ok
+[23/84] chain_22 ok 15.934s calls=4 code=ok
+[24/84] chain_23 ok 23.746s calls=4 code=ok
+[25/84] chain_24 ok 14.115s calls=4 code=ok
+[26/84] chain_25 ok 19.201s calls=4 code=ok
+[27/84] chain_26 ok 16.214s calls=4 code=ok
+[28/84] chain_27 ok 26.405s calls=5 code=ok
+[29/84] chain_28 ok 16.865s calls=5 code=ok
+[30/84] chain_29 ok 16.609s calls=5 code=ok
+[31/84] chain_30 ok 20.31s calls=5 code=ok
+[32/84] chain_31 ok 27.516s calls=5 code=ok
+[33/84] chain_32 ok 16.832s calls=5 code=ok
+[34/84] chain_33 ok 22.28s calls=5 code=ok
+[35/84] chain_34 ok 19.63s calls=5 code=ok
+[36/84] chain_35 ok 26.792s calls=6 code=ok
+[37/84] chain_36 ok 21.501s calls=7 code=ok
+[38/84] chain_37 ok 28.25s calls=8 code=ok
+[39/84] chain_38 ok 33.171s calls=9 code=ok
+[40/84] chain_39 ok 37.833s calls=10 code=ok
+[41/84] chain_40 ok 31.905s calls=11 code=ok
+[42/84] chain_41 ok 43.636s calls=12 code=ok
+[43/84] chain_42 ok 51.307s calls=13 code=ok
+[44/84] chain_43 ok 50.976s calls=14 code=ok
+[45/84] chain_44 ok 45.687s calls=15 code=ok
+[46/84] chain_45 ok 57.634s calls=16 code=ok
+[47/84] chain_46 ok 44.978s calls=17 code=ok
+[48/84] chain_47 ok 57.918s calls=18 code=ok
+[49/84] chain_48 ok 44.272s calls=19 code=ok
+[50/84] chain_49 ok 67.735s calls=20 code=ok
+[51/84] chain_50 ok 45.33s calls=15 code=ok
+[52/84] chain_51 ok 63.84s calls=20 code=ok
+[53/84] fanout_00 ok 11.611s calls=7 code=ok
+[54/84] fanout_01 ok 11.665s calls=7 code=ok
+[55/84] fanout_02 ok 10.472s calls=7 code=ok
+[56/84] fanout_03 ok 13.641s calls=7 code=ok
+[57/84] fanout_04 ok 12.157s calls=9 code=ok
+[58/84] fanout_05 ok 13.153s calls=9 code=ok
+[59/84] fanout_06 ok 11.827s calls=9 code=ok
+[60/84] fanout_07 ok 14.813s calls=9 code=ok
+[61/84] fanout_08 ok 13.54s calls=11 code=ok
+[62/84] fanout_09 ok 14.79s calls=11 code=ok
+[63/84] fanout_10 ok 16.221s calls=11 code=ok
+[64/84] fanout_11 ok 15.341s calls=11 code=ok
+[65/84] fanout_12 ok 13.894s calls=13 code=ok
+[66/84] fanout_13 ok 15.851s calls=13 code=ok
+[67/84] fanout_14 ok 17.627s calls=13 code=ok
+[68/84] fanout_15 ok 17.286s calls=13 code=ok
+[69/84] fanout_16 ok 16.853s calls=15 code=ok
+[70/84] fanout_17 ok 17.333s calls=15 code=ok
+[71/84] fanout_18 ok 17.732s calls=15 code=ok
+[72/84] fanout_19 ok 18.582s calls=15 code=ok
+[73/84] fanout_20 ok 21.503s calls=20 code=ok
+[74/84] fanout_21 ok 21.361s calls=20 code=ok
+[75/84] fanout_22 ok 25.45s calls=20 code=ok
+[76/84] fanout_23 ok 18.364s calls=20 code=ok
+[77/84] fanout_24 ok 26.938s calls=30 code=ok
+[78/84] fanout_25 ok 29.113s calls=30 code=ok
+[79/84] fanout_26 ok 29.952s calls=30 code=ok
+[80/84] fanout_27 ok 26.243s calls=30 code=ok
+[81/84] fanout_28 ok 34.507s calls=48 code=ok
+[82/84] fanout_29 ok 41.602s calls=48 code=ok
+[83/84] fanout_30 ok 42.437s calls=48 code=ok
+[84/84] fanout_31 ok 35.905s calls=48 code=ok
+all                      n= 84  acc=0.952  strict=0.952  enum=1.000  {'ok': 84}
+chain                    n= 52  acc=0.942  strict=0.942  enum=1.000  {'ok': 52}
+chain_len02-05           n= 35  acc=1.000  strict=1.000  enum=1.000  {'ok': 35}
+chain_len06-12           n=  7  acc=1.000  strict=1.000  enum=1.000  {'ok': 7}
+chain_len13-20           n= 10  acc=0.700  strict=0.700  enum=1.000  {'ok': 10}
+fanout                   n= 32  acc=0.969  strict=0.969  enum=1.000  {'ok': 32}
+fanout_n07               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n09               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n11               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n13               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n15               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n20               n=  4  acc=0.750  strict=0.750  enum=1.000  {'ok': 4}
+fanout_n30               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n48               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+idle_w=4.51 idle_post_w=4.54 work_s=1950.6 work_mean_w=10.48 energy_wh=5.678 energy_j=20440.0 energy_above_idle_j=11643.0 tasks=84 j_per_task=243.33 j_per_task_above_idle=138.61 generated_tokens=21821 prompt_tokens=29985 j_per_generated_token=0.937 j_per_generated_token_above_idle=0.534 tokens_per_wh=3843.2 j_per_token_all=0.395 work_peak_w=11.038 generation_mean_w=10.53 model_calls=84 prefill_s=100.1 decode_s=1839.2 prefill_tok_s=299.58 decode_tok_s=11.86 decode_tok_s_per_w=1.127 peak_ram_mb=3781 mean_gpu_load_pct=95.1 peak_tj_c=62.093
+  chain                tasks=52 acc=0.9423 j_per_task=262.64 j_per_task_above_idle=149.65 s_per_task=25.05 passes_per_wh=12.92
+  chain_len02-05       tasks=35 acc=1.0 j_per_task=163.66 j_per_task_above_idle=92.79 s_per_task=15.71 passes_per_wh=22.0
+  chain_len06-12       tasks=7 acc=1.0 j_per_task=333.53 j_per_task_above_idle=189.8 s_per_task=31.87 passes_per_wh=10.79
+  chain_len13-20       tasks=10 acc=0.7 j_per_task=559.47 j_per_task_above_idle=320.58 s_per_task=52.97 passes_per_wh=4.5
+  fanout               tasks=32 acc=0.9688 j_per_task=211.95 j_per_task_above_idle=120.65 s_per_task=20.24 passes_per_wh=16.45
+  fanout_n07           tasks=4 acc=1.0 j_per_task=120.71 j_per_task_above_idle=67.28 s_per_task=11.85 passes_per_wh=29.82
+  fanout_n09           tasks=4 acc=1.0 j_per_task=135.7 j_per_task_above_idle=77.12 s_per_task=12.99 passes_per_wh=26.53
+  fanout_n11           tasks=4 acc=1.0 j_per_task=157.16 j_per_task_above_idle=89.62 s_per_task=14.97 passes_per_wh=22.91
+  fanout_n13           tasks=4 acc=1.0 j_per_task=170.05 j_per_task_above_idle=97.15 s_per_task=16.17 passes_per_wh=21.17
+  fanout_n15           tasks=4 acc=1.0 j_per_task=184.97 j_per_task_above_idle=105.48 s_per_task=17.62 passes_per_wh=19.46
+  fanout_n20           tasks=4 acc=0.75 j_per_task=227.44 j_per_task_above_idle=129.71 s_per_task=21.67 passes_per_wh=11.87
+  fanout_n30           tasks=4 acc=1.0 j_per_task=294.74 j_per_task_above_idle=168.19 s_per_task=28.06 passes_per_wh=12.21
+  fanout_n48           tasks=4 acc=1.0 j_per_task=404.81 j_per_task_above_idle=230.66 s_per_task=38.61 passes_per_wh=8.89
+=== Mon Nov  2 12:27:52 AM CST 2026 t1 json turbo3 e4b ===
+0 done, 84 to run
+[1/84] chain_00 ok 5.946s calls=2
+[2/84] chain_01 ok 9.306s calls=2
+[3/84] chain_02 ok 11.662s calls=2
+[4/84] chain_03 ok 5.434s calls=2
+[5/84] chain_04 ok 5.848s calls=2
+[6/84] chain_05 ok 5.315s calls=2
+[7/84] chain_06 ok 10.476s calls=2
+[8/84] chain_07 ok 4.685s calls=2
+[9/84] chain_08 ok 5.903s calls=2
+[10/84] chain_09 ok 6.548s calls=3
+[11/84] chain_10 ok 7.596s calls=3
+[12/84] chain_11 ok 6.473s calls=3
+[13/84] chain_12 ok 11.808s calls=3
+[14/84] chain_13 ok 7.326s calls=3
+[15/84] chain_14 ok 8.245s calls=3
+[16/84] chain_15 ok 6.06s calls=3
+[17/84] chain_16 ok 7.845s calls=3
+[18/84] chain_17 ok 7.311s calls=3
+[19/84] chain_18 ok 10.55s calls=4
+[20/84] chain_19 ok 8.077s calls=4
+[21/84] chain_20 ok 8.569s calls=4
+[22/84] chain_21 ok 9.329s calls=4
+[23/84] chain_22 ok 10.413s calls=4
+[24/84] chain_23 ok 8.384s calls=4
+[25/84] chain_24 ok 9.845s calls=4
+[26/84] chain_25 ok 9.441s calls=4
+[27/84] chain_26 ok 10.497s calls=4
+[28/84] chain_27 ok 9.933s calls=5
+[29/84] chain_28 ok 10.365s calls=5
+[30/84] chain_29 ok 11.102s calls=5
+[31/84] chain_30 ok 12.581s calls=5
+[32/84] chain_31 ok 10.032s calls=5
+[33/84] chain_32 ok 10.318s calls=5
+[34/84] chain_33 ok 11.195s calls=5
+[35/84] chain_34 ok 11.725s calls=5
+[36/84] chain_35 ok 11.811s calls=6
+[37/84] chain_36 ok 13.963s calls=7
+[38/84] chain_37 ok 15.909s calls=8
+[39/84] chain_38 ok 20.92s calls=9
+[40/84] chain_39 ok 17.8s calls=10
+[41/84] chain_40 ok 21.738s calls=11
+[42/84] chain_41 ok 22.662s calls=12
+[43/84] chain_42 ok 31.156s calls=13
+[44/84] chain_43 ok 25.356s calls=14
+[45/84] chain_44 ok 29.586s calls=15
+[46/84] chain_45 ok 30.682s calls=16
+[47/84] chain_46 ok 40.533s calls=17
+[48/84] chain_47 ok 32.192s calls=18
+[49/84] chain_48 ok 32.396s calls=19
+[50/84] chain_49 ok 38.662s calls=20
+[51/84] chain_50 ok 36.877s calls=15
+[52/84] chain_51 ok 36.122s calls=20
+[53/84] fanout_00 ok 11.313s calls=7
+[54/84] fanout_01 ok 23.369s calls=7
+[55/84] fanout_02 ok 16.201s calls=7
+[56/84] fanout_03 ok 18.956s calls=7
+[57/84] fanout_04 ok 14.439s calls=9
+[58/84] fanout_05 ok 25.472s calls=9
+[59/84] fanout_06 ok 21.187s calls=9
+[60/84] fanout_07 ok 24.295s calls=9
+[61/84] fanout_08 ok 17.953s calls=11
+[62/84] fanout_09 ok 31.307s calls=11
+[63/84] fanout_10 ok 24.901s calls=11
+[64/84] fanout_11 ok 29.535s calls=11
+[65/84] fanout_12 ok 20.677s calls=13
+[66/84] fanout_13 ok 36.53s calls=13
+[67/84] fanout_14 ok 30.558s calls=13
+[68/84] fanout_15 ok 34.873s calls=13
+[69/84] fanout_16 ok 24.171s calls=15
+[70/84] fanout_17 ok 42.228s calls=15
+[71/84] fanout_18 ok 33.993s calls=15
+[72/84] fanout_19 ok 40.609s calls=15
+[73/84] fanout_20 ok 32.011s calls=20
+[74/84] fanout_21 ok 57.161s calls=20
+[75/84] fanout_22 ok 47.289s calls=20
+[76/84] fanout_23 ok 53.814s calls=20
+[77/84] fanout_24 ok 47.599s calls=30
+[78/84] fanout_25 ok 87.611s calls=30
+[79/84] fanout_26 ok 72.172s calls=30
+[80/84] fanout_27 ok 82.68s calls=30
+[81/84] fanout_28 ok 78.977s calls=48
+[82/84] fanout_29 ok 141.015s calls=48
+[83/84] fanout_30 ok 118.056s calls=48
+[84/84] fanout_31 ok 134.744s calls=48
+all                      n= 84  acc=0.893  strict=0.893  enum=1.000  {'ok': 84}
+chain                    n= 52  acc=0.827  strict=0.827  enum=1.000  {'ok': 52}
+chain_len02-05           n= 35  acc=0.943  strict=0.943  enum=1.000  {'ok': 35}
+chain_len06-12           n=  7  acc=0.714  strict=0.714  enum=1.000  {'ok': 7}
+chain_len13-20           n= 10  acc=0.500  strict=0.500  enum=1.000  {'ok': 10}
+fanout                   n= 32  acc=1.000  strict=1.000  enum=1.000  {'ok': 32}
+fanout_n07               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n09               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n11               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n13               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n15               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n20               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n30               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n48               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+idle_w=4.45 idle_post_w=4.5 work_s=2240.2 work_mean_w=10.31 energy_wh=6.417 energy_j=23100.1 energy_above_idle_j=13131.0 tasks=84 j_per_task=275.0 j_per_task_above_idle=156.32 generated_tokens=23926 prompt_tokens=133348 j_per_generated_token=0.965 j_per_generated_token_above_idle=0.549 tokens_per_wh=3728.7 j_per_token_all=0.147 work_peak_w=10.959 generation_mean_w=10.38 model_calls=279 prefill_s=166.2 decode_s=2056.4 prefill_tok_s=216.22 decode_tok_s=11.63 decode_tok_s_per_w=1.121 peak_ram_mb=3806 mean_gpu_load_pct=94.3 peak_tj_c=62.375
+  chain                tasks=52 acc=0.8269 j_per_task=148.88 j_per_task_above_idle=83.46 s_per_task=14.7 passes_per_wh=19.99
+  chain_len02-05       tasks=35 acc=0.9429 j_per_task=86.79 j_per_task_above_idle=47.87 s_per_task=8.75 passes_per_wh=39.11
+  chain_len06-12       tasks=7 acc=0.7143 j_per_task=183.47 j_per_task_above_idle=104.13 s_per_task=17.83 passes_per_wh=14.02
+  chain_len13-20       tasks=10 acc=0.5 j_per_task=342.0 j_per_task_above_idle=193.56 s_per_task=33.36 passes_per_wh=5.26
+  fanout               tasks=32 acc=1.0 j_per_task=479.93 j_per_task_above_idle=274.72 s_per_task=46.12 passes_per_wh=7.5
+  fanout_n07           tasks=4 acc=1.0 j_per_task=177.09 j_per_task_above_idle=99.39 s_per_task=17.46 passes_per_wh=20.33
+  fanout_n09           tasks=4 acc=1.0 j_per_task=223.81 j_per_task_above_idle=128.81 s_per_task=21.35 passes_per_wh=16.09
+  fanout_n11           tasks=4 acc=1.0 j_per_task=271.81 j_per_task_above_idle=156.44 s_per_task=25.92 passes_per_wh=13.24
+  fanout_n13           tasks=4 acc=1.0 j_per_task=321.88 j_per_task_above_idle=185.45 s_per_task=30.66 passes_per_wh=11.18
+  fanout_n15           tasks=4 acc=1.0 j_per_task=369.32 j_per_task_above_idle=212.45 s_per_task=35.25 passes_per_wh=9.75
+  fanout_n20           tasks=4 acc=1.0 j_per_task=497.95 j_per_task_above_idle=286.27 s_per_task=47.57 passes_per_wh=7.23
+  fanout_n30           tasks=4 acc=1.0 j_per_task=754.15 j_per_task_above_idle=431.45 s_per_task=72.52 passes_per_wh=4.77
+  fanout_n48           tasks=4 acc=1.0 j_per_task=1223.46 j_per_task_above_idle=697.48 s_per_task=118.2 passes_per_wh=2.94
+=== Mon Nov  2 01:07:39 AM CST 2026 t1 code-lenient turbo3 e4b ===
+0 done, 84 to run
+[1/84] chain_00 ok 12.012s calls=0 code=syntax_error
+[2/84] chain_01 ok 15.313s calls=0 code=syntax_error
+[3/84] chain_02 ok 37.127s calls=0 code=syntax_error
+[4/84] chain_03 ok 12.827s calls=0 code=syntax_error
+[5/84] chain_04 ok 11.25s calls=0 code=syntax_error
+[6/84] chain_05 ok 12.448s calls=2 code=ok
+[7/84] chain_06 ok 11.058s calls=2 code=ok
+[8/84] chain_07 ok 13.898s calls=2 code=ok
+[9/84] chain_08 ok 12.289s calls=0 code=syntax_error
+[10/84] chain_09 ok 15.831s calls=3 code=ok
+[11/84] chain_10 ok 48.796s calls=0 code=syntax_error
+[12/84] chain_11 ok 24.3s calls=0 code=ok
+[13/84] chain_12 ok 14.243s calls=0 code=syntax_error
+[14/84] chain_13 ok 16.379s calls=3 code=ok
+[15/84] chain_14 ok 13.334s calls=3 code=ok
+[16/84] chain_15 ok 26.325s calls=0 code=syntax_error
+[17/84] chain_16 ok 13.766s calls=0 code=syntax_error
+[18/84] chain_17 ok 17.79s calls=0 code=syntax_error
+[19/84] chain_18 ok 18.284s calls=0 code=syntax_error
+[20/84] chain_19 ok 20.644s calls=0 code=syntax_error
+[21/84] chain_20 ok 15.797s calls=4 code=ok
+[22/84] chain_21 ok 18.587s calls=0 code=syntax_error
+[23/84] chain_22 ok 17.08s calls=4 code=ok
+[24/84] chain_23 ok 25.86s calls=0 code=syntax_error
+[25/84] chain_24 ok 16.205s calls=0 code=syntax_error
+[26/84] chain_25 ok 18.665s calls=4 code=ok
+[27/84] chain_26 ok 19.472s calls=0 code=syntax_error
+[28/84] chain_27 ok 23.424s calls=0 code=syntax_error
+[29/84] chain_28 ok 20.634s calls=0 code=syntax_error
+[30/84] chain_29 ok 22.307s calls=0 code=syntax_error
+[31/84] chain_30 ok 20.662s calls=5 code=ok
+[32/84] chain_31 ok 25.748s calls=5 code=ok
+[33/84] chain_32 ok 27.743s calls=0 code=syntax_error
+[34/84] chain_33 ok 23.374s calls=5 code=ok
+[35/84] chain_34 ok 19.625s calls=5 code=ok
+[36/84] chain_35 ok 27.503s calls=6 code=ok
+[37/84] chain_36 ok 37.42s calls=7 code=ok
+[38/84] chain_37 ok 27.146s calls=8 code=ok
+[39/84] chain_38 ok 31.804s calls=9 code=ok
+[40/84] chain_39 parse_error 387.141s calls=0
+[41/84] chain_40 ok 39.441s calls=0 code=syntax_error
+[42/84] chain_41 ok 49.739s calls=12 code=ok
+[43/84] chain_42 ok 46.234s calls=13 code=ok
+[44/84] chain_43 ok 51.657s calls=0 code=ok
+[45/84] chain_44 ok 52.03s calls=0 code=syntax_error
+[46/84] chain_45 ok 56.614s calls=16 code=ok
+[47/84] chain_46 ok 69.157s calls=17 code=ok
+[48/84] chain_47 ok 66.204s calls=18 code=ok
+[49/84] chain_48 ok 55.02s calls=19 code=ok
+[50/84] chain_49 ok 69.504s calls=20 code=ok
+[51/84] chain_50 ok 63.023s calls=0 code=ok
+[52/84] chain_51 ok 79.234s calls=20 code=ok
+[53/84] fanout_00 ok 7.954s calls=7 code=ok
+[54/84] fanout_01 ok 13.139s calls=7 code=ok
+[55/84] fanout_02 ok 13.777s calls=7 code=ok
+[56/84] fanout_03 ok 12.962s calls=7 code=ok
+[57/84] fanout_04 ok 12.134s calls=9 code=ok
+[58/84] fanout_05 ok 13.578s calls=9 code=ok
+[59/84] fanout_06 ok 15.136s calls=9 code=ok
+[60/84] fanout_07 ok 15.61s calls=9 code=ok
+[61/84] fanout_08 ok 11.429s calls=11 code=ok
+[62/84] fanout_09 ok 14.966s calls=11 code=ok
+[63/84] fanout_10 ok 16.249s calls=11 code=ok
+[64/84] fanout_11 ok 16.547s calls=11 code=ok
+[65/84] fanout_12 ok 10.896s calls=13 code=ok
+[66/84] fanout_13 ok 16.098s calls=13 code=ok
+[67/84] fanout_14 ok 18.911s calls=13 code=ok
+[68/84] fanout_15 ok 19.352s calls=13 code=ok
+[69/84] fanout_16 ok 14.401s calls=15 code=ok
+[70/84] fanout_17 ok 17.532s calls=15 code=ok
+[71/84] fanout_18 ok 18.195s calls=15 code=ok
+[72/84] fanout_19 ok 18.806s calls=15 code=ok
+[73/84] fanout_20 ok 24.187s calls=20 code=ok
+[74/84] fanout_21 ok 21.539s calls=20 code=ok
+[75/84] fanout_22 ok 25.401s calls=20 code=ok
+[76/84] fanout_23 ok 20.958s calls=20 code=ok
+[77/84] fanout_24 ok 31.959s calls=30 code=ok
+[78/84] fanout_25 ok 29.606s calls=30 code=ok
+[79/84] fanout_26 ok 29.473s calls=30 code=ok
+[80/84] fanout_27 ok 25.111s calls=30 code=ok
+[81/84] fanout_28 ok 32.174s calls=48 code=ok
+[82/84] fanout_29 ok 42.979s calls=48 code=ok
+[83/84] fanout_30 ok 44.419s calls=48 code=ok
+[84/84] fanout_31 ok 37.862s calls=48 code=ok
+all                      n= 84  acc=0.679  strict=0.679  enum=0.679  {'ok': 83, 'parse_error': 1}
+chain                    n= 52  acc=0.481  strict=0.481  enum=0.481  {'ok': 51, 'parse_error': 1}
+chain_len02-05           n= 35  acc=0.371  strict=0.371  enum=0.371  {'ok': 35}
+chain_len06-12           n=  7  acc=0.714  strict=0.714  enum=0.714  {'ok': 6, 'parse_error': 1}
+chain_len13-20           n= 10  acc=0.700  strict=0.700  enum=0.700  {'ok': 10}
+fanout                   n= 32  acc=1.000  strict=1.000  enum=1.000  {'ok': 32}
+fanout_n07               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n09               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n11               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n13               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n15               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n20               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n30               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+fanout_n48               n=  4  acc=1.000  strict=1.000  enum=1.000  {'ok': 4}
+idle_w=4.49 idle_post_w=4.51 work_s=2555.3 work_mean_w=10.36 energy_wh=7.355 energy_j=26476.7 energy_above_idle_j=15003.2 tasks=84 j_per_task=315.2 j_per_task_above_idle=178.61 generated_tokens=27921 prompt_tokens=29985 j_per_generated_token=0.948 j_per_generated_token_above_idle=0.537 tokens_per_wh=3796.4 j_per_token_all=0.457 work_peak_w=10.959 generation_mean_w=10.39 model_calls=84 prefill_s=104.7 decode_s=2443.1 prefill_tok_s=286.26 decode_tok_s=11.43 decode_tok_s_per_w=1.1 peak_ram_mb=3801 mean_gpu_load_pct=95.6 peak_tj_c=62.156
+  chain                tasks=52 acc=0.4808 j_per_task=376.43 j_per_task_above_idle=213.06 s_per_task=36.38 passes_per_wh=4.6
+  chain_len02-05       tasks=35 acc=0.3714 j_per_task=201.69 j_per_task_above_idle=114.05 s_per_task=19.52 passes_per_wh=6.63
+  chain_len06-12       tasks=7 acc=0.7143 j_per_task=885.75 j_per_task_above_idle=500.77 s_per_task=85.74 passes_per_wh=2.9
+  chain_len13-20       tasks=10 acc=0.7 j_per_task=631.49 j_per_task_above_idle=358.19 s_per_task=60.87 passes_per_wh=3.99
+  fanout               tasks=32 acc=1.0 j_per_task=215.7 j_per_task_above_idle=122.62 s_per_task=20.73 passes_per_wh=16.69
+  fanout_n07           tasks=4 acc=1.0 j_per_task=122.73 j_per_task_above_idle=69.04 s_per_task=11.96 passes_per_wh=29.33
+  fanout_n09           tasks=4 acc=1.0 j_per_task=147.3 j_per_task_above_idle=83.92 s_per_task=14.11 passes_per_wh=24.44
+  fanout_n11           tasks=4 acc=1.0 j_per_task=154.5 j_per_task_above_idle=88.05 s_per_task=14.8 passes_per_wh=23.3
+  fanout_n13           tasks=4 acc=1.0 j_per_task=170.28 j_per_task_above_idle=97.03 s_per_task=16.31 passes_per_wh=21.14
+  fanout_n15           tasks=4 acc=1.0 j_per_task=179.52 j_per_task_above_idle=102.15 s_per_task=17.23 passes_per_wh=20.05
+  fanout_n20           tasks=4 acc=1.0 j_per_task=240.46 j_per_task_above_idle=137.09 s_per_task=23.02 passes_per_wh=14.97
+  fanout_n30           tasks=4 acc=1.0 j_per_task=303.19 j_per_task_above_idle=172.81 s_per_task=29.04 passes_per_wh=11.87
+  fanout_n48           tasks=4 acc=1.0 j_per_task=407.6 j_per_task_above_idle=230.88 s_per_task=39.36 passes_per_wh=8.83
+Mon Nov  2 01:52:55 AM CST 2026 all done

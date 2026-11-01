@@ -1,0 +1,173 @@
+{
+  "all": {
+    "n": 84,
+    "pass": 57,
+    "strict": 57,
+    "enum": 57,
+    "outcomes": {
+      "ok": 83,
+      "parse_error": 1
+    },
+    "acc": 0.6786,
+    "acc_strict": 0.6786,
+    "acc_enum": 0.6786
+  },
+  "chain": {
+    "n": 52,
+    "pass": 25,
+    "strict": 25,
+    "enum": 25,
+    "outcomes": {
+      "ok": 51,
+      "parse_error": 1
+    },
+    "acc": 0.4808,
+    "acc_strict": 0.4808,
+    "acc_enum": 0.4808
+  },
+  "chain_len02-05": {
+    "n": 35,
+    "pass": 13,
+    "strict": 13,
+    "enum": 13,
+    "outcomes": {
+      "ok": 35
+    },
+    "acc": 0.3714,
+    "acc_strict": 0.3714,
+    "acc_enum": 0.3714
+  },
+  "chain_len06-12": {
+    "n": 7,
+    "pass": 5,
+    "strict": 5,
+    "enum": 5,
+    "outcomes": {
+      "ok": 6,
+      "parse_error": 1
+    },
+    "acc": 0.7143,
+    "acc_strict": 0.7143,
+    "acc_enum": 0.7143
+  },
+  "chain_len13-20": {
+    "n": 10,
+    "pass": 7,
+    "strict": 7,
+    "enum": 7,
+    "outcomes": {
+      "ok": 10
+    },
+    "acc": 0.7,
+    "acc_strict": 0.7,
+    "acc_enum": 0.7
+  },
+  "fanout": {
+    "n": 32,
+    "pass": 32,
+    "strict": 32,
+    "enum": 32,
+    "outcomes": {
+      "ok": 32
+    },
+    "acc": 1.0,
+    "acc_strict": 1.0,
+    "acc_enum": 1.0
+  },
+  "fanout_n07": {
+    "n": 4,
+    "pass": 4,
+    "strict": 4,
+    "enum": 4,
+    "outcomes": {
+      "ok": 4
+    },
+    "acc": 1.0,
+    "acc_strict": 1.0,
+    "acc_enum": 1.0
+  },
+  "fanout_n09": {
+    "n": 4,
+    "pass": 4,
+    "strict": 4,
+    "enum": 4,
+    "outcomes": {
+      "ok": 4
+    },
+    "acc": 1.0,
+    "acc_strict": 1.0,
+    "acc_enum": 1.0
+  },
+  "fanout_n11": {
+    "n": 4,
+    "pass": 4,
+    "strict": 4,
+    "enum": 4,
+    "outcomes": {
+      "ok": 4
+    },
+    "acc": 1.0,
+    "acc_strict": 1.0,
+    "acc_enum": 1.0
+  },
+  "fanout_n13": {
+    "n": 4,
+    "pass": 4,
+    "strict": 4,
+    "enum": 4,
+    "outcomes": {
+      "ok": 4
+    },
+    "acc": 1.0,
+    "acc_strict": 1.0,
+    "acc_enum": 1.0
+  },
+  "fanout_n15": {
+    "n": 4,
+    "pass": 4,
+    "strict": 4,
+    "enum": 4,
+    "outcomes": {
+      "ok": 4
+    },
+    "acc": 1.0,
+    "acc_strict": 1.0,
+    "acc_enum": 1.0
+  },
+  "fanout_n20": {
+    "n": 4,
+    "pass": 4,
+    "strict": 4,
+    "enum": 4,
+    "outcomes": {
+      "ok": 4
+    },
+    "acc": 1.0,
+    "acc_strict": 1.0,
+    "acc_enum": 1.0
+  },
+  "fanout_n30": {
+    "n": 4,
+    "pass": 4,
+    "strict": 4,
+    "enum": 4,
+    "outcomes": {
+      "ok": 4
+    },
+    "acc": 1.0,
+    "acc_strict": 1.0,
+    "acc_enum": 1.0
+  },
+  "fanout_n48": {
+    "n": 4,
+    "pass": 4,
+    "strict": 4,
+    "enum": 4,
+    "outcomes": {
+      "ok": 4
+    },
+    "acc": 1.0,
+    "acc_strict": 1.0,
+    "acc_enum": 1.0
+  }
+}
