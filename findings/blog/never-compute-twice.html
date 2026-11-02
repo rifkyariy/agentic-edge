@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Never Compute Twice</title>
+<meta name="description" content="A recap of the agentic-edge experiments: exact-output speedups for Gemma 4 on a Jetson Orin Nano, a Raspberry Pi 5 and an iPhone.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f5f0; --paper:#fffdf8; --ink:#1b1a17; --ink2:#4a4740; --ink3:#8a857a;
+  --rule:#e4dfd3; --rule2:#efebe1; --tint:#f0ece2;
+  --accent:#c2410c; --accent-soft:#fde7d9;
+  --e0:#9b968b; --e1:#6b7a8f; --e2:#c79a2b; --e3:#c2410c;
+  --good:#15803d; --good-soft:#dcfce7; --bad:#b91c1c;
+  --heat0:#fbf7ee; --heat1:#c2410c;
+  --serif:"Newsreader",Georgia,serif; --sans:"Inter",system-ui,-apple-system,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#13120f; --paper:#1b1a16; --ink:#efebe1; --ink2:#bdb7a9; --ink3:#857f72;
+    --rule:#2f2c26; --rule2:#26241f; --tint:#22201b;
+    --accent:#fb8a4c; --accent-soft:#3a2216;
+    --e0:#7d786d; --e1:#8b9bb0; --e2:#e0b44a; --e3:#fb8a4c;
+    --good:#4ade80; --good-soft:#163222; --bad:#f87171;
+    --heat0:#1f1d19; --heat1:#fb8a4c;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13120f; --paper:#1b1a16; --ink:#efebe1; --ink2:#bdb7a9; --ink3:#857f72;
+  --rule:#2f2c26; --rule2:#26241f; --tint:#22201b;
+  --accent:#fb8a4c; --accent-soft:#3a2216;
+  --e0:#7d786d; --e1:#8b9bb0; --e2:#e0b44a; --e3:#fb8a4c;
+  --good:#4ade80; --good-soft:#163222; --bad:#f87171;
+  --heat0:#1f1d19; --heat1:#fb8a4c;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.65 var(--serif);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{color:inherit;text-decoration-color:var(--accent);text-underline-offset:3px}
+a:hover{color:var(--accent)}
+.col{max-width:720px;margin:0 auto;padding:0 16px}
+.wide{max-width:1040px;margin:0 auto;padding:0 16px}
+.sans{font-family:var(--sans)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+p{margin:0 0 1.1em}
+strong{font-weight:600}
+h2{font:500 clamp(28px,4vw,36px)/1.15 var(--serif);letter-spacing:-.01em;margin:0 0 .6em}
+h2 .n{font:500 14px var(--mono);color:var(--accent);display:block;margin-bottom:10px;letter-spacing:.04em}
+h3{font:600 15px/1.3 var(--sans);margin:1.8em 0 .6em;letter-spacing:-.005em}
+section{padding:72px 0 8px;border-top:1px solid var(--rule)}
+section:first-of-type{border-top:0}
+.lede{font-size:21px;line-height:1.5;color:var(--ink2)}
+
+/* header */
+header{padding:56px 0 40px}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}
+.tag{font:500 12px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);border:1px solid var(--rule);border-radius:99px;padding:5px 11px;background:var(--paper)}
+.tag.hot{color:var(--accent);border-color:var(--accent)}
+h1{font:400 clamp(44px,8vw,84px)/.98 var(--serif);letter-spacing:-.03em;margin:0 0 22px}
+h1 em{font-style:italic;color:var(--accent)}
+.sub{font-size:clamp(19px,2.4vw,23px);line-height:1.45;color:var(--ink2);max-width:640px;margin:0 0 28px}
+.byline{font:400 14px var(--sans);color:var(--ink3);display:flex;gap:6px 16px;flex-wrap:wrap}
+.byline b{color:var(--ink2);font-weight:500}
+.cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
+.btn{font:500 14px var(--sans);padding:10px 16px;border-radius:10px;border:1px solid var(--rule);background:var(--paper);text-decoration:none;color:var(--ink);transition:border-color .15s,transform .15s}
+.btn:hover{border-color:var(--accent);color:var(--ink);transform:translateY(-1px)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.primary:hover{color:var(--bg)}
+
+/* stat strip */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:16px;overflow:hidden;margin:8px 0 0}
+.stat{background:var(--paper);padding:22px 20px 20px}
+.stat .k{font:500 12px var(--sans);color:var(--ink3);letter-spacing:.04em;text-transform:uppercase}
+.stat .v{font:500 clamp(30px,4vw,40px)/1.1 var(--sans);letter-spacing:-.03em;margin:10px 0 6px;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:.5em;color:var(--ink3);font-weight:500;letter-spacing:0}
+.stat .d{font:400 13px/1.4 var(--sans);color:var(--ink2)}
+.stat .v.acc{color:var(--accent)}
+@media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
+
+/* toc */
+.toc{margin:56px auto 0;font-family:var(--sans);font-size:14px}
+.toc ol{list-style:none;padding:0;margin:0;columns:2;column-gap:32px}
+.toc li{break-inside:avoid;border-top:1px solid var(--rule2);padding:9px 0;display:flex;gap:12px}
+.toc li span{font-family:var(--mono);color:var(--accent);font-size:12px;min-width:20px;padding-top:2px}
+.toc a{text-decoration:none;color:var(--ink2)}
+.toc a:hover{color:var(--accent)}
+@media(max-width:600px){.toc ol{columns:1}}
+
+/* figures & cards */
+figure{margin:32px 0 40px}
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:16px;padding:22px}
+figcaption{font:400 13.5px/1.5 var(--sans);color:var(--ink3);margin-top:12px}
+figcaption b{color:var(--ink);font-weight:600}
+.unit{font:500 11.5px var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
+.better{font:500 11px var(--sans);color:var(--good);background:var(--good-soft);padding:2px 7px;border-radius:99px;letter-spacing:.02em;white-space:nowrap}
+
+/* spec sheet */
+.spec{display:grid;grid-template-columns:160px 1fr;border-top:1px solid var(--rule);font-family:var(--sans);font-size:14.5px;line-height:1.5}
+.spec dt,.spec dd{margin:0;padding:12px 0;border-bottom:1px solid var(--rule)}
+.spec dt{color:var(--ink3);font-weight:500;font-size:13px;text-transform:uppercase;letter-spacing:.04em;padding-top:14px}
+.spec dd{color:var(--ink2)}
+.spec dd b{color:var(--ink);font-weight:600}
+@media(max-width:600px){.spec{grid-template-columns:1fr}.spec dt{border-bottom:0;padding-bottom:0}}
+
+/* controls */
+.seg{display:inline-flex;background:var(--tint);border-radius:10px;padding:3px;gap:2px;font-family:var(--sans)}
+.seg button{font:500 13px var(--sans);border:0;background:transparent;color:var(--ink2);padding:6px 12px;border-radius:8px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.bar-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.chip-row{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font:500 13px var(--sans);display:inline-flex;align-items:center;gap:8px;padding:6px 11px;border-radius:99px;border:1px solid var(--rule);background:var(--paper);color:var(--ink2);cursor:pointer;user-select:none}
+.chip i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.chip[aria-pressed="false"]{opacity:.45}
+.chip[aria-pressed="false"] i{background:transparent!important;border:1.5px solid var(--ink3)}
+
+/* prompt-lookup figure */
+.lanes{display:grid;gap:14px}
+.prompt{font:400 13.5px/1.6 var(--mono);color:var(--ink2);background:var(--tint);border-radius:10px;padding:14px 16px}
+.prompt .who{color:var(--accent);font-weight:500}
+.prompt mark{background:transparent;color:var(--ink);box-shadow:inset 0 -2px 0 var(--e2);transition:background .2s}
+.prompt mark.on{background:var(--accent-soft)}
+.lane{border:1px solid var(--rule);border-radius:12px;padding:12px 14px 14px}
+.lane-h{display:flex;justify-content:space-between;align-items:baseline;font:500 13px var(--sans);margin-bottom:8px;gap:8px;flex-wrap:wrap}
+.lane-h .meta{font:400 12.5px var(--mono);color:var(--ink3)}
+.lane-h .meta b{color:var(--ink);font-weight:500}
+.out{font:400 14px/1.75 var(--mono);min-height:4.2em;word-break:break-word}
+.tok{display:inline;border-radius:3px;padding:1px 0;animation:pop .25s ease}
+.tok.d{background:var(--accent-soft);color:var(--ink)}
+.tok.sep{border-left:2px solid var(--accent);margin-left:2px;padding-left:2px}
+@keyframes pop{from{opacity:0}to{opacity:1}}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font:400 12.5px var(--sans);color:var(--ink3);margin-top:12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:10px;border-radius:2px;display:inline-block}
+.verdict{font:500 13px var(--sans);color:var(--good);opacity:0;transition:opacity .3s;margin-top:10px}
+.verdict.on{opacity:1}
+
+/* metric bars */
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(max-width:760px){.metrics{grid-template-columns:1fr}}
+.metric{background:var(--paper);border:1px solid var(--rule);border-radius:14px;padding:18px 18px 14px}
+.metric h4{font:600 14px var(--sans);margin:0;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.metric .def{font:400 12.5px/1.45 var(--sans);color:var(--ink3);margin:4px 0 14px}
+.brow{display:grid;grid-template-columns:110px 1fr 58px;gap:10px;align-items:center;font:400 12.5px var(--sans);margin:7px 0}
+.brow .lab{color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brow .track{display:block;height:20px;background:var(--rule2);border-radius:5px;overflow:hidden}
+.brow .fill{display:block;height:100%;border-radius:5px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.brow .val{font-family:var(--mono);font-size:12.5px;text-align:right;color:var(--ink)}
+.brow.best .val{font-weight:600}
+.brow.best .lab{color:var(--ink);font-weight:600}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--rule);border-radius:14px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font:400 13.5px var(--sans);font-variant-numeric:tabular-nums}
+th,td{padding:10px 14px;text-align:right;border-bottom:1px solid var(--rule2);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-weight:600;font-size:12px;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;background:var(--tint)}
+tbody tr:last-child td{border-bottom:0}
+td.best{font-weight:700;color:var(--ink)}
+tr.ours td{background:var(--accent-soft)}
+tr.grp td{background:var(--tint);font-weight:600;font-size:12px;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em}
+td .note{color:var(--ink3);font-size:11px}
+
+/* ablation grid */
+.abl{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:760px){.abl{grid-template-columns:repeat(2,1fr)}}
+.ab{background:var(--paper);border:1px solid var(--rule);border-radius:14px;padding:16px;font-family:var(--sans)}
+.ab.ours{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.ab .t{font:600 13.5px var(--sans);margin-bottom:2px}
+.ab .s{font:400 12px var(--sans);color:var(--ink3);margin-bottom:12px;min-height:2.6em}
+.ab .sw2{display:flex;gap:6px;margin-bottom:14px}
+.ab .sw2 span{font:500 10.5px var(--mono);padding:3px 6px;border-radius:5px;background:var(--rule2);color:var(--ink3)}
+.ab .sw2 span.on{background:var(--ink);color:var(--bg)}
+.ab .row{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--rule2);padding:7px 0;font-size:12.5px;color:var(--ink3)}
+.ab .row b{font:500 15px var(--mono);color:var(--ink)}
+.ab .row b.up{color:var(--good)}
+
+/* width picker */
+.wp{display:grid;grid-template-columns:1.1fr 1fr;gap:24px;align-items:center}
+@media(max-width:760px){.wp{grid-template-columns:1fr}}
+.passes{display:flex;flex-direction:column;gap:8px}
+.pass{display:flex;gap:4px;align-items:center;font:400 12px var(--mono);color:var(--ink3)}
+.pass .slot{width:34px;height:26px;border-radius:6px;border:1.5px dashed var(--rule);display:grid;place-items:center;transition:all .25s}
+.pass .slot.fix{background:var(--ink);border:0;color:var(--bg)}
+.pass .slot.ok{background:var(--accent);border:0;color:#fff}
+.pass .slot.no{border-color:var(--ink3);opacity:.5}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kv div{background:var(--tint);border-radius:12px;padding:14px}
+.kv .k{font:500 11.5px var(--sans);color:var(--ink3);text-transform:uppercase;letter-spacing:.04em}
+.kv .v{font:500 26px var(--sans);letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:4px}
+.kv .v small{font-size:13px;color:var(--ink3);font-weight:400}
+
+/* heatmap */
+.heat td{font-family:var(--mono);font-size:12.5px;text-align:center;min-width:72px}
+.heat td:first-child{font-family:var(--sans);text-align:left}
+.heat td .n{font:400 10.5px var(--sans);color:var(--ink3);margin-left:4px}
+.heat td.diff{position:relative}
+
+/* callouts */
+.callout{border-left:3px solid var(--accent);background:var(--paper);padding:16px 20px;border-radius:0 12px 12px 0;margin:28px 0;font-size:16.5px}
+.callout b{font-family:var(--sans);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:4px}
+.caveats{counter-reset:c;list-style:none;padding:0;margin:20px 0}
+.caveats li{counter-increment:c;position:relative;padding:0 0 18px 44px}
+.caveats li::before{content:counter(c,decimal-leading-zero);position:absolute;left:0;top:2px;font:500 13px var(--mono);color:var(--accent)}
+.caveats li b{font-family:var(--sans);font-size:15px;font-weight:600;display:block;margin-bottom:2px}
+code{font:400 .86em var(--mono);background:var(--tint);padding:2px 6px;border-radius:5px}
+pre{font:400 13px/1.6 var(--mono);background:var(--ink);color:var(--bg);padding:18px 20px;border-radius:12px;overflow-x:auto}
+
+/* svg charts */
+svg text{font-family:var(--sans)}
+.scatter-wrap{position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font:400 12px/1.45 var(--sans);padding:8px 10px;border-radius:8px;opacity:0;transition:opacity .12s;white-space:nowrap;z-index:2}
+.tip b{font-weight:600}
+
+footer{margin-top:80px;padding:40px 0 64px;border-top:1px solid var(--rule);font:400 13.5px/1.6 var(--sans);color:var(--ink3)}
+.theme-t{position:fixed;top:14px;right:14px;z-index:5;width:36px;height:36px;border-radius:99px;border:1px solid var(--rule);background:var(--paper);color:var(--ink2);cursor:pointer;font-size:16px;display:grid;place-items:center}
+.progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);width:0;z-index:6}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="theme-t" id="themeT" aria-label="Toggle dark mode" title="Toggle theme">◐</button>
+
+<header class="col">
+  <div class="tags"><span class="tag hot">Research recap</span><span class="tag">Edge inference</span><span class="tag">Gemma 4</span><span class="tag">Jetson · Pi 5 · iPhone</span></div>
+  <h1>Never compute <em>twice</em></h1>
+  <p class="sub">How much faster can a small board answer, if it is not allowed to change a single output byte? A recap of the agentic-edge experiments behind the CoPR paper.</p>
+  <div class="byline"><span><b>agentic-edge</b> · NTUST</span><span>November 2026</span><span>~12 min read</span></div>
+  <div class="cta">
+    <a class="btn primary" href="#results">Jump to the results</a>
+    <a class="btn" href="https://github.com/rifkyariy/agentic-edge">The repo</a>
+    <a class="btn" href="#reproduce">Reproduce in 2 seconds</a>
+  </div>
+</header>
+
+<div class="wide">
+  <div class="stats">
+    <div class="stat"><div class="k">Wall time / question</div><div class="v acc">−34<small>%</small></div><div class="d">E4B: 62.6 s → 41.6 s against llama.cpp on the same board</div></div>
+    <div class="stat"><div class="k">Energy / token</div><div class="v acc">−30<small>%</small></div><div class="d">E4B: 0.965 J → 0.676 J of board DC energy</div></div>
+    <div class="stat"><div class="k">Replies changed</div><div class="v">0<small> / 600</small></div><div class="d">Every reply byte-identical to little-gemma, both models</div></div>
+    <div class="stat"><div class="k">Accuracy cost</div><div class="v">none</div><div class="d">Paired McNemar vs llama.cpp: p = 1.00 (E2B), 0.85 (E4B)</div></div>
+  </div>
+</div>
+
+<nav class="col toc" aria-label="Contents">
+  <ol>
+    <li><span>01</span><a href="#question">The question</a></li>
+    <li><span>02</span><a href="#measured">How it was measured</a></li>
+    <li><span>03</span><a href="#anatomy">Where the time goes</a></li>
+    <li><span>04</span><a href="#tricks">Two exact tricks</a></li>
+    <li><span>05</span><a href="#results">Results on the Jetson</a></li>
+    <li><span>06</span><a href="#apart">Take it apart</a></li>
+    <li><span>07</span><a href="#width">Picking the verify width</a></li>
+    <li><span>08</span><a href="#accuracy">Accuracy did not move</a></li>
+    <li><span>09</span><a href="#devices">Same model, other devices</a></li>
+    <li><span>10</span><a href="#change">What would change the result?</a></li>
+    <li><span>11</span><a href="#reproduce">Reproduce it</a></li>
+  </ol>
+</nav>
+
+<main>
+<section id="question" class="col" style="margin-top:56px">
+  <h2><span class="n">01</span>The question</h2>
+  <p class="lede">Most speedups for small language models trade something away: a smaller quantization, a shorter context, a drafter that sometimes changes the answer. We asked the opposite question.</p>
+  <p>On a fixed edge board, with a fixed model and fixed prompts, how much speed and energy is left on the table <strong>if the output must stay exactly the same</strong>, byte for byte? If the answer is "a lot", every deployment gets it for free: nothing has to be re-validated, because nothing the user sees has changed.</p>
+  <p>The answer turned out to be: about a fifth to a third of the time and energy, depending on the model. The engine that gets there is <strong>CoPR</strong>, two exact techniques added to the <em>little-gemma</em> runtime. It never computes the same thing twice: not the shared few-shot prefix, and not tokens it can copy from the prompt and check in one batched pass.</p>
+</section>
+
+<section id="measured" class="col">
+  <h2><span class="n">02</span>How it was measured</h2>
+  <p>Every number on this page comes from raw runs committed to the repository, and one script rebuilds all of the paper's tables from them.</p>
+  <dl class="spec">
+    <dt>Workload</dt><dd><b>MMLU-Pro</b>, 300 questions per model (three stratified subsets of 100), 5-shot chain of thought, greedy decoding, thinking off.</dd>
+    <dt>Models</dt><dd><b>Gemma 4 E2B and E4B</b>, Unsloth Q4_K_XL QAT GGUFs (MLX 4-bit builds of the same checkpoints on the iPhone).</dd>
+    <dt>Hardware</dt><dd><b>NVIDIA Jetson Orin Nano 8 GB at 15 W</b> for the engine comparison. Raspberry Pi 5 (CPU only) and iPhone 15 Pro for deployment context.</dd>
+    <dt>Baselines</dt><dd><b>llama.cpp</b>, llama.cpp with its own n-gram drafting (width 4, not exact), and <b>little-gemma</b>, the runtime CoPR builds on.</dd>
+    <dt>Proposed</dt><dd><b>CoPR</b> = little-gemma + prompt-lookup drafting through its batched verify (width 3) + shared-prefix KV reuse made exact for sliding-window ring buffers.</dd>
+    <dt>Energy</dt><dd>Board DC draw from the Jetson's INA3221 rails (the Pi's PMIC on the Pi), integrated over the working window and divided by generated tokens. Not wall power.</dd>
+    <dt>Exactness</dt><dd>Reply text compared byte for byte, per question, against the same engine with every switch off.</dd>
+  </dl>
+</section>
+
+<section id="anatomy" class="col">
+  <h2><span class="n">03</span>Where the time goes</h2>
+  <p>Before optimizing anything we took the baseline apart. Two things stood out. First, almost all of a request is <strong>decode</strong>: the model writes about 660 tokens of reasoning per question, and prefill is only around 3% of the time. Second, little-gemma <strong>re-prefilled the whole 5-shot prompt every question</strong>: 1,444 prompt tokens against llama.cpp's 381, because llama.cpp already reuses the shared prefix.</p>
+  <figure class="card">
+    <div class="bar-head"><div><div class="unit">Share of one E2B request · Jetson 15 W</div></div><span class="better">decode dominates</span></div>
+    <svg id="anatomy-svg" viewBox="0 0 640 150" width="100%" role="img" aria-label="Request time split: prefill 2.7% and 3.2%, decode the rest"></svg>
+    <figcaption><b>Figure 1.</b> Prefill vs decode share of request time, and prompt tokens processed per question (Table I). llama.cpp: 381 tokens, 2.7% prefill. little-gemma: 1,444 tokens, 3.2% prefill. Both decode at 23–26 tok/s and score 52.7–53.0%.</figcaption>
+  </figure>
+  <p>So the target is clear. Prefix reuse can only win back a few percent of time, but it is worth doing because it is free and exact. The real lever is decode: fewer forward passes per generated token.</p>
+</section>
+
+<section id="tricks" class="col">
+  <h2><span class="n">04</span>Two exact tricks</h2>
+  <p><strong>Prompt lookup.</strong> A chain-of-thought reply to a multiple-choice question repeats the question constantly: option text, units, names. When the last tokens written also appear in the prompt, the tokens that followed them there are a cheap guess for what comes next. CoPR drafts those tokens and checks them in one batched forward pass. Greedy decoding keeps a drafted token only if the model would have picked it anyway, so the reply cannot change; a wrong guess just costs a slightly wider pass.</p>
+
+  <figure class="card" id="fig-lookup">
+    <div class="bar-head">
+      <div class="unit">Same reply, two engines</div>
+      <div style="display:flex;gap:8px"><button class="btn" id="replay" style="padding:7px 14px">▶ Replay</button></div>
+    </div>
+    <div class="lanes">
+      <div class="prompt" id="promptBox"></div>
+      <div class="lane">
+        <div class="lane-h"><span>little-gemma · one token per pass</span><span class="meta">passes <b id="pA">0</b> · tokens <b id="tA">0</b></span></div>
+        <div class="out" id="outA"></div>
+      </div>
+      <div class="lane" style="border-color:var(--accent)">
+        <div class="lane-h"><span style="color:var(--accent)">CoPR · prompt lookup, verify width 3</span><span class="meta">passes <b id="pB">0</b> · tokens <b id="tB">0</b></span></div>
+        <div class="out" id="outB"></div>
+      </div>
+    </div>
+    <div class="verdict" id="verdict">✓ Identical text, <span id="saved"></span> fewer forward passes</div>
+    <div class="legend"><span><i class="sw" style="background:var(--accent-soft)"></i>tokens accepted from a prompt draft</span><span><i class="sw" style="border-left:2px solid var(--accent)"></i>start of a forward pass that verified a draft</span><span><i class="sw" style="box-shadow:inset 0 -2px 0 var(--e2)"></i>prompt span the draft was copied from</span></div>
+    <figcaption><b>Figure 2.</b> Illustrative reply, split into words for readability (the engine works on tokens). On the real 300 questions the measured gain is 1.41 tokens per verify pass at width 3 (Table VII), which is where most of CoPR's speed comes from.</figcaption>
+  </figure>
+
+  <p><strong>Prefix reuse.</strong> All 300 questions share the same 5-shot preamble. Reusing its KV cache is standard in llama.cpp, but Gemma 4 interleaves <em>sliding-window</em> layers whose cache is a ring buffer, and naive reuse there silently corrupts state once the window wraps. CoPR snapshots the ring buffers at the prefix boundary and restores them exactly, so prompt tokens processed per question drop from 1,444 to 385 with no change in output.</p>
+  <div class="callout"><b>The rule we held ourselves to</b>A technique only counts if every one of the 600 replies (300 per model) is byte-identical to little-gemma with the technique off. Anything that drifts, even when accuracy holds, is out.</div>
+</section>
+
+<section id="results">
+  <div class="col">
+    <h2><span class="n">05</span>Results on the Jetson</h2>
+    <p>Four engines, two models, 300 questions per cell, same board, same weights, same prompts. Toggle the model and the engines to compare.</p>
+  </div>
+  <div class="wide">
+    <div class="bar-head" style="margin-top:28px">
+      <div class="seg" role="group" aria-label="Model"><button data-m="E2B" aria-pressed="false">Gemma 4 E2B</button><button data-m="E4B" aria-pressed="true">Gemma 4 E4B</button></div>
+      <div class="chip-row" id="engChips"></div>
+    </div>
+    <div class="metrics" id="metrics"></div>
+
+    <figure class="card" style="margin-top:16px">
+      <div class="bar-head"><div><div style="font:600 14px var(--sans)">Time vs energy per question</div><div class="unit" style="margin-top:4px">both models · lower-left is better</div></div><span class="better">lower is better on both axes</span></div>
+      <div class="scatter-wrap"><svg id="scatter" viewBox="0 0 960 380" width="100%" role="img" aria-label="Scatter of wall time per question against energy per token"></svg><div class="tip" id="tip"></div></div>
+      <figcaption><b>Figure 3.</b> Wall seconds per question against board energy per generated token, Table III. Within each model CoPR sits alone in the shaded corner: faster and cheaper than every baseline.</figcaption>
+    </figure>
+
+    <figure>
+      <div class="tbl-wrap"><table id="t3"></table></div>
+      <figcaption><b>Table 1.</b> Engines on the Jetson Orin Nano 8 GB at 15 W, MMLU-Pro, n = 300 per cell (paper Table III). Bold: best in row within a model. Shaded: CoPR. ᶠ n-gram replies are compared with llama.cpp without drafting, not with little-gemma. Energy is board DC energy over the working window per generated token.</figcaption>
+    </figure>
+  </div>
+  <div class="col">
+    <p>Against llama.cpp, CoPR cuts wall time per question by <strong>22% on E2B and 34% on E4B</strong>, and energy per token by <strong>20% and 30%</strong>. It also beats llama.cpp's own n-gram drafting, which is not even exact: only 29 of 300 E2B replies (20 of 300 on E4B) match llama.cpp without drafting. Mean power rises slightly because the GPU is busier, but the request finishes so much sooner that energy falls.</p>
+  </div>
+</section>
+
+<section id="apart">
+  <div class="col">
+    <h2><span class="n">06</span>Take it apart</h2>
+    <p>CoPR is two switches. Turning each one on alone shows what it is worth. Every row below is byte-identical to little-gemma on all 300 questions.</p>
+    <div class="seg" role="group" aria-label="Model" id="ablSeg" style="margin-top:8px"><button data-m="E2B" aria-pressed="false">E2B</button><button data-m="E4B" aria-pressed="true">E4B</button></div>
+  </div>
+  <div class="wide"><div class="abl" id="abl" style="margin-top:20px"></div></div>
+  <div class="col">
+    <p style="margin-top:28px"><strong>Prompt lookup carries the speed</strong>: alone it gives almost all of CoPR's decode gain. <strong>Prefix reuse carries the prompt</strong>: it removes 73% of the tokens processed per question but, since prefill was only ~3% of the time, buys a couple of seconds at most. Its energy per token reads slightly <em>higher</em> than the baseline because those rows ran after the Jetson's clocks were pinned (+5–9% energy; see section 10). Together they compound to the best wall time on both models.</p>
+  </div>
+</section>
+
+<section id="width" class="col">
+  <h2><span class="n">07</span>Picking the verify width</h2>
+  <p>A wider verify pass confirms more drafted tokens when the guess is right, but every pass gets more expensive. We swept the width on 28 questions (two per subject) before committing to the full 300.</p>
+  <figure class="card">
+    <div class="bar-head"><div class="unit">Verify width</div><div class="seg" role="group" aria-label="Verify width" id="wSeg"><button data-w="1">none</button><button data-w="2">2</button><button data-w="3" aria-pressed="true">3</button><button data-w="4">4</button></div></div>
+    <div class="wp">
+      <div class="passes" id="passes"></div>
+      <div class="kv" id="wkv"></div>
+    </div>
+    <figcaption><b>Figure 4.</b> Paper Table VI. "Extra tokens" is the mean number of additional tokens a verify pass confirms; "pass cost" is a verify pass measured in plain decode steps. Width 3 gives the best tokens per second and energy on both models; width 4 confirms more tokens but each pass costs more than it saves. All 224 replies byte-identical to little-gemma.</figcaption>
+  </figure>
+  <p>The Pi tells a different story, which is why the width is a per-device setting rather than a constant. On its CPU a batch of 4 tokens costs about the same as a single token (1.06×), because the Q4_0 kernels work on 4-row tiles, while batches of 2 and 3 cost 1.30× and 1.58×. Replaying recorded Pi replies offline shows prompt lookup accepting 1.47–1.51 tokens per pass at width 4 on E2B MMLU-Pro, and 1.39–1.50 across E4B, thinking-on and GSM8K replies.</p>
+</section>
+
+<section id="accuracy">
+  <div class="col">
+    <h2><span class="n">08</span>Accuracy did not move</h2>
+    <p>CoPR's replies are identical to little-gemma's, so its accuracy is identical by construction. The real question is whether little-gemma differs from llama.cpp. Different kernels flip greedy choices at near-ties, so only 32 of 300 E2B replies match between the two engines, yet the scores are statistically the same.</p>
+  </div>
+  <div class="wide">
+    <figure>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Model</th><th>Engine vs llama.cpp</th><th>Δ points</th><th>Right only here</th><th>Right only in llama.cpp</th><th>p</th></tr></thead>
+        <tbody>
+          <tr><td>E2B</td><td style="text-align:left">llama.cpp + n-gram</td><td>+0.7</td><td>17</td><td>15</td><td>0.86</td></tr>
+          <tr class="ours"><td>E2B</td><td style="text-align:left">little-gemma = CoPR</td><td>+0.3</td><td>14</td><td>13</td><td>1.00</td></tr>
+          <tr><td>E4B</td><td style="text-align:left">llama.cpp + n-gram</td><td>−1.0</td><td>11</td><td>14</td><td>0.69</td></tr>
+          <tr class="ours"><td>E4B</td><td style="text-align:left">little-gemma = CoPR</td><td>−0.7</td><td>13</td><td>15</td><td>0.85</td></tr>
+        </tbody>
+      </table></div>
+      <figcaption><b>Table 2.</b> Exact two-sided McNemar tests on the same 300 question ids, same board. No difference is significant; the 95% interval on any single score is about ±5.5 points.</figcaption>
+    </figure>
+    <figure class="card">
+      <div class="bar-head"><div class="unit">Accuracy by subject · s1–s3 pooled</div><div class="seg" role="group" aria-label="Model" id="heatSeg"><button data-m="E2B" aria-pressed="true">E2B</button><button data-m="E4B" aria-pressed="false">E4B</button></div></div>
+      <div class="tbl-wrap" style="border:0"><table class="heat" id="heat"></table></div>
+      <figcaption><b>Table 3.</b> Brighter cells score higher. Small numbers are questions per subject (9–33), so a single question moves a cell by 3–11 points: indicative only. The column on the right covers both little-gemma and CoPR.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="devices">
+  <div class="col">
+    <h2><span class="n">09</span>Same model, other devices</h2>
+    <p>The same checkpoints and the same 300 questions also ran on a Raspberry Pi 5 (llama.cpp, CPU only) and an iPhone 15 Pro (MLX, in our GemmaBench app). This is deployment context, not an engine comparison: the engines differ, and the iPhone's energy is a battery estimate.</p>
+  </div>
+  <div class="wide">
+    <figure>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Device</th><th style="text-align:left">Engine</th><th>Accuracy %</th><th>Decode tok/s</th><th>J / token</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="5">Gemma 4 E2B</td></tr>
+          <tr class="ours"><td>Jetson Orin Nano, 15 W</td><td style="text-align:left">CoPR</td><td>53.0</td><td class="best">29.52</td><td>0.370</td></tr>
+          <tr><td>Raspberry Pi 5 (CPU)</td><td style="text-align:left">llama.cpp</td><td>51.7</td><td>6.87<span class="note">ᵃ</span></td><td>1.130</td></tr>
+          <tr><td>iPhone 15 Pro</td><td style="text-align:left">MLX 4-bit</td><td>51.0</td><td>14.50<span class="note">ᶜ</span></td><td>0.354<span class="note">ᵇ</span></td></tr>
+          <tr class="grp"><td colspan="5">Gemma 4 E4B</td></tr>
+          <tr class="ours"><td>Jetson Orin Nano, 15 W</td><td style="text-align:left">CoPR</td><td>65.3</td><td class="best">17.67</td><td>0.676</td></tr>
+          <tr><td>Raspberry Pi 5 (CPU)</td><td style="text-align:left">llama.cpp</td><td>65.7</td><td>3.37<span class="note">ᵃ</span></td><td>2.223</td></tr>
+          <tr><td>iPhone 15 Pro</td><td style="text-align:left">MLX 4-bit</td><td>66.0</td><td>9.18<span class="note">ᶜ</span></td><td>0.593<span class="note">ᵇ</span></td></tr>
+        </tbody>
+      </table></div>
+      <figcaption><b>Table 4.</b> Paper Table VIII. ᵃ Pi rates pooled over the two subsets with request logs (n = 200). ᵇ Whole-phone battery estimate (battery % × capacity, 1% steps, screen on), not board DC: not comparable with the boards. ᶜ Thermally throttled for most of each run.</figcaption>
+    </figure>
+  </div>
+  <div class="col">
+    <p>Accuracy is flat across all three devices: every score sits inside the others' 95% interval. What changes is speed. The Jetson with CoPR decodes <strong>4–5× faster than the Pi</strong> and roughly <strong>2× faster than a throttled iPhone</strong>, at a third of the Pi's energy per token.</p>
+  </div>
+</section>
+
+<section id="change" class="col">
+  <h2><span class="n">10</span>What would change the result?</h2>
+  <p>What we are confident of, what we are not, and what would move the numbers.</p>
+  <ol class="caveats">
+    <li><b>Exactness is the strong claim; speed is a single run</b>Byte-identity is checked on all 600 replies and cannot be luck. Time and energy come from one run per configuration. A repeat of CoPR on E2B s1 landed at 29.78 vs 29.54 tok/s and 0.404 vs 0.369 J/tok (the repeat ran with clocks pinned, below), so expect a few percent of run-to-run spread, more in energy than in speed.</li>
+    <li><b>The Jetson's clocks were pinned mid-study</b>In early October the board's clocks were locked, which adds 5–9% to energy. The prefix-reuse ablation rows ran in that window. Compare time, not watt-hours, across it. The manuscript does not yet name this.</li>
+    <li><b>Two rounding errata in paper Table IV</b>The data gives 0.224 and 0.369 where the paper prints 0.225 and 0.370 (rounded twice). The "width 3" n-gram row in that table never drafted at all; it is a plain llama.cpp rerun.</li>
+    <li><b>One workload</b>MMLU-Pro chain of thought copies a lot from its prompt, which is exactly what prompt lookup feeds on. Replays on GSM8K and thinking-on replies still accept 1.34–1.43 tokens per pass at width 3, but tasks that copy little (free-form chat, code from scratch) will gain less.</li>
+    <li><b>Separating engine from technique</b>Some of the gap to llama.cpp is little-gemma itself (25.58 vs 23.00 tok/s on E2B before any switch). The ablation isolates CoPR's own share: +15% decode on E2B and +17% on E4B over little-gemma.</li>
+    <li><b>Where it should do better</b>Multi-turn agents re-send a growing transcript and tool list every turn. That is more shared prefix to reuse and more prompt text to copy from than single-turn MMLU-Pro offers.</li>
+  </ol>
+</section>
+
+<section id="reproduce" class="col">
+  <h2><span class="n">11</span>Reproduce it</h2>
+  <p>Every table in the paper is rebuilt from committed raw runs. It needs Python 3.9 and nothing else: no packages, no network, no board.</p>
+  <pre>git clone https://github.com/rifkyariy/agentic-edge.git
+cd agentic-edge
+python3 benchmark/paper_tables.py</pre>
+  <p>It prints the paper's value beside the recomputed one, line by line. Re-running the experiments themselves takes about 42 board-hours on a Jetson Orin Nano; the README walks through it, and <code>findings/TABLES.md</code> has every result as a table image.</p>
+</section>
+</main>
+
+<footer class="col">
+  <p><b style="color:var(--ink2)">Paper:</b> R. A. Yunanto, "Never Compute Twice: Exact-Output Speedups for Gemma 4 on Edge Devices," NTUST, draft. Data and code: <a href="https://github.com/rifkyariy/agentic-edge">github.com/rifkyariy/agentic-edge</a>. Pi data from the <code>pi-results</code> branch.</p>
+  <p>Gemma is a trademark of Google LLC. This is an independent research write-up.</p>
+</footer>
+
+<script>
+(() => {
+const $ = (s, r = document) => r.querySelector(s);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+// theme toggle + reading progress
+const root = document.documentElement;
+$('#themeT').onclick = () => {
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+  drawAll();
+};
+addEventListener('scroll', () => {
+  const h = document.body.scrollHeight - innerHeight;
+  $('#progress').style.width = (h > 0 ? scrollY / h * 100 : 0) + '%';
+}, {passive: true});
+
+// ---------- data (paper Tables I, III, V, VI; findings/TABLES.md) ----------
+const ENG = ['llama.cpp', 'llama.cpp + n-gram', 'little-gemma', 'CoPR (ours)'];
+const ECOL = ['--e0', '--e1', '--e2', '--e3'];
+const T3 = {
+  E2B: {acc:[52.7,53.3,53.0,53.0], ident:['32/300','29/300ᶠ','–','300/300'], decode:[23.00,26.63,25.58,29.52], prompt:[381,381,1444,385], wall:[31.0,27.9,28.3,24.1], power:[10.26,10.84,10.86,10.58], jtok:[0.465,0.429,0.446,0.370], above:[0.258,0.228,0.254,0.207]},
+  E4B: {acc:[66.0,65.0,65.3,65.3], ident:['28/300','20/300ᶠ','–','300/300'], decode:[11.62,13.83,15.05,17.67], prompt:[381,381,1446,385], wall:[62.6,54.3,51.9,41.6], power:[10.77,11.53,11.62,11.39], jtok:[0.965,0.871,0.838,0.676], above:[0.552,0.487,0.490,0.396]},
+};
+const METRICS = [
+  {k:'decode', t:'Decode speed', u:'tok/s', d:'Generated tokens per second while decoding.', hi:true, f:2},
+  {k:'wall', t:'Wall time per question', u:'s', d:'End-to-end seconds per MMLU-Pro question, including prefill.', hi:false, f:1},
+  {k:'jtok', t:'Energy per generated token', u:'J', d:'Board DC energy over the working window, per generated token.', hi:false, f:3},
+  {k:'prompt', t:'Prompt tokens processed', u:'/ q', d:'Tokens prefilled per question; prefix reuse skips the shared 5-shot preamble.', hi:false, f:0},
+];
+const ABL = {
+  E2B: [[25.58,1444,28.3,0.446],[29.51,1444,24.8,0.378],[25.81,385,27.2,0.464],[29.52,385,24.1,0.370]],
+  E4B: [[15.05,1446,51.9,0.838],[17.82,1444,42.7,0.696],[15.47,385,47.6,0.853],[17.67,385,41.6,0.676]],
+};
+const WID = {1:{e2:[25.63,0.451],e4:[15.39,0.879],plus:0,cost:1.00},2:{e2:[29.62,0.386],e4:[17.76,0.736],plus:.57,cost:1.24},3:{e2:[29.93,0.381],e4:[17.91,0.707],plus:.90,cost:1.47},4:{e2:[28.81,0.393],e4:[17.63,0.713],plus:1.12,cost:1.76}};
+const SUBJ = ['biology','business','chemistry','computer science','economics','engineering','health','history','law','math','other','philosophy','physics','psychology'];
+const SN = [18,21,27,9,21,24,21,9,27,33,24,12,33,21];
+const HEAT = {
+  E2B: {l:[14,12,14,5,12,6,11,4,9,25,8,7,20,11], g:[13,12,17,5,10,6,12,5,6,25,10,7,22,9]},
+  E4B: {l:[13,15,18,7,15,10,13,7,11,28,14,8,26,13], g:[12,15,17,7,13,12,14,7,10,27,14,8,27,13]},
+};
+
+let model = 'E4B', heatModel = 'E2B', ablModel = 'E4B', width = 3;
+const on = [true, true, true, true];
+
+// ---------- Figure 1: anatomy ----------
+function drawAnatomy() {
+  const s = $('#anatomy-svg'); const W = 640, x0 = 110, bw = W - x0 - 10;
+  const rows = [['llama.cpp', 2.7, 381], ['little-gemma', 3.2, 1444]];
+  let h = '';
+  rows.forEach(([n, p, tok], i) => {
+    const y = 18 + i * 62, pw = Math.max(bw * p / 100, 3);
+    h += `<text x="0" y="${y+17}" font-size="13" font-weight="600" fill="${css('--ink')}">${n}</text>`;
+    h += `<text x="0" y="${y+34}" font-size="11.5" fill="${css('--ink3')}">${tok.toLocaleString()} prompt tok</text>`;
+    h += `<rect x="${x0}" y="${y}" width="${pw}" height="26" rx="4" fill="${css('--accent')}"/>`;
+    h += `<rect x="${x0+pw+2}" y="${y}" width="${bw-pw-2}" height="26" rx="4" fill="${css('--rule')}"/>`;
+    h += `<text x="${x0+pw+10}" y="${y+17.5}" font-size="12" fill="${css('--ink2')}">decode ${(100-p).toFixed(1)}%</text>`;
+    h += `<text x="${x0}" y="${y+44}" font-size="11.5" fill="${css('--accent')}">prefill ${p}%</text>`;
+  });
+  s.innerHTML = h;
+}
+
+// ---------- Figure 2: prompt lookup ----------
+// Each pass: [words, draftedFromPromptSpanId|null]. Illustrative only.
+const PROMPT = [
+  'Question: ', ['Which of the following is a renewable resource', 4], '? Options: (A) coal (B) ',
+  ['natural gas', 2], ' (C) ', ['solar energy', 3], ' (D) petroleum'
+];
+const PASSES = [
+  [['Let\'s'],null],[['think'],null],[['step'],null],[['by'],null],[['step.'],null],
+  [['The'],null],[['question'],null],[['asks'],null],[['which','of','the'],4],[['following','is','a'],4],[['renewable','resource.'],4],
+  [['Coal,'],null],[['natural','gas'],2],[['and'],null],[['petroleum'],null],[['are'],null],[['fossil'],null],[['fuels'],null],
+  [['formed'],null],[['over'],null],[['millions'],null],[['of'],null],[['years.'],null],
+  [['Solar','energy'],3],[['is'],null],[['replenished'],null],[['continuously.'],null],
+  [['The'],null],[['answer'],null],[['is'],null],[['(C)'],null],[['solar','energy.'],3],
+];
+let timer = null;
+function promptHTML(active) {
+  return '<span class="who">user ›</span> ' + PROMPT.map(p => typeof p === 'string' ? p : `<mark class="${p[1]===active?'on':''}">${p[0]}</mark>`).join('');
+}
+function replay() {
+  clearInterval(timer);
+  const A = $('#outA'), B = $('#outB');
+  A.innerHTML = B.innerHTML = '';
+  $('#verdict').classList.remove('on');
+  const words = PASSES.flatMap(p => p[0]);
+  let ia = 0, ib = 0, pa = 0, pb = 0, tb = 0;
+  $('#promptBox').innerHTML = promptHTML(null);
+  const set = () => { $('#pA').textContent = pa; $('#tA').textContent = ia; $('#pB').textContent = pb; $('#tB').textContent = tb; };
+  set();
+  timer = setInterval(() => {
+    if (ia < words.length) { A.insertAdjacentHTML('beforeend', `<span class="tok">${words[ia]} </span>`); ia++; pa++; }
+    if (ib < PASSES.length) {
+      const [w, src] = PASSES[ib];
+      const drafted = w.length > 1;
+      w.forEach((x, j) => B.insertAdjacentHTML('beforeend', `<span class="tok${drafted ? ' d' : ''}${drafted && j === 0 ? ' sep' : ''}">${x} </span>`));
+      $('#promptBox').innerHTML = promptHTML(drafted ? src : null);
+      ib++; pb++; tb += w.length;
+    }
+    set();
+    if (ia >= words.length && ib >= PASSES.length) {
+      clearInterval(timer);
+      $('#saved').textContent = `${pa - pb} (${Math.round((1 - pb / pa) * 100)}%)`;
+      $('#verdict').classList.add('on');
+    }
+  }, 260);
+}
+$('#replay').onclick = replay;
+// start when scrolled into view, once
+new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { replay(); o.disconnect(); } }, {threshold: .4}).observe($('#fig-lookup'));
+$('#promptBox').innerHTML = promptHTML(null);
+
+// ---------- Section 5: metrics, scatter, table ----------
+function chips() {
+  $('#engChips').innerHTML = ENG.map((e, i) => `<button class="chip" aria-pressed="${on[i]}" data-i="${i}"><i style="background:var(${ECOL[i]})"></i>${e}</button>`).join('');
+  $('#engChips').querySelectorAll('.chip').forEach(c => c.onclick = () => {
+    const i = +c.dataset.i;
+    if (on[i] && on.filter(Boolean).length === 1) return;
+    on[i] = !on[i]; chips(); drawMetrics(); drawScatter();
+  });
+}
+function drawMetrics() {
+  const d = T3[model];
+  $('#metrics').innerHTML = METRICS.map(m => {
+    const vals = d[m.k], idx = ENG.map((_, i) => i).filter(i => on[i]);
+    const max = Math.max(...vals) * 1.05;
+    const best = idx.reduce((b, i) => (m.hi ? vals[i] > vals[b] : vals[i] < vals[b]) ? i : b, idx[0]);
+    const ties = idx.filter(i => vals[i] === vals[best]);
+    const rows = idx.map(i => `<div class="brow${ties.includes(i) ? ' best' : ''}"><span class="lab">${ENG[i]}</span><span class="track"><span class="fill" style="width:${vals[i]/max*100}%;background:var(${ECOL[i]})"></span></span><span class="val">${vals[i].toLocaleString(undefined,{minimumFractionDigits:m.f,maximumFractionDigits:m.f})}</span></div>`).join('');
+    return `<div class="metric"><h4>${m.t} <span class="better">${m.hi ? 'higher' : 'lower'} is better</span></h4><div class="def">${m.d} <span class="mono">(${m.u})</span></div>${rows}</div>`;
+  }).join('');
+}
+function drawScatter() {
+  const s = $('#scatter'), W = 960, H = 380, L = 64, R = 24, T = 20, B = 52;
+  const xs = [0.3, 1.0], ys = [20, 66];
+  const X = v => L + (v - xs[0]) / (xs[1] - xs[0]) * (W - L - R);
+  const Y = v => H - B - (v - ys[0]) / (ys[1] - ys[0]) * (H - T - B);
+  let h = '';
+  for (let v = 0.3; v <= 1.001; v += 0.1) h += `<line x1="${X(v)}" x2="${X(v)}" y1="${T}" y2="${H-B}" stroke="${css('--rule2')}"/><text x="${X(v)}" y="${H-B+18}" font-size="11.5" text-anchor="middle" fill="${css('--ink3')}">${v.toFixed(1)}</text>`;
+  for (let v = 20; v <= 66; v += 10) h += `<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${css('--rule2')}"/><text x="${L-10}" y="${Y(v)+4}" font-size="11.5" text-anchor="end" fill="${css('--ink3')}">${v}</text>`;
+  h += `<text x="${(L+W-R)/2}" y="${H-10}" font-size="12" text-anchor="middle" fill="${css('--ink2')}">energy per generated token (J) · lower is better →</text>`;
+  h += `<text transform="translate(16 ${(T+H-B)/2}) rotate(-90)" font-size="12" text-anchor="middle" fill="${css('--ink2')}">wall s / question · lower is better</text>`;
+  ['E2B', 'E4B'].forEach(m => {
+    const d = T3[m], c = d.jtok[3], w = d.wall[3];
+    // shade the region beating every baseline of this model, clipped near CoPR so the two models' boxes don't overlap
+    const bx = Math.min(...d.jtok.slice(0, 3)), by = Math.min(...d.wall.slice(0, 3));
+    const x1 = X(c - 0.05), y1 = Y(Math.max(w - 4, ys[0]));
+    h += `<rect x="${x1}" y="${Y(by)}" width="${X(bx)-x1}" height="${y1-Y(by)}" rx="6" fill="${css('--accent')}" fill-opacity=".08" stroke="${css('--accent')}" stroke-opacity=".35" stroke-dasharray="3 3"/>`;
+    h += `<text x="${X(bx)-6}" y="${Y(by)+14}" font-size="10.5" text-anchor="end" fill="${css('--accent')}">beats every ${m} baseline</text>`;
+    const pts = ENG.map((_, i) => i).filter(i => on[i]).map(i => [X(d.jtok[i]), Y(d.wall[i]), i]);
+    // line from llama.cpp to CoPR when both visible
+    if (on[0] && on[3]) h += `<line x1="${X(d.jtok[0])}" y1="${Y(d.wall[0])}" x2="${X(c)}" y2="${Y(w)}" stroke="${css('--accent')}" stroke-dasharray="4 4" opacity=".6"/>`;
+    pts.forEach(([x, y, i]) => {
+      h += `<circle cx="${x}" cy="${y}" r="${i===3?9:7}" fill="${css(ECOL[i])}" stroke="${css('--paper')}" stroke-width="2" data-m="${m}" data-i="${i}" style="cursor:pointer"/>`;
+    });
+    h += `<text x="${X(d.jtok[0])+12}" y="${Y(d.wall[0])+4}" font-size="12" font-weight="600" fill="${css('--ink2')}">${m}</text>`;
+  });
+  s.innerHTML = h;
+  const tip = $('#tip'), wrap = s.parentElement;
+  s.querySelectorAll('circle').forEach(c => {
+    c.onmouseenter = () => {
+      const d = T3[c.dataset.m], i = +c.dataset.i;
+      tip.innerHTML = `<b>${ENG[i]}</b> · ${c.dataset.m}<br>${d.wall[i]} s / q · ${d.jtok[i]} J / tok<br>${d.decode[i]} tok/s · ${d.acc[i]}%`;
+      const r = c.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+      tip.style.left = Math.min(r.left - wr.left + 14, wr.width - 190) + 'px'; tip.style.top = (r.top - wr.top - 58) + 'px'; tip.style.opacity = 1;
+    };
+    c.onmouseleave = () => tip.style.opacity = 0;
+  });
+}
+function drawT3() {
+  const rows = [['Accuracy (%)','acc',null,1],['Replies identical to little-gemma','ident',null],['Decode (tok/s)','decode',true,2],['Prompt tokens processed / q','prompt',false,0],['Wall time / question (s)','wall',false,1],['Mean power, generating (W)','power',false,2],['Energy / gen. token (J)','jtok',false,3],['  above idle (J)','above',false,3]];
+  let h = '<thead><tr><th></th>' + ['E2B','E4B'].map(m => ENG.map(e => `<th>${m}<br>${e}</th>`).join('')).join('') + '</tr></thead><tbody>';
+  rows.forEach(([lab, k, hi, f]) => {
+    h += `<tr><td>${lab}</td>`;
+    ['E2B','E4B'].forEach(m => {
+      const v = T3[m][k];
+      const best = hi === null ? null : (hi ? Math.max(...v) : Math.min(...v));
+      v.forEach((x, i) => h += `<td class="${x===best?'best':''}" style="${i===3?'background:var(--accent-soft)':''}">${typeof x==='number'?x.toLocaleString(undefined,{minimumFractionDigits:f,maximumFractionDigits:f}):x}</td>`);
+    });
+    h += '</tr>';
+  });
+  $('#t3').innerHTML = h + '</tbody>';
+}
+document.querySelectorAll('#results .seg button').forEach(b => b.onclick = () => {
+  model = b.dataset.m;
+  document.querySelectorAll('#results .seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  drawMetrics();
+});
+
+// ---------- Section 6: ablation ----------
+function drawAbl() {
+  const names = [['little-gemma','no switches','0','0'],['+ prompt lookup','drafting only','1','0'],['+ prefix reuse','KV reuse only','0','1'],['CoPR','both switches','1','1']];
+  const base = ABL[ablModel][0];
+  $('#abl').innerHTML = ABL[ablModel].map((r, i) => {
+    const pct = (a, b, hi) => i === 0 || Math.abs(a / b - 1) < .005 ? '' : ` <span style="font:400 11px var(--sans);color:${(hi ? a > b : a < b) ? 'var(--good)' : 'var(--bad)'}">${a > b ? '+' : '−'}${Math.abs((a/b-1)*100).toFixed(0)}%</span>`;
+    return `<div class="ab${i===3?' ours':''}"><div class="t">${names[i][0]}</div><div class="s">${names[i][1]}</div>
+      <div class="sw2"><span class="${names[i][2]==='1'?'on':''}">lookup</span><span class="${names[i][3]==='1'?'on':''}">reuse</span></div>
+      <div class="row">decode tok/s<b>${r[0].toFixed(2)}${pct(r[0],base[0],true)}</b></div>
+      <div class="row">prompt tok / q<b>${r[1].toLocaleString()}${pct(r[1],base[1],false)}</b></div>
+      <div class="row">wall s / q<b>${r[2].toFixed(1)}${pct(r[2],base[2],false)}</b></div>
+      <div class="row">J / tok<b>${r[3].toFixed(3)}${pct(r[3],base[3],false)}</b></div>
+      <div class="row">= little-gemma<b>${i===0?'–':'300/300'}</b></div></div>`;
+  }).join('');
+}
+document.querySelectorAll('#ablSeg button').forEach(b => b.onclick = () => {
+  ablModel = b.dataset.m; document.querySelectorAll('#ablSeg button').forEach(x => x.setAttribute('aria-pressed', x === b)); drawAbl();
+});
+
+// ---------- Section 7: verify width ----------
+function drawWidth() {
+  const w = WID[width];
+  // five example passes; accepted counts chosen so their mean matches the measured "+tokens"
+  const acc = {1:[0,0,0,0,0],2:[1,0,1,1,0],3:[2,0,1,2,0],4:[3,0,1,2,0]}[width];
+  $('#passes').innerHTML = acc.map((a, p) => {
+    let slots = `<span class="slot fix">t</span>`;
+    for (let k = 1; k < width; k++) slots += `<span class="slot ${k <= a ? 'ok' : 'no'}">${k <= a ? '✓' : '·'}</span>`;
+    return `<div class="pass"><span style="width:52px">pass ${p+1}</span>${slots}</div>`;
+  }).join('') + `<div style="font:400 12px var(--sans);color:var(--ink3);margin-top:6px">t = token the model decodes anyway · ✓ drafted token confirmed · · rejected</div>`;
+  const best = width === 3;
+  $('#wkv').innerHTML = `
+    <div><div class="k">Extra tokens / pass</div><div class="v">${width===1?'–':'+'+w.plus.toFixed(2)}</div></div>
+    <div><div class="k">Pass cost</div><div class="v">${w.cost.toFixed(2)}<small>×</small></div></div>
+    <div><div class="k">E2B decode</div><div class="v" style="${best?'color:var(--accent)':''}">${w.e2[0]}<small> tok/s</small></div></div>
+    <div><div class="k">E4B decode</div><div class="v" style="${best?'color:var(--accent)':''}">${w.e4[0]}<small> tok/s</small></div></div>
+    <div><div class="k">E2B energy</div><div class="v" style="${best?'color:var(--accent)':''}">${w.e2[1]}<small> J/tok</small></div></div>
+    <div><div class="k">E4B energy</div><div class="v" style="${best?'color:var(--accent)':''}">${w.e4[1]}<small> J/tok</small></div></div>`;
+}
+document.querySelectorAll('#wSeg button').forEach(b => b.onclick = () => {
+  width = +b.dataset.w; document.querySelectorAll('#wSeg button').forEach(x => x.setAttribute('aria-pressed', x === b)); drawWidth();
+});
+
+// ---------- Section 8: subject heatmap ----------
+function mix(p) { // p in 0..1 -> blend heat0..heat1
+  const a = css('--heat0'), b = css('--heat1');
+  const h = s => [1,3,5].map(i => parseInt(s.slice(i, i+2), 16));
+  const [x, y] = [h(a), h(b)];
+  return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * p)).join(',')})`;
+}
+function drawHeat() {
+  const d = HEAT[heatModel];
+  let h = '<thead><tr><th>Subject</th><th style="text-align:center">llama.cpp</th><th style="text-align:center">little-gemma = CoPR</th><th style="text-align:center">Δ</th></tr></thead><tbody>';
+  SUBJ.forEach((s, i) => {
+    const a = d.l[i] / SN[i], b = d.g[i] / SN[i], dl = Math.round(b*100) - Math.round(a*100);
+    const cell = v => { const p = Math.max(0, (v - .2) / .7); return `<td style="background:${mix(p)};color:${p > .6 ? '#fff' : 'var(--ink)'}">${Math.round(v*100)}%<span class="n" style="color:inherit;opacity:.7">${Math.round(v*SN[i])}/${SN[i]}</span></td>`; };
+    h += `<tr><td>${s}</td>${cell(a)}${cell(b)}<td style="color:${dl>0?'var(--good)':dl<0?'var(--bad)':'var(--ink3)'}">${dl>0?'+':''}${dl}</td></tr>`;
+  });
+  $('#heat').innerHTML = h + '</tbody>';
+}
+document.querySelectorAll('#heatSeg button').forEach(b => b.onclick = () => {
+  heatModel = b.dataset.m; document.querySelectorAll('#heatSeg button').forEach(x => x.setAttribute('aria-pressed', x === b)); drawHeat();
+});
+
+function drawAll() { drawAnatomy(); chips(); drawMetrics(); drawScatter(); drawT3(); drawAbl(); drawWidth(); drawHeat(); }
+drawAll();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawAll);
+
+// self-check: CoPR must be best on wall time and J/tok for both models (the page's headline claim)
+['E2B','E4B'].forEach(m => {
+  console.assert(Math.min(...T3[m].wall) === T3[m].wall[3] && Math.min(...T3[m].jtok) === T3[m].jtok[3], 'headline claim broken for ' + m);
+});
+})();
+</script>
+</body>
+</html>
