@@ -1,0 +1,16 @@
+{
+ "label": "mmlupro-ngram-n3m3-e2b-s1",
+ "command": "env SUBSET=s1 THINKING=off SPEC=n3m3 ./std_mmlupro_jetson.sh e2b",
+ "model_path": "",
+ "server_args": "",
+ "governor": "schedutil",
+ "kernel": "Linux 6.8.12-1021-tegra",
+ "host": "mitlab-orin-nano",
+ "cpus": 6,
+ "start_epoch": 1791377801.8391955,
+ "throttled_at_start": "",
+ "server_args_after": "/home/ari/build/llama.cpp/build/bin/llama-server -m /home/ari/research/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf -c 8192 --host 127.0.0.1 --port 8080 -ngl 99 -rea off --reasoning-budget -1 --cache-ram 0 --spec-type ngram-simple --spec-ngram-simple-size-n 3 --spec-ngram-simple-size-m 3 --spec-draft-n-max 3",
+ "work_start_epoch": 1791377831.0,
+ "work_end_epoch": 1791380383.0,
+ "exit_code": 0
+}

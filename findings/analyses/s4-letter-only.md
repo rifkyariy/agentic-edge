@@ -1,8 +1,8 @@
 # S4 letter-only: the result
 
-**E2B, Pi 5, s1+s2+s3, n=300.** The probe behind
-[`2026-09-27-RECOMMENDATION.md`](../../docs/proposals/2026-09-27-RECOMMENDATION.md): can Gemma pick
-the option without reasoning its way there?
+**E2B, Pi 5, s1+s2+s3, n=300.** The probe behind the cascade line of work
+(see [`iso-accuracy.md`](iso-accuracy.md)): can Gemma pick the option without
+reasoning its way there? Not used in the manuscript; reported because it ran.
 
 ## Headline
 
@@ -76,6 +76,9 @@ table *if* a gate can be built. Nothing here shows one can.
 - **The gate is now the entire problem**, and its target is sharper than it
   was: not "is this question hard" but "will the cheap path get this right".
   Those 10 questions are where the value is.
+- **Followed up and closed:** every gate built on this premise was then tested
+  and none reached iso-accuracy — see [`permutation-ensemble.md`](permutation-ensemble.md)
+  and [`model-cascade.md`](model-cascade.md).
 
 ## What it cost to learn
 

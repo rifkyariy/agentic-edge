@@ -1,0 +1,695 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1453" height="1199" viewBox="0 0 1453 1199" role="img" aria-label="Every Jetson run in findings/runs/jetson/ (MMLU-Pro, one subset each)">
+<style>text{font-family:Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;font-variant-numeric:tabular-nums}.title{font-size:15px;font-weight:600}.head{font-size:12px;font-weight:600}.cell{font-size:13px}.cell.b{font-weight:700}.note{font-size:11.5px}.glabel{font-size:13px;font-weight:600;font-style:italic}.hair{stroke-width:0.6}.hair2{stroke-width:0.6}.bg{fill:#fcfcfb}.title{fill:#0b0b0b}.head{fill:#52514e}.cell{fill:#0b0b0b}.note{fill:#52514e}.glabel{fill:#52514e}.rule{stroke:#0b0b0b}.hair{stroke:#e4e3df}.hair2{stroke:#52514e}.tint{fill:#e8f0fa}.group{fill:#f3f2ee}@media (prefers-color-scheme:dark){.bg{fill:#1a1a19}.title{fill:#ffffff}.head{fill:#c3c2b7}.cell{fill:#ffffff}.note{fill:#c3c2b7}.glabel{fill:#c3c2b7}.rule{stroke:#c3c2b7}.hair{stroke:#34332f}.hair2{stroke:#c3c2b7}.tint{fill:#1d2a3b}.group{fill:#242321}}</style>
+<rect class="bg" width="100%" height="100%"/>
+<text class="title" x="20" y="35">Every Jetson run in findings/runs/jetson/ (MMLU-Pro, one subset each)</text>
+<rect class="tint" x="20" y="619.0" width="1413.9" height="27"/>
+<rect class="tint" x="20" y="646.0" width="1413.9" height="27"/>
+<rect class="tint" x="20" y="673.0" width="1413.9" height="27"/>
+<rect class="tint" x="20" y="700.0" width="1413.9" height="27"/>
+<rect class="tint" x="20" y="727.0" width="1413.9" height="27"/>
+<rect class="tint" x="20" y="754.0" width="1413.9" height="27"/>
+<rect class="tint" x="20" y="781.0" width="1413.9" height="27"/>
+<text class="head" x="32.0" y="68.0">Run</text>
+<text class="head" x="178.9" y="68.0">Started</text>
+<text class="head" x="343.1" y="68.0" text-anchor="end">Acc %</text>
+<text class="head" x="442.0" y="68.0" text-anchor="end">Decode tok/s</text>
+<text class="head" x="529.6" y="68.0" text-anchor="end">Prefill tok/s</text>
+<text class="head" x="626.2" y="68.0" text-anchor="end">Prompt tok/q</text>
+<text class="head" x="718.2" y="68.0" text-anchor="end">Gen. tokens</text>
+<text class="head" x="791.0" y="68.0" text-anchor="end">Wall min</text>
+<text class="head" x="855.1" y="68.0" text-anchor="end">W gen.</text>
+<text class="head" x="911.6" y="68.0" text-anchor="end">J/tok</text>
+<text class="head" x="993.4" y="68.0" text-anchor="end">above idle</text>
+<text class="head" x="1053.4" y="68.0" text-anchor="end">Idle W</text>
+<text class="head" x="1124.4" y="68.0" text-anchor="end">Peak °C</text>
+<text class="head" x="1204.5" y="68.0" text-anchor="end">GPU MHz</text>
+<text class="head" x="1284.6" y="68.0" text-anchor="end">CPU MHz</text>
+<text class="head" x="1308.6" y="68.0">Fingerprint</text>
+<line class="rule" x1="20" x2="1433.9" y1="49.0" y2="49.0" stroke-width="1.5"/>
+<line class="rule" x1="20" x2="1433.9" y1="79.0" y2="79.0" stroke-width="0.8"/>
+<line class="rule" x1="20" x2="1433.9" y1="1132.0" y2="1132.0" stroke-width="1.5"/>
+<text class="cell" x="32.0" y="97.0">e2b-s1</text>
+<text class="cell" x="178.9" y="97.0">2026-09-22 00:22</text>
+<text class="cell" x="343.1" y="97.0" text-anchor="end">56</text>
+<text class="cell" x="442.0" y="97.0" text-anchor="end">23.04</text>
+<text class="cell" x="529.6" y="97.0" text-anchor="end">482</text>
+<text class="cell" x="626.2" y="97.0" text-anchor="end">380</text>
+<text class="cell" x="718.2" y="97.0" text-anchor="end">59,053</text>
+<text class="cell" x="791.0" y="97.0" text-anchor="end">46.5</text>
+<text class="cell" x="855.1" y="97.0" text-anchor="end">10.27</text>
+<text class="cell" x="911.6" y="97.0" text-anchor="end">0.466</text>
+<text class="cell" x="993.4" y="97.0" text-anchor="end">0.259</text>
+<text class="cell" x="1053.4" y="97.0" text-anchor="end">4.49</text>
+<text class="cell" x="1124.4" y="97.0" text-anchor="end">60.8</text>
+<text class="cell" x="1204.5" y="97.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="97.0" text-anchor="end">902</text>
+<text class="cell" x="1308.6" y="97.0">by hand</text>
+<line class="hair" x1="20" x2="1433.9" y1="106.0" y2="106.0"/>
+<text class="cell" x="32.0" y="124.0">e2b-s2</text>
+<text class="cell" x="178.9" y="124.0">2026-09-21 22:40</text>
+<text class="cell" x="343.1" y="124.0" text-anchor="end">47</text>
+<text class="cell" x="442.0" y="124.0" text-anchor="end">23.00</text>
+<text class="cell" x="529.6" y="124.0" text-anchor="end">472</text>
+<text class="cell" x="626.2" y="124.0" text-anchor="end">371</text>
+<text class="cell" x="718.2" y="124.0" text-anchor="end">74,149</text>
+<text class="cell" x="791.0" y="124.0" text-anchor="end">57.3</text>
+<text class="cell" x="855.1" y="124.0" text-anchor="end">10.25</text>
+<text class="cell" x="911.6" y="124.0" text-anchor="end">0.462</text>
+<text class="cell" x="993.4" y="124.0" text-anchor="end">0.256</text>
+<text class="cell" x="1053.4" y="124.0" text-anchor="end">4.51</text>
+<text class="cell" x="1124.4" y="124.0" text-anchor="end">57.5</text>
+<text class="cell" x="1204.5" y="124.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="124.0" text-anchor="end">898</text>
+<text class="cell" x="1308.6" y="124.0">by hand</text>
+<line class="hair" x1="20" x2="1433.9" y1="133.0" y2="133.0"/>
+<text class="cell" x="32.0" y="151.0">e2b-s3</text>
+<text class="cell" x="178.9" y="151.0">2026-09-22 01:08</text>
+<text class="cell" x="343.1" y="151.0" text-anchor="end">55</text>
+<text class="cell" x="442.0" y="151.0" text-anchor="end">22.96</text>
+<text class="cell" x="529.6" y="151.0" text-anchor="end">477</text>
+<text class="cell" x="626.2" y="151.0" text-anchor="end">391</text>
+<text class="cell" x="718.2" y="151.0" text-anchor="end">65,504</text>
+<text class="cell" x="791.0" y="151.0" text-anchor="end">51.3</text>
+<text class="cell" x="855.1" y="151.0" text-anchor="end">10.27</text>
+<text class="cell" x="911.6" y="151.0" text-anchor="end">0.466</text>
+<text class="cell" x="993.4" y="151.0" text-anchor="end">0.258</text>
+<text class="cell" x="1053.4" y="151.0" text-anchor="end">4.53</text>
+<text class="cell" x="1124.4" y="151.0" text-anchor="end">56.9</text>
+<text class="cell" x="1204.5" y="151.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="151.0" text-anchor="end">887</text>
+<text class="cell" x="1308.6" y="151.0">by hand</text>
+<line class="hair" x1="20" x2="1433.9" y1="160.0" y2="160.0"/>
+<text class="cell" x="32.0" y="178.0">e4b-s1</text>
+<text class="cell" x="178.9" y="178.0">2026-09-22 09:52</text>
+<text class="cell" x="343.1" y="178.0" text-anchor="end">67</text>
+<text class="cell" x="442.0" y="178.0" text-anchor="end">11.63</text>
+<text class="cell" x="529.6" y="178.0" text-anchor="end">273</text>
+<text class="cell" x="626.2" y="178.0" text-anchor="end">381</text>
+<text class="cell" x="718.2" y="178.0" text-anchor="end">66,165</text>
+<text class="cell" x="791.0" y="178.0" text-anchor="end">101.9</text>
+<text class="cell" x="855.1" y="178.0" text-anchor="end">10.76</text>
+<text class="cell" x="911.6" y="178.0" text-anchor="end">0.963</text>
+<text class="cell" x="993.4" y="178.0" text-anchor="end">0.553</text>
+<text class="cell" x="1053.4" y="178.0" text-anchor="end">4.48</text>
+<text class="cell" x="1124.4" y="178.0" text-anchor="end">59.7</text>
+<text class="cell" x="1204.5" y="178.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="178.0" text-anchor="end">902</text>
+<text class="cell" x="1308.6" y="178.0">by hand</text>
+<line class="hair" x1="20" x2="1433.9" y1="187.0" y2="187.0"/>
+<text class="cell" x="32.0" y="205.0">e4b-s2</text>
+<text class="cell" x="178.9" y="205.0">2026-09-22 12:52</text>
+<text class="cell" x="343.1" y="205.0" text-anchor="end">66</text>
+<text class="cell" x="442.0" y="205.0" text-anchor="end">11.60</text>
+<text class="cell" x="529.6" y="205.0" text-anchor="end">272</text>
+<text class="cell" x="626.2" y="205.0" text-anchor="end">371</text>
+<text class="cell" x="718.2" y="205.0" text-anchor="end">68,372</text>
+<text class="cell" x="791.0" y="205.0" text-anchor="end">105.4</text>
+<text class="cell" x="855.1" y="205.0" text-anchor="end">10.78</text>
+<text class="cell" x="911.6" y="205.0" text-anchor="end">0.967</text>
+<text class="cell" x="993.4" y="205.0" text-anchor="end">0.552</text>
+<text class="cell" x="1053.4" y="205.0" text-anchor="end">4.53</text>
+<text class="cell" x="1124.4" y="205.0" text-anchor="end">59.6</text>
+<text class="cell" x="1204.5" y="205.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="205.0" text-anchor="end">913</text>
+<text class="cell" x="1308.6" y="205.0">by hand</text>
+<line class="hair" x1="20" x2="1433.9" y1="214.0" y2="214.0"/>
+<text class="cell" x="32.0" y="232.0">e4b-s3</text>
+<text class="cell" x="178.9" y="232.0">2026-09-22 14:48</text>
+<text class="cell" x="343.1" y="232.0" text-anchor="end">65</text>
+<text class="cell" x="442.0" y="232.0" text-anchor="end">11.64</text>
+<text class="cell" x="529.6" y="232.0" text-anchor="end">279</text>
+<text class="cell" x="626.2" y="232.0" text-anchor="end">391</text>
+<text class="cell" x="718.2" y="232.0" text-anchor="end">68,679</text>
+<text class="cell" x="791.0" y="232.0" text-anchor="end">105.9</text>
+<text class="cell" x="855.1" y="232.0" text-anchor="end">10.77</text>
+<text class="cell" x="911.6" y="232.0" text-anchor="end">0.964</text>
+<text class="cell" x="993.4" y="232.0" text-anchor="end">0.552</text>
+<text class="cell" x="1053.4" y="232.0" text-anchor="end">4.50</text>
+<text class="cell" x="1124.4" y="232.0" text-anchor="end">57.8</text>
+<text class="cell" x="1204.5" y="232.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="232.0" text-anchor="end">912</text>
+<text class="cell" x="1308.6" y="232.0">by hand</text>
+<line class="hair" x1="20" x2="1433.9" y1="241.0" y2="241.0"/>
+<text class="cell" x="32.0" y="259.0">ngram-n3m3-e2b-s1</text>
+<text class="cell" x="178.9" y="259.0">2026-10-07 20:56</text>
+<text class="cell" x="343.1" y="259.0" text-anchor="end">56</text>
+<text class="cell" x="442.0" y="259.0" text-anchor="end">26.97</text>
+<text class="cell" x="529.6" y="259.0" text-anchor="end">480</text>
+<text class="cell" x="626.2" y="259.0" text-anchor="end">381</text>
+<text class="cell" x="718.2" y="259.0" text-anchor="end">63,741</text>
+<text class="cell" x="791.0" y="259.0" text-anchor="end">43.5</text>
+<text class="cell" x="855.1" y="259.0" text-anchor="end">10.84</text>
+<text class="cell" x="911.6" y="259.0" text-anchor="end">0.424</text>
+<text class="cell" x="993.4" y="259.0" text-anchor="end">0.224</text>
+<text class="cell" x="1053.4" y="259.0" text-anchor="end">4.99</text>
+<text class="cell" x="1124.4" y="259.0" text-anchor="end">60.6</text>
+<text class="cell" x="1204.5" y="259.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="259.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="259.0">ok · ngram-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="268.0" y2="268.0"/>
+<text class="cell" x="32.0" y="286.0">ngram-n3m3-e2b-s2</text>
+<text class="cell" x="178.9" y="286.0">2026-10-08 04:38</text>
+<text class="cell" x="343.1" y="286.0" text-anchor="end">51</text>
+<text class="cell" x="442.0" y="286.0" text-anchor="end">26.39</text>
+<text class="cell" x="529.6" y="286.0" text-anchor="end">482</text>
+<text class="cell" x="626.2" y="286.0" text-anchor="end">371</text>
+<text class="cell" x="718.2" y="286.0" text-anchor="end">68,322</text>
+<text class="cell" x="791.0" y="286.0" text-anchor="end">47.6</text>
+<text class="cell" x="855.1" y="286.0" text-anchor="end">10.85</text>
+<text class="cell" x="911.6" y="286.0" text-anchor="end">0.433</text>
+<text class="cell" x="993.4" y="286.0" text-anchor="end">0.231</text>
+<text class="cell" x="1053.4" y="286.0" text-anchor="end">4.95</text>
+<text class="cell" x="1124.4" y="286.0" text-anchor="end">61.7</text>
+<text class="cell" x="1204.5" y="286.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="286.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="286.0">ok · ngram-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="295.0" y2="295.0"/>
+<text class="cell" x="32.0" y="313.0">ngram-n3m3-e2b-s3</text>
+<text class="cell" x="178.9" y="313.0">2026-10-08 05:26</text>
+<text class="cell" x="343.1" y="313.0" text-anchor="end">53</text>
+<text class="cell" x="442.0" y="313.0" text-anchor="end">26.56</text>
+<text class="cell" x="529.6" y="313.0" text-anchor="end">489</text>
+<text class="cell" x="626.2" y="313.0" text-anchor="end">391</text>
+<text class="cell" x="718.2" y="313.0" text-anchor="end">69,997</text>
+<text class="cell" x="791.0" y="313.0" text-anchor="end">48.2</text>
+<text class="cell" x="855.1" y="313.0" text-anchor="end">10.83</text>
+<text class="cell" x="911.6" y="313.0" text-anchor="end">0.429</text>
+<text class="cell" x="993.4" y="313.0" text-anchor="end">0.229</text>
+<text class="cell" x="1053.4" y="313.0" text-anchor="end">4.94</text>
+<text class="cell" x="1124.4" y="313.0" text-anchor="end">61.4</text>
+<text class="cell" x="1204.5" y="313.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="313.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="313.0">ok · ngram-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="322.0" y2="322.0"/>
+<text class="cell" x="32.0" y="340.0">ngram-n3m3-e4b-s1</text>
+<text class="cell" x="178.9" y="340.0">2026-10-08 06:14</text>
+<text class="cell" x="343.1" y="340.0" text-anchor="end">62</text>
+<text class="cell" x="442.0" y="340.0" text-anchor="end">13.78</text>
+<text class="cell" x="529.6" y="340.0" text-anchor="end">280</text>
+<text class="cell" x="626.2" y="340.0" text-anchor="end">381</text>
+<text class="cell" x="718.2" y="340.0" text-anchor="end">69,200</text>
+<text class="cell" x="791.0" y="340.0" text-anchor="end">90.6</text>
+<text class="cell" x="855.1" y="340.0" text-anchor="end">11.53</text>
+<text class="cell" x="911.6" y="340.0" text-anchor="end">0.875</text>
+<text class="cell" x="993.4" y="340.0" text-anchor="end">0.491</text>
+<text class="cell" x="1053.4" y="340.0" text-anchor="end">4.94</text>
+<text class="cell" x="1124.4" y="340.0" text-anchor="end">62.5</text>
+<text class="cell" x="1204.5" y="340.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="340.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="340.0">ok · ngram-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="349.0" y2="349.0"/>
+<text class="cell" x="32.0" y="367.0">ngram-n3m3-e4b-s2</text>
+<text class="cell" x="178.9" y="367.0">2026-10-08 07:45</text>
+<text class="cell" x="343.1" y="367.0" text-anchor="end">66</text>
+<text class="cell" x="442.0" y="367.0" text-anchor="end">13.82</text>
+<text class="cell" x="529.6" y="367.0" text-anchor="end">280</text>
+<text class="cell" x="626.2" y="367.0" text-anchor="end">371</text>
+<text class="cell" x="718.2" y="367.0" text-anchor="end">69,324</text>
+<text class="cell" x="791.0" y="367.0" text-anchor="end">90.3</text>
+<text class="cell" x="855.1" y="367.0" text-anchor="end">11.54</text>
+<text class="cell" x="911.6" y="367.0" text-anchor="end">0.872</text>
+<text class="cell" x="993.4" y="367.0" text-anchor="end">0.486</text>
+<text class="cell" x="1053.4" y="367.0" text-anchor="end">4.99</text>
+<text class="cell" x="1124.4" y="367.0" text-anchor="end">62.6</text>
+<text class="cell" x="1204.5" y="367.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="367.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="367.0">ok · ngram-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="376.0" y2="376.0"/>
+<text class="cell" x="32.0" y="394.0">ngram-n3m3-e4b-s3</text>
+<text class="cell" x="178.9" y="394.0">2026-10-08 09:15</text>
+<text class="cell" x="343.1" y="394.0" text-anchor="end">67</text>
+<text class="cell" x="442.0" y="394.0" text-anchor="end">13.88</text>
+<text class="cell" x="529.6" y="394.0" text-anchor="end">284</text>
+<text class="cell" x="626.2" y="394.0" text-anchor="end">391</text>
+<text class="cell" x="718.2" y="394.0" text-anchor="end">69,860</text>
+<text class="cell" x="791.0" y="394.0" text-anchor="end">90.5</text>
+<text class="cell" x="855.1" y="394.0" text-anchor="end">11.53</text>
+<text class="cell" x="911.6" y="394.0" text-anchor="end">0.867</text>
+<text class="cell" x="993.4" y="394.0" text-anchor="end">0.484</text>
+<text class="cell" x="1053.4" y="394.0" text-anchor="end">4.99</text>
+<text class="cell" x="1124.4" y="394.0" text-anchor="end">62.8</text>
+<text class="cell" x="1204.5" y="394.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="394.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="394.0">ok · ngram-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="403.0" y2="403.0"/>
+<text class="cell" x="32.0" y="421.0">ngram-n3m2-e2b-s1</text>
+<text class="cell" x="178.9" y="421.0">2026-10-07 20:11</text>
+<text class="cell" x="343.1" y="421.0" text-anchor="end">56</text>
+<text class="cell" x="442.0" y="421.0" text-anchor="end">23.80</text>
+<text class="cell" x="529.6" y="421.0" text-anchor="end">492</text>
+<text class="cell" x="626.2" y="421.0" text-anchor="end">380</text>
+<text class="cell" x="718.2" y="421.0" text-anchor="end">59,053</text>
+<text class="cell" x="791.0" y="421.0" text-anchor="end">45.6</text>
+<text class="cell" x="855.1" y="421.0" text-anchor="end">11.10</text>
+<text class="cell" x="911.6" y="421.0" text-anchor="end">0.491</text>
+<text class="cell" x="993.4" y="421.0" text-anchor="end">0.266</text>
+<text class="cell" x="1053.4" y="421.0" text-anchor="end">4.96</text>
+<text class="cell" x="1124.4" y="421.0" text-anchor="end">61.3</text>
+<text class="cell" x="1204.5" y="421.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="421.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="421.0">ok · ngram-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="430.0" y2="430.0"/>
+<text class="cell" x="32.0" y="448.0">ngram-default-e2b-s1</text>
+<text class="cell" x="178.9" y="448.0">2026-10-07 21:40</text>
+<text class="cell" x="343.1" y="448.0" text-anchor="end">53</text>
+<text class="cell" x="442.0" y="448.0" text-anchor="end">25.15</text>
+<text class="cell" x="529.6" y="448.0" text-anchor="end">489</text>
+<text class="cell" x="626.2" y="448.0" text-anchor="end">381</text>
+<text class="cell" x="718.2" y="448.0" text-anchor="end">62,024</text>
+<text class="cell" x="791.0" y="448.0" text-anchor="end">44.6</text>
+<text class="cell" x="855.1" y="448.0" text-anchor="end">11.01</text>
+<text class="cell" x="911.6" y="448.0" text-anchor="end">0.458</text>
+<text class="cell" x="993.4" y="448.0" text-anchor="end">0.249</text>
+<text class="cell" x="1053.4" y="448.0" text-anchor="end">4.94</text>
+<text class="cell" x="1124.4" y="448.0" text-anchor="end">60.7</text>
+<text class="cell" x="1204.5" y="448.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="448.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="448.0">ok · ngram-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="457.0" y2="457.0"/>
+<text class="cell" x="32.0" y="475.0">lg-e2b-s1</text>
+<text class="cell" x="178.9" y="475.0">2026-09-25 22:50</text>
+<text class="cell" x="343.1" y="475.0" text-anchor="end">54</text>
+<text class="cell" x="442.0" y="475.0" text-anchor="end">25.57</text>
+<text class="cell" x="529.6" y="475.0" text-anchor="end">1687</text>
+<text class="cell" x="626.2" y="475.0" text-anchor="end">1444</text>
+<text class="cell" x="718.2" y="475.0" text-anchor="end">64,880</text>
+<text class="cell" x="791.0" y="475.0" text-anchor="end">47.2</text>
+<text class="cell" x="855.1" y="475.0" text-anchor="end">10.88</text>
+<text class="cell" x="911.6" y="475.0" text-anchor="end">0.451</text>
+<text class="cell" x="993.4" y="475.0" text-anchor="end">0.255</text>
+<text class="cell" x="1053.4" y="475.0" text-anchor="end">4.59</text>
+<text class="cell" x="1124.4" y="475.0" text-anchor="end">60.5</text>
+<text class="cell" x="1204.5" y="475.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="475.0" text-anchor="end">845</text>
+<text class="cell" x="1308.6" y="475.0">ok · lg-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="484.0" y2="484.0"/>
+<text class="cell" x="32.0" y="502.0">lg-e2b-s2</text>
+<text class="cell" x="178.9" y="502.0">2026-09-25 23:59</text>
+<text class="cell" x="343.1" y="502.0" text-anchor="end">51</text>
+<text class="cell" x="442.0" y="502.0" text-anchor="end">25.59</text>
+<text class="cell" x="529.6" y="502.0" text-anchor="end">1694</text>
+<text class="cell" x="626.2" y="502.0" text-anchor="end">1435</text>
+<text class="cell" x="718.2" y="502.0" text-anchor="end">68,627</text>
+<text class="cell" x="791.0" y="502.0" text-anchor="end">48.4</text>
+<text class="cell" x="855.1" y="502.0" text-anchor="end">10.86</text>
+<text class="cell" x="911.6" y="502.0" text-anchor="end">0.443</text>
+<text class="cell" x="993.4" y="502.0" text-anchor="end">0.253</text>
+<text class="cell" x="1053.4" y="502.0" text-anchor="end">4.58</text>
+<text class="cell" x="1124.4" y="502.0" text-anchor="end">60.9</text>
+<text class="cell" x="1204.5" y="502.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="502.0" text-anchor="end">849</text>
+<text class="cell" x="1308.6" y="502.0">ok · lg-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="511.0" y2="511.0"/>
+<text class="cell" x="32.0" y="529.0">lg-e2b-s3</text>
+<text class="cell" x="178.9" y="529.0">2026-09-26 00:48</text>
+<text class="cell" x="343.1" y="529.0" text-anchor="end">54</text>
+<text class="cell" x="442.0" y="529.0" text-anchor="end">25.59</text>
+<text class="cell" x="529.6" y="529.0" text-anchor="end">1690</text>
+<text class="cell" x="626.2" y="529.0" text-anchor="end">1454</text>
+<text class="cell" x="718.2" y="529.0" text-anchor="end">64,470</text>
+<text class="cell" x="791.0" y="529.0" text-anchor="end">45.8</text>
+<text class="cell" x="855.1" y="529.0" text-anchor="end">10.83</text>
+<text class="cell" x="911.6" y="529.0" text-anchor="end">0.443</text>
+<text class="cell" x="993.4" y="529.0" text-anchor="end">0.254</text>
+<text class="cell" x="1053.4" y="529.0" text-anchor="end">4.55</text>
+<text class="cell" x="1124.4" y="529.0" text-anchor="end">55.3</text>
+<text class="cell" x="1204.5" y="529.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="529.0" text-anchor="end">834</text>
+<text class="cell" x="1308.6" y="529.0">ok · lg-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="538.0" y2="538.0"/>
+<text class="cell" x="32.0" y="556.0">lg-e4b-s1</text>
+<text class="cell" x="178.9" y="556.0">2026-09-27 00:15</text>
+<text class="cell" x="343.1" y="556.0" text-anchor="end">64</text>
+<text class="cell" x="442.0" y="556.0" text-anchor="end">15.05</text>
+<text class="cell" x="529.6" y="556.0" text-anchor="end">331</text>
+<text class="cell" x="626.2" y="556.0" text-anchor="end">1444</text>
+<text class="cell" x="718.2" y="556.0" text-anchor="end">67,070</text>
+<text class="cell" x="791.0" y="556.0" text-anchor="end">86.2</text>
+<text class="cell" x="855.1" y="556.0" text-anchor="end">11.64</text>
+<text class="cell" x="911.6" y="556.0" text-anchor="end">0.844</text>
+<text class="cell" x="993.4" y="556.0" text-anchor="end">0.491</text>
+<text class="cell" x="1053.4" y="556.0" text-anchor="end">4.63</text>
+<text class="cell" x="1124.4" y="556.0" text-anchor="end">60.2</text>
+<text class="cell" x="1204.5" y="556.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="556.0" text-anchor="end">856</text>
+<text class="cell" x="1308.6" y="556.0">ok · lg-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="565.0" y2="565.0"/>
+<text class="cell" x="32.0" y="583.0">lg-e4b-s2</text>
+<text class="cell" x="178.9" y="583.0">2026-09-27 01:41</text>
+<text class="cell" x="343.1" y="583.0" text-anchor="end">67</text>
+<text class="cell" x="442.0" y="583.0" text-anchor="end">15.12</text>
+<text class="cell" x="529.6" y="583.0" text-anchor="end">375</text>
+<text class="cell" x="626.2" y="583.0" text-anchor="end">1435</text>
+<text class="cell" x="718.2" y="583.0" text-anchor="end">65,943</text>
+<text class="cell" x="791.0" y="583.0" text-anchor="end">83.2</text>
+<text class="cell" x="855.1" y="583.0" text-anchor="end">11.65</text>
+<text class="cell" x="911.6" y="583.0" text-anchor="end">0.836</text>
+<text class="cell" x="993.4" y="583.0" text-anchor="end">0.492</text>
+<text class="cell" x="1053.4" y="583.0" text-anchor="end">4.59</text>
+<text class="cell" x="1124.4" y="583.0" text-anchor="end">60.5</text>
+<text class="cell" x="1204.5" y="583.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="583.0" text-anchor="end">858</text>
+<text class="cell" x="1308.6" y="583.0">ok · lg-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="592.0" y2="592.0"/>
+<text class="cell" x="32.0" y="610.0">lg-e4b-s3</text>
+<text class="cell" x="178.9" y="610.0">2026-09-27 03:04</text>
+<text class="cell" x="343.1" y="610.0" text-anchor="end">65</text>
+<text class="cell" x="442.0" y="610.0" text-anchor="end">14.99</text>
+<text class="cell" x="529.6" y="610.0" text-anchor="end">351</text>
+<text class="cell" x="626.2" y="610.0" text-anchor="end">1460</text>
+<text class="cell" x="718.2" y="610.0" text-anchor="end">71,241</text>
+<text class="cell" x="791.0" y="610.0" text-anchor="end">90.2</text>
+<text class="cell" x="855.1" y="610.0" text-anchor="end">11.58</text>
+<text class="cell" x="911.6" y="610.0" text-anchor="end">0.836</text>
+<text class="cell" x="993.4" y="610.0" text-anchor="end">0.487</text>
+<text class="cell" x="1053.4" y="610.0" text-anchor="end">4.64</text>
+<text class="cell" x="1124.4" y="610.0" text-anchor="end">59.9</text>
+<text class="cell" x="1204.5" y="610.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="610.0" text-anchor="end">864</text>
+<text class="cell" x="1308.6" y="610.0">ok · lg-baseline</text>
+<line class="hair" x1="20" x2="1433.9" y1="619.0" y2="619.0"/>
+<text class="cell" x="32.0" y="637.0">ae-full-e2b-s1</text>
+<text class="cell" x="178.9" y="637.0">2026-10-04 22:27</text>
+<text class="cell" x="343.1" y="637.0" text-anchor="end">54</text>
+<text class="cell" x="442.0" y="637.0" text-anchor="end">29.54</text>
+<text class="cell" x="529.6" y="637.0" text-anchor="end">1305</text>
+<text class="cell" x="626.2" y="637.0" text-anchor="end">385</text>
+<text class="cell" x="718.2" y="637.0" text-anchor="end">64,880</text>
+<text class="cell" x="791.0" y="637.0" text-anchor="end">39.7</text>
+<text class="cell" x="855.1" y="637.0" text-anchor="end">10.56</text>
+<text class="cell" x="911.6" y="637.0" text-anchor="end">0.369</text>
+<text class="cell" x="993.4" y="637.0" text-anchor="end">0.207</text>
+<text class="cell" x="1053.4" y="637.0" text-anchor="end">4.55</text>
+<text class="cell" x="1124.4" y="637.0" text-anchor="end">59.8</text>
+<text class="cell" x="1204.5" y="637.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="637.0" text-anchor="end">870</text>
+<text class="cell" x="1308.6" y="637.0">ok · ae-full</text>
+<line class="hair" x1="20" x2="1433.9" y1="646.0" y2="646.0"/>
+<text class="cell" x="32.0" y="664.0">ae-full-e2b-s2</text>
+<text class="cell" x="178.9" y="664.0">2026-10-04 23:07</text>
+<text class="cell" x="343.1" y="664.0" text-anchor="end">51</text>
+<text class="cell" x="442.0" y="664.0" text-anchor="end">29.38</text>
+<text class="cell" x="529.6" y="664.0" text-anchor="end">1296</text>
+<text class="cell" x="626.2" y="664.0" text-anchor="end">376</text>
+<text class="cell" x="718.2" y="664.0" text-anchor="end">68,627</text>
+<text class="cell" x="791.0" y="664.0" text-anchor="end">41.7</text>
+<text class="cell" x="855.1" y="664.0" text-anchor="end">10.60</text>
+<text class="cell" x="911.6" y="664.0" text-anchor="end">0.371</text>
+<text class="cell" x="993.4" y="664.0" text-anchor="end">0.210</text>
+<text class="cell" x="1053.4" y="664.0" text-anchor="end">4.53</text>
+<text class="cell" x="1124.4" y="664.0" text-anchor="end">59.7</text>
+<text class="cell" x="1204.5" y="664.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="664.0" text-anchor="end">882</text>
+<text class="cell" x="1308.6" y="664.0">ok · ae-full</text>
+<line class="hair" x1="20" x2="1433.9" y1="673.0" y2="673.0"/>
+<text class="cell" x="32.0" y="691.0">ae-full-e2b-s3</text>
+<text class="cell" x="178.9" y="691.0">2026-10-04 23:49</text>
+<text class="cell" x="343.1" y="691.0" text-anchor="end">54</text>
+<text class="cell" x="442.0" y="691.0" text-anchor="end">29.64</text>
+<text class="cell" x="529.6" y="691.0" text-anchor="end">1315</text>
+<text class="cell" x="626.2" y="691.0" text-anchor="end">395</text>
+<text class="cell" x="718.2" y="691.0" text-anchor="end">64,470</text>
+<text class="cell" x="791.0" y="691.0" text-anchor="end">39.1</text>
+<text class="cell" x="855.1" y="691.0" text-anchor="end">10.59</text>
+<text class="cell" x="911.6" y="691.0" text-anchor="end">0.368</text>
+<text class="cell" x="993.4" y="691.0" text-anchor="end">0.206</text>
+<text class="cell" x="1053.4" y="691.0" text-anchor="end">4.59</text>
+<text class="cell" x="1124.4" y="691.0" text-anchor="end">60.6</text>
+<text class="cell" x="1204.5" y="691.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="691.0" text-anchor="end">870</text>
+<text class="cell" x="1308.6" y="691.0">ok · ae-full</text>
+<line class="hair" x1="20" x2="1433.9" y1="700.0" y2="700.0"/>
+<text class="cell" x="32.0" y="718.0">ae-full-e4b-s1</text>
+<text class="cell" x="178.9" y="718.0">2026-10-05 00:28</text>
+<text class="cell" x="343.1" y="718.0" text-anchor="end">64</text>
+<text class="cell" x="442.0" y="718.0" text-anchor="end">17.46</text>
+<text class="cell" x="529.6" y="718.0" text-anchor="end">221</text>
+<text class="cell" x="626.2" y="718.0" text-anchor="end">385</text>
+<text class="cell" x="718.2" y="718.0" text-anchor="end">67,070</text>
+<text class="cell" x="791.0" y="718.0" text-anchor="end">70.8</text>
+<text class="cell" x="855.1" y="718.0" text-anchor="end">11.33</text>
+<text class="cell" x="911.6" y="718.0" text-anchor="end">0.683</text>
+<text class="cell" x="993.4" y="718.0" text-anchor="end">0.399</text>
+<text class="cell" x="1053.4" y="718.0" text-anchor="end">4.55</text>
+<text class="cell" x="1124.4" y="718.0" text-anchor="end">62.0</text>
+<text class="cell" x="1204.5" y="718.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="718.0" text-anchor="end">871</text>
+<text class="cell" x="1308.6" y="718.0">ok · ae-full</text>
+<line class="hair" x1="20" x2="1433.9" y1="727.0" y2="727.0"/>
+<text class="cell" x="32.0" y="745.0">ae-full-e4b-s2</text>
+<text class="cell" x="178.9" y="745.0">2026-10-05 01:39</text>
+<text class="cell" x="343.1" y="745.0" text-anchor="end">67</text>
+<text class="cell" x="442.0" y="745.0" text-anchor="end">17.74</text>
+<text class="cell" x="529.6" y="745.0" text-anchor="end">267</text>
+<text class="cell" x="626.2" y="745.0" text-anchor="end">376</text>
+<text class="cell" x="718.2" y="745.0" text-anchor="end">65,943</text>
+<text class="cell" x="791.0" y="745.0" text-anchor="end">68.0</text>
+<text class="cell" x="855.1" y="745.0" text-anchor="end">11.44</text>
+<text class="cell" x="911.6" y="745.0" text-anchor="end">0.675</text>
+<text class="cell" x="993.4" y="745.0" text-anchor="end">0.396</text>
+<text class="cell" x="1053.4" y="745.0" text-anchor="end">4.58</text>
+<text class="cell" x="1124.4" y="745.0" text-anchor="end">61.7</text>
+<text class="cell" x="1204.5" y="745.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="745.0" text-anchor="end">883</text>
+<text class="cell" x="1308.6" y="745.0">ok · ae-full</text>
+<line class="hair" x1="20" x2="1433.9" y1="754.0" y2="754.0"/>
+<text class="cell" x="32.0" y="772.0">ae-full-e4b-s3</text>
+<text class="cell" x="178.9" y="772.0">2026-10-05 02:47</text>
+<text class="cell" x="343.1" y="772.0" text-anchor="end">65</text>
+<text class="cell" x="442.0" y="772.0" text-anchor="end">17.82</text>
+<text class="cell" x="529.6" y="772.0" text-anchor="end">282</text>
+<text class="cell" x="626.2" y="772.0" text-anchor="end">395</text>
+<text class="cell" x="718.2" y="772.0" text-anchor="end">67,601</text>
+<text class="cell" x="791.0" y="772.0" text-anchor="end">69.2</text>
+<text class="cell" x="855.1" y="772.0" text-anchor="end">11.40</text>
+<text class="cell" x="911.6" y="772.0" text-anchor="end">0.670</text>
+<text class="cell" x="993.4" y="772.0" text-anchor="end">0.393</text>
+<text class="cell" x="1053.4" y="772.0" text-anchor="end">4.58</text>
+<text class="cell" x="1124.4" y="772.0" text-anchor="end">60.7</text>
+<text class="cell" x="1204.5" y="772.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="772.0" text-anchor="end">879</text>
+<text class="cell" x="1308.6" y="772.0">ok · ae-full</text>
+<line class="hair" x1="20" x2="1433.9" y1="781.0" y2="781.0"/>
+<text class="cell" x="32.0" y="799.0">ae-full-r2-e2b-s1</text>
+<text class="cell" x="178.9" y="799.0">2026-10-07 19:30</text>
+<text class="cell" x="343.1" y="799.0" text-anchor="end">54</text>
+<text class="cell" x="442.0" y="799.0" text-anchor="end">29.78</text>
+<text class="cell" x="529.6" y="799.0" text-anchor="end">634</text>
+<text class="cell" x="626.2" y="799.0" text-anchor="end">385</text>
+<text class="cell" x="718.2" y="799.0" text-anchor="end">64,880</text>
+<text class="cell" x="791.0" y="799.0" text-anchor="end">40.9</text>
+<text class="cell" x="855.1" y="799.0" text-anchor="end">11.42</text>
+<text class="cell" x="911.6" y="799.0" text-anchor="end">0.404</text>
+<text class="cell" x="993.4" y="799.0" text-anchor="end">0.219</text>
+<text class="cell" x="1053.4" y="799.0" text-anchor="end">5.01</text>
+<text class="cell" x="1124.4" y="799.0" text-anchor="end">62.2</text>
+<text class="cell" x="1204.5" y="799.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="799.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="799.0">ok · ae-full</text>
+<line class="hair" x1="20" x2="1433.9" y1="808.0" y2="808.0"/>
+<text class="cell" x="32.0" y="826.0">ae-ngram-e2b-s1</text>
+<text class="cell" x="178.9" y="826.0">2026-10-05 03:56</text>
+<text class="cell" x="343.1" y="826.0" text-anchor="end">54</text>
+<text class="cell" x="442.0" y="826.0" text-anchor="end">29.55</text>
+<text class="cell" x="529.6" y="826.0" text-anchor="end">1687</text>
+<text class="cell" x="626.2" y="826.0" text-anchor="end">1444</text>
+<text class="cell" x="718.2" y="826.0" text-anchor="end">64,880</text>
+<text class="cell" x="791.0" y="826.0" text-anchor="end">41.1</text>
+<text class="cell" x="855.1" y="826.0" text-anchor="end">10.55</text>
+<text class="cell" x="911.6" y="826.0" text-anchor="end">0.380</text>
+<text class="cell" x="993.4" y="826.0" text-anchor="end">0.211</text>
+<text class="cell" x="1053.4" y="826.0" text-anchor="end">4.55</text>
+<text class="cell" x="1124.4" y="826.0" text-anchor="end">59.6</text>
+<text class="cell" x="1204.5" y="826.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="826.0" text-anchor="end">863</text>
+<text class="cell" x="1308.6" y="826.0">ok · ae-ngram</text>
+<line class="hair" x1="20" x2="1433.9" y1="835.0" y2="835.0"/>
+<text class="cell" x="32.0" y="853.0">ae-ngram-e2b-s2</text>
+<text class="cell" x="178.9" y="853.0">2026-10-05 04:37</text>
+<text class="cell" x="343.1" y="853.0" text-anchor="end">51</text>
+<text class="cell" x="442.0" y="853.0" text-anchor="end">29.37</text>
+<text class="cell" x="529.6" y="853.0" text-anchor="end">1691</text>
+<text class="cell" x="626.2" y="853.0" text-anchor="end">1435</text>
+<text class="cell" x="718.2" y="853.0" text-anchor="end">68,627</text>
+<text class="cell" x="791.0" y="853.0" text-anchor="end">42.7</text>
+<text class="cell" x="855.1" y="853.0" text-anchor="end">10.57</text>
+<text class="cell" x="911.6" y="853.0" text-anchor="end">0.378</text>
+<text class="cell" x="993.4" y="853.0" text-anchor="end">0.213</text>
+<text class="cell" x="1053.4" y="853.0" text-anchor="end">4.54</text>
+<text class="cell" x="1124.4" y="853.0" text-anchor="end">59.8</text>
+<text class="cell" x="1204.5" y="853.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="853.0" text-anchor="end">855</text>
+<text class="cell" x="1308.6" y="853.0">ok · ae-ngram</text>
+<line class="hair" x1="20" x2="1433.9" y1="862.0" y2="862.0"/>
+<text class="cell" x="32.0" y="880.0">ae-ngram-e2b-s3</text>
+<text class="cell" x="178.9" y="880.0">2026-10-05 05:20</text>
+<text class="cell" x="343.1" y="880.0" text-anchor="end">54</text>
+<text class="cell" x="442.0" y="880.0" text-anchor="end">29.63</text>
+<text class="cell" x="529.6" y="880.0" text-anchor="end">1687</text>
+<text class="cell" x="626.2" y="880.0" text-anchor="end">1454</text>
+<text class="cell" x="718.2" y="880.0" text-anchor="end">64,470</text>
+<text class="cell" x="791.0" y="880.0" text-anchor="end">40.0</text>
+<text class="cell" x="855.1" y="880.0" text-anchor="end">10.56</text>
+<text class="cell" x="911.6" y="880.0" text-anchor="end">0.376</text>
+<text class="cell" x="993.4" y="880.0" text-anchor="end">0.211</text>
+<text class="cell" x="1053.4" y="880.0" text-anchor="end">4.55</text>
+<text class="cell" x="1124.4" y="880.0" text-anchor="end">59.6</text>
+<text class="cell" x="1204.5" y="880.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="880.0" text-anchor="end">856</text>
+<text class="cell" x="1308.6" y="880.0">ok · ae-ngram</text>
+<line class="hair" x1="20" x2="1433.9" y1="889.0" y2="889.0"/>
+<text class="cell" x="32.0" y="907.0">ae-ngram-e4b-s1</text>
+<text class="cell" x="178.9" y="907.0">2026-10-05 06:21</text>
+<text class="cell" x="343.1" y="907.0" text-anchor="end">64</text>
+<text class="cell" x="442.0" y="907.0" text-anchor="end">17.71</text>
+<text class="cell" x="529.6" y="907.0" text-anchor="end">473</text>
+<text class="cell" x="626.2" y="907.0" text-anchor="end">1444</text>
+<text class="cell" x="718.2" y="907.0" text-anchor="end">67,070</text>
+<text class="cell" x="791.0" y="907.0" text-anchor="end">72.4</text>
+<text class="cell" x="855.1" y="907.0" text-anchor="end">11.41</text>
+<text class="cell" x="911.6" y="907.0" text-anchor="end">0.702</text>
+<text class="cell" x="993.4" y="907.0" text-anchor="end">0.413</text>
+<text class="cell" x="1053.4" y="907.0" text-anchor="end">4.53</text>
+<text class="cell" x="1124.4" y="907.0" text-anchor="end">60.9</text>
+<text class="cell" x="1204.5" y="907.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="907.0" text-anchor="end">862</text>
+<text class="cell" x="1308.6" y="907.0">ok · ae-ngram</text>
+<line class="hair" x1="20" x2="1433.9" y1="916.0" y2="916.0"/>
+<text class="cell" x="32.0" y="934.0">ae-ngram-e4b-s2</text>
+<text class="cell" x="178.9" y="934.0">2026-10-05 07:33</text>
+<text class="cell" x="343.1" y="934.0" text-anchor="end">67</text>
+<text class="cell" x="442.0" y="934.0" text-anchor="end">17.83</text>
+<text class="cell" x="529.6" y="934.0" text-anchor="end">520</text>
+<text class="cell" x="626.2" y="934.0" text-anchor="end">1435</text>
+<text class="cell" x="718.2" y="934.0" text-anchor="end">65,943</text>
+<text class="cell" x="791.0" y="934.0" text-anchor="end">70.2</text>
+<text class="cell" x="855.1" y="934.0" text-anchor="end">11.42</text>
+<text class="cell" x="911.6" y="934.0" text-anchor="end">0.696</text>
+<text class="cell" x="993.4" y="934.0" text-anchor="end">0.410</text>
+<text class="cell" x="1053.4" y="934.0" text-anchor="end">4.55</text>
+<text class="cell" x="1124.4" y="934.0" text-anchor="end">60.3</text>
+<text class="cell" x="1204.5" y="934.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="934.0" text-anchor="end">864</text>
+<text class="cell" x="1308.6" y="934.0">ok · ae-ngram</text>
+<line class="hair" x1="20" x2="1433.9" y1="943.0" y2="943.0"/>
+<text class="cell" x="32.0" y="961.0">ae-ngram-e4b-s3</text>
+<text class="cell" x="178.9" y="961.0">2026-10-05 08:44</text>
+<text class="cell" x="343.1" y="961.0" text-anchor="end">65</text>
+<text class="cell" x="442.0" y="961.0" text-anchor="end">17.90</text>
+<text class="cell" x="529.6" y="961.0" text-anchor="end">524</text>
+<text class="cell" x="626.2" y="961.0" text-anchor="end">1454</text>
+<text class="cell" x="718.2" y="961.0" text-anchor="end">67,601</text>
+<text class="cell" x="791.0" y="961.0" text-anchor="end">71.2</text>
+<text class="cell" x="855.1" y="961.0" text-anchor="end">11.41</text>
+<text class="cell" x="911.6" y="961.0" text-anchor="end">0.691</text>
+<text class="cell" x="993.4" y="961.0" text-anchor="end">0.407</text>
+<text class="cell" x="1053.4" y="961.0" text-anchor="end">4.55</text>
+<text class="cell" x="1124.4" y="961.0" text-anchor="end">61.6</text>
+<text class="cell" x="1204.5" y="961.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="961.0" text-anchor="end">864</text>
+<text class="cell" x="1308.6" y="961.0">ok · ae-ngram</text>
+<line class="hair" x1="20" x2="1433.9" y1="970.0" y2="970.0"/>
+<text class="cell" x="32.0" y="988.0">ae-reuse-e2b-s1</text>
+<text class="cell" x="178.9" y="988.0">2026-10-07 22:24</text>
+<text class="cell" x="343.1" y="988.0" text-anchor="end">54</text>
+<text class="cell" x="442.0" y="988.0" text-anchor="end">25.80</text>
+<text class="cell" x="529.6" y="988.0" text-anchor="end">1339</text>
+<text class="cell" x="626.2" y="988.0" text-anchor="end">385</text>
+<text class="cell" x="718.2" y="988.0" text-anchor="end">64,880</text>
+<text class="cell" x="791.0" y="988.0" text-anchor="end">44.7</text>
+<text class="cell" x="855.1" y="988.0" text-anchor="end">11.68</text>
+<text class="cell" x="911.6" y="988.0" text-anchor="end">0.464</text>
+<text class="cell" x="993.4" y="988.0" text-anchor="end">0.263</text>
+<text class="cell" x="1053.4" y="988.0" text-anchor="end">4.98</text>
+<text class="cell" x="1124.4" y="988.0" text-anchor="end">61.6</text>
+<text class="cell" x="1204.5" y="988.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="988.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="988.0">ok · ae-reuse</text>
+<line class="hair" x1="20" x2="1433.9" y1="997.0" y2="997.0"/>
+<text class="cell" x="32.0" y="1015.0">ae-reuse-e2b-s2</text>
+<text class="cell" x="178.9" y="1015.0">2026-10-07 23:09</text>
+<text class="cell" x="343.1" y="1015.0" text-anchor="end">51</text>
+<text class="cell" x="442.0" y="1015.0" text-anchor="end">25.81</text>
+<text class="cell" x="529.6" y="1015.0" text-anchor="end">1331</text>
+<text class="cell" x="626.2" y="1015.0" text-anchor="end">376</text>
+<text class="cell" x="718.2" y="1015.0" text-anchor="end">68,627</text>
+<text class="cell" x="791.0" y="1015.0" text-anchor="end">47.0</text>
+<text class="cell" x="855.1" y="1015.0" text-anchor="end">11.68</text>
+<text class="cell" x="911.6" y="1015.0" text-anchor="end">0.463</text>
+<text class="cell" x="993.4" y="1015.0" text-anchor="end">0.264</text>
+<text class="cell" x="1053.4" y="1015.0" text-anchor="end">4.95</text>
+<text class="cell" x="1124.4" y="1015.0" text-anchor="end">61.8</text>
+<text class="cell" x="1204.5" y="1015.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="1015.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="1015.0">ok · ae-reuse</text>
+<line class="hair" x1="20" x2="1433.9" y1="1024.0" y2="1024.0"/>
+<text class="cell" x="32.0" y="1042.0">ae-reuse-e2b-s3</text>
+<text class="cell" x="178.9" y="1042.0">2026-10-07 23:56</text>
+<text class="cell" x="343.1" y="1042.0" text-anchor="end">54</text>
+<text class="cell" x="442.0" y="1042.0" text-anchor="end">25.82</text>
+<text class="cell" x="529.6" y="1042.0" text-anchor="end">1351</text>
+<text class="cell" x="626.2" y="1042.0" text-anchor="end">395</text>
+<text class="cell" x="718.2" y="1042.0" text-anchor="end">64,470</text>
+<text class="cell" x="791.0" y="1042.0" text-anchor="end">44.3</text>
+<text class="cell" x="855.1" y="1042.0" text-anchor="end">11.69</text>
+<text class="cell" x="911.6" y="1042.0" text-anchor="end">0.464</text>
+<text class="cell" x="993.4" y="1042.0" text-anchor="end">0.264</text>
+<text class="cell" x="1053.4" y="1042.0" text-anchor="end">4.95</text>
+<text class="cell" x="1124.4" y="1042.0" text-anchor="end">62.6</text>
+<text class="cell" x="1204.5" y="1042.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="1042.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="1042.0">ok · ae-reuse</text>
+<line class="hair" x1="20" x2="1433.9" y1="1051.0" y2="1051.0"/>
+<text class="cell" x="32.0" y="1069.0">ae-reuse-e4b-s1</text>
+<text class="cell" x="178.9" y="1069.0">2026-10-08 00:41</text>
+<text class="cell" x="343.1" y="1069.0" text-anchor="end">64</text>
+<text class="cell" x="442.0" y="1069.0" text-anchor="end">15.45</text>
+<text class="cell" x="529.6" y="1069.0" text-anchor="end">184</text>
+<text class="cell" x="626.2" y="1069.0" text-anchor="end">385</text>
+<text class="cell" x="718.2" y="1069.0" text-anchor="end">67,070</text>
+<text class="cell" x="791.0" y="1069.0" text-anchor="end">80.3</text>
+<text class="cell" x="855.1" y="1069.0" text-anchor="end">12.61</text>
+<text class="cell" x="911.6" y="1069.0" text-anchor="end">0.858</text>
+<text class="cell" x="993.4" y="1069.0" text-anchor="end">0.502</text>
+<text class="cell" x="1053.4" y="1069.0" text-anchor="end">5.01</text>
+<text class="cell" x="1124.4" y="1069.0" text-anchor="end">63.6</text>
+<text class="cell" x="1204.5" y="1069.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="1069.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="1069.0">ok · ae-reuse</text>
+<line class="hair" x1="20" x2="1433.9" y1="1078.0" y2="1078.0"/>
+<text class="cell" x="32.0" y="1096.0">ae-reuse-e4b-s2</text>
+<text class="cell" x="178.9" y="1096.0">2026-10-08 02:01</text>
+<text class="cell" x="343.1" y="1096.0" text-anchor="end">67</text>
+<text class="cell" x="442.0" y="1096.0" text-anchor="end">15.50</text>
+<text class="cell" x="529.6" y="1096.0" text-anchor="end">216</text>
+<text class="cell" x="626.2" y="1096.0" text-anchor="end">376</text>
+<text class="cell" x="718.2" y="1096.0" text-anchor="end">65,943</text>
+<text class="cell" x="791.0" y="1096.0" text-anchor="end">77.9</text>
+<text class="cell" x="855.1" y="1096.0" text-anchor="end">12.61</text>
+<text class="cell" x="911.6" y="1096.0" text-anchor="end">0.851</text>
+<text class="cell" x="993.4" y="1096.0" text-anchor="end">0.504</text>
+<text class="cell" x="1053.4" y="1096.0" text-anchor="end">4.97</text>
+<text class="cell" x="1124.4" y="1096.0" text-anchor="end">63.8</text>
+<text class="cell" x="1204.5" y="1096.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="1096.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="1096.0">ok · ae-reuse</text>
+<line class="hair" x1="20" x2="1433.9" y1="1105.0" y2="1105.0"/>
+<text class="cell" x="32.0" y="1123.0">ae-reuse-e4b-s3</text>
+<text class="cell" x="178.9" y="1123.0">2026-10-08 03:19</text>
+<text class="cell" x="343.1" y="1123.0" text-anchor="end">65</text>
+<text class="cell" x="442.0" y="1123.0" text-anchor="end">15.48</text>
+<text class="cell" x="529.6" y="1123.0" text-anchor="end">231</text>
+<text class="cell" x="626.2" y="1123.0" text-anchor="end">395</text>
+<text class="cell" x="718.2" y="1123.0" text-anchor="end">67,601</text>
+<text class="cell" x="791.0" y="1123.0" text-anchor="end">79.7</text>
+<text class="cell" x="855.1" y="1123.0" text-anchor="end">12.60</text>
+<text class="cell" x="911.6" y="1123.0" text-anchor="end">0.851</text>
+<text class="cell" x="993.4" y="1123.0" text-anchor="end">0.503</text>
+<text class="cell" x="1053.4" y="1123.0" text-anchor="end">4.99</text>
+<text class="cell" x="1124.4" y="1123.0" text-anchor="end">63.7</text>
+<text class="cell" x="1204.5" y="1123.0" text-anchor="end">612</text>
+<text class="cell" x="1284.6" y="1123.0" text-anchor="end">1497</text>
+<text class="cell" x="1308.6" y="1123.0">ok · ae-reuse</text>
+<text class="note" x="20" y="1157.5">Run names: (empty) llama.cpp · ngram-n3m3 llama.cpp n-gram width 4 · lg little-gemma · ae-full CoPR · ae-ngram / ae-reuse CoPR's single switches. Runs from 2026-10-07 19:30 on had the clocks pinned (CPU ~1,497 MHz): compare their time, not their energy,</text>
+<text class="note" x="20" y="1174.0">with earlier rows. Fingerprint: the live serving command line checked against benchmark/baselines.json; the llama.cpp baseline runs predate the queue and were launched by hand with the same flags.</text>
+</svg>

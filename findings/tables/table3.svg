@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1029" height="402" viewBox="0 0 1029 402" role="img" aria-label="Table III — Engines on the Jetson Orin Nano 8 GB at 15 W, MMLU-Pro, n=300 per cell">
+<style>text{font-family:Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;font-variant-numeric:tabular-nums}.title{font-size:15px;font-weight:600}.head{font-size:12px;font-weight:600}.cell{font-size:13px}.cell.b{font-weight:700}.note{font-size:11.5px}.glabel{font-size:13px;font-weight:600;font-style:italic}.hair{stroke-width:0.6}.hair2{stroke-width:0.6}.bg{fill:#fcfcfb}.title{fill:#0b0b0b}.head{fill:#52514e}.cell{fill:#0b0b0b}.note{fill:#52514e}.glabel{fill:#52514e}.rule{stroke:#0b0b0b}.hair{stroke:#e4e3df}.hair2{stroke:#52514e}.tint{fill:#e8f0fa}.group{fill:#f3f2ee}@media (prefers-color-scheme:dark){.bg{fill:#1a1a19}.title{fill:#ffffff}.head{fill:#c3c2b7}.cell{fill:#ffffff}.note{fill:#c3c2b7}.glabel{fill:#c3c2b7}.rule{stroke:#c3c2b7}.hair{stroke:#34332f}.hair2{stroke:#c3c2b7}.tint{fill:#1d2a3b}.group{fill:#242321}}</style>
+<rect class="bg" width="100%" height="100%"/>
+<text class="title" x="20" y="35">Table III — Engines on the Jetson Orin Nano 8 GB at 15 W, MMLU-Pro, n=300 per cell</text>
+<rect class="tint" x="523.4" y="73.0" width="94.3" height="246.0"/>
+<rect class="tint" x="915.6" y="73.0" width="94.3" height="246.0"/>
+<text class="head" x="421.6" y="65.0" text-anchor="middle">Gemma 4 E2B</text>
+<line class="hair2" x1="231.5" x2="611.7" y1="72.0" y2="72.0"/>
+<text class="head" x="813.8" y="65.0" text-anchor="middle">Gemma 4 E4B</text>
+<line class="hair2" x1="623.7" x2="1004.0" y1="72.0" y2="72.0"/>
+<text class="head" x="32.0" y="92.0"></text>
+<text class="head" x="292.1" y="92.0" text-anchor="end">llama.cpp</text>
+<text class="head" x="418.3" y="92.0" text-anchor="end">llama.cpp+n-gram</text>
+<text class="head" x="511.4" y="92.0" text-anchor="end">little-gemma</text>
+<text class="head" x="605.7" y="92.0" text-anchor="end">CoPR (ours)</text>
+<text class="head" x="684.4" y="92.0" text-anchor="end">llama.cpp</text>
+<text class="head" x="810.5" y="92.0" text-anchor="end">llama.cpp+n-gram</text>
+<text class="head" x="903.6" y="92.0" text-anchor="end">little-gemma</text>
+<text class="head" x="998.0" y="92.0" text-anchor="end">CoPR (ours)</text>
+<line class="rule" x1="20" x2="1010.0" y1="49.0" y2="49.0" stroke-width="1.5"/>
+<line class="rule" x1="20" x2="1010.0" y1="103.0" y2="103.0" stroke-width="0.8"/>
+<line class="rule" x1="20" x2="1010.0" y1="319.0" y2="319.0" stroke-width="1.5"/>
+<text class="cell" x="32.0" y="121.0">Accuracy (%)</text>
+<text class="cell" x="292.1" y="121.0" text-anchor="end">52.7</text>
+<text class="cell" x="418.3" y="121.0" text-anchor="end">53.3</text>
+<text class="cell" x="511.4" y="121.0" text-anchor="end">53.0</text>
+<text class="cell" x="605.7" y="121.0" text-anchor="end">53.0</text>
+<text class="cell" x="684.4" y="121.0" text-anchor="end">66.0</text>
+<text class="cell" x="810.5" y="121.0" text-anchor="end">65.0</text>
+<text class="cell" x="903.6" y="121.0" text-anchor="end">65.3</text>
+<text class="cell" x="998.0" y="121.0" text-anchor="end">65.3</text>
+<line class="hair" x1="20" x2="1010.0" y1="130.0" y2="130.0"/>
+<text class="cell" x="32.0" y="148.0">Replies identical to little-gemma</text>
+<text class="cell" x="292.1" y="148.0" text-anchor="end">32/300</text>
+<text class="cell" x="418.3" y="148.0" text-anchor="end">29/300ᶠ</text>
+<text class="cell" x="511.4" y="148.0" text-anchor="end">–</text>
+<text class="cell" x="605.7" y="148.0" text-anchor="end">300/300</text>
+<text class="cell" x="684.4" y="148.0" text-anchor="end">28/300</text>
+<text class="cell" x="810.5" y="148.0" text-anchor="end">20/300ᶠ</text>
+<text class="cell" x="903.6" y="148.0" text-anchor="end">–</text>
+<text class="cell" x="998.0" y="148.0" text-anchor="end">300/300</text>
+<line class="hair" x1="20" x2="1010.0" y1="157.0" y2="157.0"/>
+<text class="cell" x="32.0" y="175.0">Decode (tok/s)</text>
+<text class="cell" x="292.1" y="175.0" text-anchor="end">23.00</text>
+<text class="cell" x="418.3" y="175.0" text-anchor="end">26.63</text>
+<text class="cell" x="511.4" y="175.0" text-anchor="end">25.58</text>
+<text class="cell b" x="605.7" y="175.0" text-anchor="end">29.52</text>
+<text class="cell" x="684.4" y="175.0" text-anchor="end">11.62</text>
+<text class="cell" x="810.5" y="175.0" text-anchor="end">13.83</text>
+<text class="cell" x="903.6" y="175.0" text-anchor="end">15.05</text>
+<text class="cell b" x="998.0" y="175.0" text-anchor="end">17.67</text>
+<line class="hair" x1="20" x2="1010.0" y1="184.0" y2="184.0"/>
+<text class="cell" x="32.0" y="202.0">Prompt tokens processed / q</text>
+<text class="cell b" x="292.1" y="202.0" text-anchor="end">381</text>
+<text class="cell b" x="418.3" y="202.0" text-anchor="end">381</text>
+<text class="cell" x="511.4" y="202.0" text-anchor="end">1,444</text>
+<text class="cell" x="605.7" y="202.0" text-anchor="end">385</text>
+<text class="cell b" x="684.4" y="202.0" text-anchor="end">381</text>
+<text class="cell b" x="810.5" y="202.0" text-anchor="end">381</text>
+<text class="cell" x="903.6" y="202.0" text-anchor="end">1,446</text>
+<text class="cell" x="998.0" y="202.0" text-anchor="end">385</text>
+<line class="hair" x1="20" x2="1010.0" y1="211.0" y2="211.0"/>
+<text class="cell" x="32.0" y="229.0">Wall time / question (s)</text>
+<text class="cell" x="292.1" y="229.0" text-anchor="end">31.0</text>
+<text class="cell" x="418.3" y="229.0" text-anchor="end">27.9</text>
+<text class="cell" x="511.4" y="229.0" text-anchor="end">28.3</text>
+<text class="cell b" x="605.7" y="229.0" text-anchor="end">24.1</text>
+<text class="cell" x="684.4" y="229.0" text-anchor="end">62.6</text>
+<text class="cell" x="810.5" y="229.0" text-anchor="end">54.3</text>
+<text class="cell" x="903.6" y="229.0" text-anchor="end">51.9</text>
+<text class="cell b" x="998.0" y="229.0" text-anchor="end">41.6</text>
+<line class="hair" x1="20" x2="1010.0" y1="238.0" y2="238.0"/>
+<text class="cell" x="32.0" y="256.0">Mean power, generating (W)</text>
+<text class="cell b" x="292.1" y="256.0" text-anchor="end">10.26</text>
+<text class="cell" x="418.3" y="256.0" text-anchor="end">10.84</text>
+<text class="cell" x="511.4" y="256.0" text-anchor="end">10.86</text>
+<text class="cell" x="605.7" y="256.0" text-anchor="end">10.58</text>
+<text class="cell b" x="684.4" y="256.0" text-anchor="end">10.77</text>
+<text class="cell" x="810.5" y="256.0" text-anchor="end">11.53</text>
+<text class="cell" x="903.6" y="256.0" text-anchor="end">11.62</text>
+<text class="cell" x="998.0" y="256.0" text-anchor="end">11.39</text>
+<line class="hair" x1="20" x2="1010.0" y1="265.0" y2="265.0"/>
+<text class="cell" x="32.0" y="283.0">Energy / gen. token (J)</text>
+<text class="cell" x="292.1" y="283.0" text-anchor="end">0.465</text>
+<text class="cell" x="418.3" y="283.0" text-anchor="end">0.429</text>
+<text class="cell" x="511.4" y="283.0" text-anchor="end">0.446</text>
+<text class="cell b" x="605.7" y="283.0" text-anchor="end">0.370</text>
+<text class="cell" x="684.4" y="283.0" text-anchor="end">0.965</text>
+<text class="cell" x="810.5" y="283.0" text-anchor="end">0.871</text>
+<text class="cell" x="903.6" y="283.0" text-anchor="end">0.838</text>
+<text class="cell b" x="998.0" y="283.0" text-anchor="end">0.676</text>
+<line class="hair" x1="20" x2="1010.0" y1="292.0" y2="292.0"/>
+<text class="cell" x="32.0" y="310.0">  above idle (J)</text>
+<text class="cell" x="292.1" y="310.0" text-anchor="end">0.258</text>
+<text class="cell" x="418.3" y="310.0" text-anchor="end">0.228</text>
+<text class="cell" x="511.4" y="310.0" text-anchor="end">0.254</text>
+<text class="cell b" x="605.7" y="310.0" text-anchor="end">0.207</text>
+<text class="cell" x="684.4" y="310.0" text-anchor="end">0.552</text>
+<text class="cell" x="810.5" y="310.0" text-anchor="end">0.487</text>
+<text class="cell" x="903.6" y="310.0" text-anchor="end">0.490</text>
+<text class="cell b" x="998.0" y="310.0" text-anchor="end">0.396</text>
+<text class="note" x="20" y="344.5">Energy is board DC energy over the working window per generated token. Bold: best in row within a model; shaded: the proposed system. Accuracy is not bolded: all engines are</text>
+<text class="note" x="20" y="361.0">statistically tied. llama.cpp+n-gram is llama.cpp's own drafting at width 4 (not exact). ᶠ identical to llama.cpp without drafting, not to little-gemma. Replies identical are pooled over</text>
+<text class="note" x="20" y="377.5">s1–s3 (the paper's 12/100 is s1 alone).</text>
+</svg>

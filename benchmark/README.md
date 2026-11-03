@@ -1,6 +1,10 @@
 # Agentic edge benchmark
 
-Harness for the Agentic Edge study: the same fixed workload across
+Harness for the Agentic Edge study. **To reproduce the manuscript, follow the
+[top-level README](../README.md#reproducing-the-paper)**; this page documents
+the harness itself, including the own suite the paper does not use.
+
+The harness runs the same fixed workload across
 (device, model, quantization, architecture, MTP, thinking), with **accuracy and
 device cost measured in the same run**, producing one comparable JSON result
 file each time.
@@ -13,7 +17,7 @@ Two halves:
 | **standard benchmarks + telemetry** | `std_mmlupro.sh`, `run_measured.sh`, `telemetry.py` | `~/Research/stdbench/`, `~/Research/measured/` |
 
 The protocol, the statistical design, and the revisions that results forced are
-in [docs/experiment-plan.md](../docs/experiment-plan.md). Measured results are in
+in [docs/protocol.md](../docs/protocol.md). Measured results are in
 [../findings/RESULTS.md](../findings/RESULTS.md).
 
 **Zero setup on a new device.** Stdlib only, no `pip install`. Clone the
@@ -46,7 +50,7 @@ edits, no per-run config duplication.
 
 **The protocol** — what to build first, what to run in what order on which
 device, and what each table proves — is in
-[docs/experiment-plan.md](../docs/experiment-plan.md).
+[docs/protocol.md](../docs/protocol.md).
 
 ## What this answers
 
@@ -77,7 +81,7 @@ device, and what each table proves — is in
 | `E` | **proposed** | yes | classify → pin → orchestrator-side fallback execution |
 | `B-mtp`, `E-think`, … | as above | | with MTP and/or thinking on (Tier 2) |
 
-**D vs E was the original claim** — see [experiment-plan §7.2](../docs/experiment-plan.md) for how results revised it.
+**D vs E was the original claim** — see [protocol §6](../docs/protocol.md) for how results revised it.
 
 **Condition C (LiteRT-LM) was dropped** on 2026-09-20 and its runtime removed from the Pi. Its runs remain in `results/` unreported.
 
@@ -236,9 +240,14 @@ same comparison, since little-gemma is the one engine designed around CUDA.
 | `report.py` | tables T1-T4 from `results/` |
 | `mmlupro_subset.py` | draws a stratified, seeded, disjoint MMLU-Pro subset |
 | `std_mmlupro.sh` | one MMLU-Pro run (`SUBSET=`, `THINKING=`) via lm-eval |
-| `std_run.sh` | tinyGSM8k now; IFEval and BFCL deferred |
+| `std_run.sh` | tinyGSM8k via lm-eval |
+| `std_mmlupro_jetson.sh` | one MMLU-Pro run on the Jetson, CUDA llama-server launched directly; `SPEC=n3mK\|default` adds llama.cpp's n-gram drafting (S10) |
+| `std_mmlupro_lg_jetson.sh` | the same through little-gemma (S3), or `VARIANT=full\|ngram\|reuse` through CoPR (S9) |
+| `ae_gate.py` | CoPR's byte-identity gate: replays S3 questions with given switches, or `--diff RUN REF` for two finished runs |
 | `run_measured.sh` | wraps any of the above with idle baselines and telemetry |
 | `telemetry.py` | 1 Hz device sampler, stdlib only |
 | `parse_llama_log.py` | per-request token timings from llama-server's journal |
 | `summarize_run.py` | energy, J/token, tok/s/W, thermals for one measured run |
 | `build_viz.py` | builds `findings/viz/mmlupro_run.html` from results + telemetry |
+| `collect_runs.py` | copies finished runs off a board into `findings/runs/<board>/` (`--paper`: every run the manuscript uses) |
+| `paper_tables.py` | rebuilds the manuscript's tables from `findings/` and checks every number against it |

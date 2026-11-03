@@ -1,0 +1,6 @@
+Mon Sep 21 10:41:12 PM CST 2026 starting llama.cpp (CUDA, -ngl 99) on E2B
+"model_path":"/home/ari/research/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf"
+  CUDA0: Orin (7485 MiB, 2831 MiB free)
+Mon Sep 21 10:41:21 PM CST 2026 start MMLU-Pro subset100/s2  model=E2B
+Mon Sep 21 11:37:28 PM CST 2026 end rc=0
+finished

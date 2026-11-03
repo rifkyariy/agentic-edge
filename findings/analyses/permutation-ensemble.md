@@ -83,23 +83,6 @@ escalated to full CoT cost. That is what erases most of the energy saving
 escalated set is simply large and expensive under this construction, not that
 the gate mis-routes badly.
 
-## What would actually move this forward
-
-Not more pooling — the gate signal is now well-measured. Two real levers,
-untested here:
-
-1. **A cheaper escalation path than full CoT.** The construction escalates to
-   the *most* expensive option available. A bounded-budget CoT pass (as in
-   `2026-09-27-quality-flows.md` Use 3) on just the disagreement set would cut
-   the 62%-at-full-price cost without touching the gate.
-2. **A threshold that trades kept-accuracy for kept-fraction more favorably.**
-   thr=4/K=4 buys the highest separation but the smallest kept bucket (38%).
-   thr=3 configurations keep 40–54% at a smaller but still real accuracy edge
-   (55–59% vs 51.7% baseline) — worth checking whether *those* pooled
-   McNemar numbers (already in the table above: p=0.832, 0.263, 0.860) move
-   toward significance with a cheaper escalation cost, since a smaller Δenergy
-   requirement is easier to clear.
-
 ## A third construction, tested and rejected: adaptive early-stop
 
 **Hypothesis:** most of the K=4 rotation cost is wasted on questions that

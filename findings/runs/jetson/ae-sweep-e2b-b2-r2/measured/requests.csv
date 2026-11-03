@@ -1,0 +1,1 @@
+task,slot,end_epoch,end_iso,start_epoch,prompt_tokens,prompt_ms,prompt_tok_s,gen_tokens,gen_ms,gen_tok_s,total_ms

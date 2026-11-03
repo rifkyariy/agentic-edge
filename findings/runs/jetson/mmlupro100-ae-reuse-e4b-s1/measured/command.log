@@ -1,0 +1,5 @@
+Thu Oct  8 12:41:37 AM CST 2026 starting little-gemma (CUDA int8) on E4B, thinking=off budget=-1 row=ae-reuse flags='-reuse'
+{"engine": "little-gemma", "model_path": "/home/ari/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf", "engine_args": "/home/ari/build/little-gemma-ae/build/run-cuda-i8 -m /home/ari/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf -raw -think -1 -s /tmp/lg-bench.sock -reuse", "thinking": "off", "think": -1, "served": 0}
+Thu Oct  8 12:44:08 AM CST 2026 start MMLU-Pro subset100/s1  model=E4B engine=little-gemma row=ae-reuse thinking=off
+Thu Oct  8 02:00:47 AM CST 2026 end rc=0
+finished

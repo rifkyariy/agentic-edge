@@ -13,7 +13,7 @@ Runs (`bench_prompts.py`, queue kind `raw`): `agentic-llama-e2b-bfcl`
 (20:20–20:28), `agentic-llama-e2b-ifeval` (20:28–20:56), `agentic-lg-e2b-bfcl`
 (20:56–21:01), `agentic-ae-e2b-bfcl` (21:01–21:06, `-reuse -ngram -block 3`).
 Each directory keeps the replies (lm-eval sample format) and per-request
-timings. Replays (`replay_lookup.py`, on the Pi): `replay/`.
+timings. Replays (`replay_dirs.py`, on the Pi): `replay/`.
 
 ## Acceptance (replayed, width 3)
 

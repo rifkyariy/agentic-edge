@@ -1,0 +1,5 @@
+Sun Sep 27 03:05:33 AM CST 2026 starting little-gemma (CUDA int8) on E4B, thinking=off budget=-1
+{"engine": "little-gemma", "model_path": "/home/ari/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf", "engine_args": "/home/ari/build/little-gemma/build/run-cuda-i8 -m /home/ari/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf -raw -think -1 -s /tmp/lg-bench.sock", "thinking": "off", "think": -1, "served": 0}
+Sun Sep 27 03:07:34 AM CST 2026 start MMLU-Pro subset100/s3  model=E4B engine=little-gemma thinking=off
+Sun Sep 27 04:34:41 AM CST 2026 end rc=0
+finished

@@ -1,19 +1,11 @@
 #!/usr/bin/env bash
-# Standard benchmarks on the Pi, replacing the hand-written static cases:
-#   tinyGSM8k (Polo et al. 2024) and IFEval (Zhou et al. 2023) via
-#   lm-evaluation-harness, against the same server condition B uses.
+# tinyGSM8k (Polo et al. 2024) on the Pi via lm-evaluation-harness, against
+# the same server condition B uses:
 #
 #   ./std_run.sh queue    # tinyGSM8k on B, E2B then E4B
-#   ./std_run.sh full     # deferred: IFEval (B) + BFCL (D) per model
 #
 # MMLU-Pro runs from std_mmlupro.sh instead (it needs -c 8192).
 # LiteRT-LM (condition C) was dropped on 2026-09-20 and removed from the box.
-#
-# BFCL (Patil et al., ICML 2025) runs through its generic OpenAI-compatible
-# chat-completions function-calling handler (OpenAICompletionsHandler, borrowed
-# via the openbmb/MiniCPM-SALA-FC registry entry, whose name llama.cpp ignores)
-# pointed at llama.cpp — the same native tool-calling path as condition D.
-# Everything is grouped per model so no run straddles a model switch.
 #
 # Task configs are lm-eval's own, unmodified (greedy, their shot counts and
 # max_gen_toks) so the numbers are comparable to published ones.
@@ -43,20 +35,9 @@ evaluate() {  # evaluate <label> <url> <model-id> <tasks>
 }
 
 LLAMA=http://127.0.0.1:8080/v1/chat/completions
-BFCL_CATS=simple_python,multiple,irrelevance,live_simple,live_irrelevance
-BFCL_HANDLER=openbmb/MiniCPM-SALA-FC
 
-bfcl_run() {  # bfcl_run <label>
-  log "=== $1 / BFCL $BFCL_CATS ==="
-  mkdir -p "$OUT/bfcl-$1" && (
-    cd "$OUT/bfcl-$1" && . ~/Research/bfcl-venv/bin/activate &&
-    export BFCL_PROJECT_ROOT="$PWD" OPENAI_BASE_URL=http://127.0.0.1:8080/v1 OPENAI_API_KEY=local &&
-    bfcl generate --model "$BFCL_HANDLER" --test-category "$BFCL_CATS" --temperature 0.001 > gen.log 2>&1 &&
-    bfcl evaluate --model "$BFCL_HANDLER" --test-category "$BFCL_CATS" 2>&1 | grep -E "Accuracy" | tee eval.log
-  ) || log "(bfcl failed)"
-}
 case "${1:-}" in
-  queue)   # tinyGSM8k only for now; IFEval and BFCL deferred
+  queue)
     for m in E2B E4B; do
       l=$(echo $m | tr A-Z a-z)
       [ -f "$OUT/B-$l/.tinyGSM8k.done" ] && continue
@@ -64,14 +45,6 @@ case "${1:-}" in
         evaluate "B-$l" "$LLAMA" "gemma4-$m" tinyGSM8k &&
         touch "$OUT/B-$l/.tinyGSM8k.done"
     done ;;
-  full)     # the deferred rest: IFEval + BFCL per model, then C
-    for m in E2B E4B; do
-      l=$(echo $m | tr A-Z a-z)
-      use_model "$MODELS/gemma-4-$m-it-qat-UD-Q4_K_XL.gguf" || continue
-      evaluate "B-$l" "$LLAMA" "gemma4-$m" ifeval
-      bfcl_run "D-$l"
-    done
-    ;;
-  *) echo "usage: $0 {queue|full}" >&2; exit 1 ;;
+  *) echo "usage: $0 queue" >&2; exit 1 ;;
 esac
 log "done"

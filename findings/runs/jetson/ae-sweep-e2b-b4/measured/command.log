@@ -1,0 +1,29 @@
+same  biology          doc 51       5.9s   523 chars
+same  biology          doc 157     13.4s  1786 chars
+same  business         doc 160     30.0s  2690 chars
+same  business         doc 333     60.8s  6010 chars
+same  chemistry        doc 95      72.3s  5157 chars
+same  chemistry        doc 200     49.3s  3627 chars
+same  computer science doc 93      20.9s  2369 chars
+same  computer science doc 308     15.4s  2223 chars
+same  economics        doc 240     10.3s  1609 chars
+same  economics        doc 296     17.7s  2252 chars
+same  engineering      doc 66      65.4s  6074 chars
+same  engineering      doc 229     41.4s  3068 chars
+same  health           doc 132      3.3s   392 chars
+same  health           doc 160      3.6s   418 chars
+same  history          doc 58       3.5s   262 chars
+same  history          doc 81       4.2s   362 chars
+same  law              doc 77       6.5s   786 chars
+same  law              doc 123     36.5s  4160 chars
+same  math             doc 33      13.0s   746 chars
+same  math             doc 56       9.0s   650 chars
+same  other            doc 31       2.2s   213 chars
+same  other            doc 115      4.2s   473 chars
+same  philosophy       doc 152     15.5s  1913 chars
+same  philosophy       doc 229      2.2s   197 chars
+same  physics          doc 78       3.1s   345 chars
+same  physics          doc 81       2.0s   190 chars
+same  psychology       doc 2        2.1s   229 chars
+same  psychology       doc 210      2.2s   265 chars
+== e2b '-reuse -ngram -block 4': 28/28 byte-identical, 516s of requests

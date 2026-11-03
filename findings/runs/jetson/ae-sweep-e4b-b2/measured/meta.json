@@ -1,0 +1,16 @@
+{
+ "label": "ae-sweep-e4b-b2",
+ "command": "./ae_gate.py --model e4b --flags -reuse -ngram -block 2 --against /home/ari/research/stdbench/mmlupro100-lg-e4b-s1 --per-category 2 --out /home/ari/research/stdbench/ae-sweep-e4b-b2",
+ "model_path": "",
+ "server_args": "",
+ "governor": "schedutil",
+ "kernel": "Linux 6.8.12-1021-tegra",
+ "host": "mitlab-orin-nano",
+ "cpus": 6,
+ "start_epoch": 1791118546.1585634,
+ "throttled_at_start": "",
+ "server_args_after": "/home/ari/build/little-gemma-ae/build/run-cuda-i8 -m /home/ari/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf -raw -think -1 -s /tmp/ae-gate.sock -reuse -ngram -block 2 | ",
+ "work_start_epoch": 1791118576.0,
+ "work_end_epoch": 1791119731.0,
+ "exit_code": 0
+}

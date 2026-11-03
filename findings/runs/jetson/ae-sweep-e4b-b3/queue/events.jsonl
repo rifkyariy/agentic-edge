@@ -1,0 +1,4 @@
+{"by": "queue_ctl", "event": "queued", "job": "20261004-195035-ec9649", "label": "ae-sweep-e4b-b3", "ts": 1791114635.114969}
+{"event": "precheck_passed", "job": "20261004-195035-ec9649", "ts": 1791119763.2378778}
+{"command": "./run_measured.sh ae-sweep-e4b-b3 -- ./ae_gate.py --model e4b --flags \"-reuse -ngram -block 3\" --against /home/ari/research/stdbench/mmlupro100-lg-e4b-s1 --per-category 2 --out /home/ari/research/stdbench/ae-sweep-e4b-b3", "event": "started", "job": "20261004-195035-ec9649", "ts": 1791119763.2598279}
+{"event": "completed", "exit_code": 0, "job": "20261004-195035-ec9649", "ts": 1791120916.8358216}

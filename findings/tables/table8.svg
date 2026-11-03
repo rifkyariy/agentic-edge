@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="574" height="389" viewBox="0 0 574 389" role="img" aria-label="Table VIII — Same checkpoint and 300 questions on other edge devices">
+<style>text{font-family:Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;font-variant-numeric:tabular-nums}.title{font-size:15px;font-weight:600}.head{font-size:12px;font-weight:600}.cell{font-size:13px}.cell.b{font-weight:700}.note{font-size:11.5px}.glabel{font-size:13px;font-weight:600;font-style:italic}.hair{stroke-width:0.6}.hair2{stroke-width:0.6}.bg{fill:#fcfcfb}.title{fill:#0b0b0b}.head{fill:#52514e}.cell{fill:#0b0b0b}.note{fill:#52514e}.glabel{fill:#52514e}.rule{stroke:#0b0b0b}.hair{stroke:#e4e3df}.hair2{stroke:#52514e}.tint{fill:#e8f0fa}.group{fill:#f3f2ee}@media (prefers-color-scheme:dark){.bg{fill:#1a1a19}.title{fill:#ffffff}.head{fill:#c3c2b7}.cell{fill:#ffffff}.note{fill:#c3c2b7}.glabel{fill:#c3c2b7}.rule{stroke:#c3c2b7}.hair{stroke:#34332f}.hair2{stroke:#c3c2b7}.tint{fill:#1d2a3b}.group{fill:#242321}}</style>
+<rect class="bg" width="100%" height="100%"/>
+<text class="title" x="20" y="35">Table VIII — Same checkpoint and 300 questions on other edge devices</text>
+<rect class="group" x="20" y="79.0" width="458.3" height="24"/>
+<text class="glabel" x="32.0" y="95.5">Gemma 4 E2B</text>
+<rect class="tint" x="20" y="103.0" width="458.3" height="27"/>
+<rect class="group" x="20" y="184.0" width="458.3" height="24"/>
+<text class="glabel" x="32.0" y="200.5">Gemma 4 E4B</text>
+<rect class="tint" x="20" y="208.0" width="458.3" height="27"/>
+<text class="head" x="32.0" y="68.0">Device</text>
+<text class="head" x="194.3" y="68.0">Engine</text>
+<text class="head" x="339.2" y="68.0" text-anchor="end">Acc. (%)</text>
+<text class="head" x="402.8" y="68.0" text-anchor="end">tok/s</text>
+<text class="head" x="466.3" y="68.0" text-anchor="end">J/tok</text>
+<line class="rule" x1="20" x2="478.3" y1="49.0" y2="49.0" stroke-width="1.5"/>
+<line class="rule" x1="20" x2="478.3" y1="79.0" y2="79.0" stroke-width="0.8"/>
+<line class="rule" x1="20" x2="478.3" y1="289.0" y2="289.0" stroke-width="1.5"/>
+<text class="cell" x="32.0" y="121.0">Jetson Orin Nano, 15 W</text>
+<text class="cell" x="194.3" y="121.0">CoPR (ours)</text>
+<text class="cell" x="339.2" y="121.0" text-anchor="end">53.0</text>
+<text class="cell" x="402.8" y="121.0" text-anchor="end">29.52</text>
+<text class="cell" x="466.3" y="121.0" text-anchor="end">0.370</text>
+<line class="hair" x1="20" x2="478.3" y1="130.0" y2="130.0"/>
+<text class="cell" x="32.0" y="148.0">Raspberry Pi 5 (CPU)</text>
+<text class="cell" x="194.3" y="148.0">llama.cpp</text>
+<text class="cell" x="339.2" y="148.0" text-anchor="end">51.7</text>
+<text class="cell" x="402.8" y="148.0" text-anchor="end">6.87ᵃ</text>
+<text class="cell" x="466.3" y="148.0" text-anchor="end">1.130</text>
+<line class="hair" x1="20" x2="478.3" y1="157.0" y2="157.0"/>
+<text class="cell" x="32.0" y="175.0">iPhone 15 Pro</text>
+<text class="cell" x="194.3" y="175.0">MLXᵈ</text>
+<text class="cell" x="339.2" y="175.0" text-anchor="end">51.0</text>
+<text class="cell" x="402.8" y="175.0" text-anchor="end">14.50ᵉ</text>
+<text class="cell" x="466.3" y="175.0" text-anchor="end">0.354ᵇ</text>
+<text class="cell" x="32.0" y="226.0">Jetson Orin Nano, 15 W</text>
+<text class="cell" x="194.3" y="226.0">CoPR (ours)</text>
+<text class="cell" x="339.2" y="226.0" text-anchor="end">65.3</text>
+<text class="cell" x="402.8" y="226.0" text-anchor="end">17.67</text>
+<text class="cell" x="466.3" y="226.0" text-anchor="end">0.676</text>
+<line class="hair" x1="20" x2="478.3" y1="235.0" y2="235.0"/>
+<text class="cell" x="32.0" y="253.0">Raspberry Pi 5 (CPU)</text>
+<text class="cell" x="194.3" y="253.0">llama.cpp</text>
+<text class="cell" x="339.2" y="253.0" text-anchor="end">65.7</text>
+<text class="cell" x="402.8" y="253.0" text-anchor="end">3.37ᵃ</text>
+<text class="cell" x="466.3" y="253.0" text-anchor="end">2.223</text>
+<line class="hair" x1="20" x2="478.3" y1="262.0" y2="262.0"/>
+<text class="cell" x="32.0" y="280.0">iPhone 15 Pro</text>
+<text class="cell" x="194.3" y="280.0">MLXᵈ</text>
+<text class="cell" x="339.2" y="280.0" text-anchor="end">66.0</text>
+<text class="cell" x="402.8" y="280.0" text-anchor="end">9.18ᵉ</text>
+<text class="cell" x="466.3" y="280.0" text-anchor="end">0.593ᵇ</text>
+<text class="note" x="20" y="314.5">Deployment context, not an engine comparison. ᵃ Pi rates pooled over the two</text>
+<text class="note" x="20" y="331.0">subsets with request logs (n=200). ᵇ Whole-phone battery estimate (battery % ×</text>
+<text class="note" x="20" y="347.5">capacity, 1% steps, screen on), not board DC: not comparable. ᵈ MLX 4-bit builds of</text>
+<text class="note" x="20" y="364.0">the same QAT checkpoints. ᵉ Thermally throttled: iOS state ≥2 for most of each run.</text>
+</svg>

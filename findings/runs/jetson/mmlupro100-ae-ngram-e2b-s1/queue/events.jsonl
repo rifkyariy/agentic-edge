@@ -1,0 +1,5 @@
+{"by": "queue_ctl", "event": "queued", "job": "20261005-004353-c517bc", "label": "mmlupro-ae-ngram-e2b-s1", "ts": 1791132233.884348}
+{"event": "precheck_passed", "job": "20261005-004353-c517bc", "ts": 1791143793.6610978}
+{"command": "./run_measured.sh mmlupro-ae-ngram-e2b-s1 -- env SUBSET=s1 THINKING=off VARIANT=ngram ./std_mmlupro_lg_jetson.sh e2b", "event": "started", "job": "20261005-004353-c517bc", "ts": 1791143793.6867414}
+{"baseline": "ae-ngram", "event": "fingerprint_ok", "job": "20261005-004353-c517bc", "ts": 1791143829.4076881}
+{"event": "completed", "exit_code": 0, "job": "20261005-004353-c517bc", "ts": 1791146263.816373}

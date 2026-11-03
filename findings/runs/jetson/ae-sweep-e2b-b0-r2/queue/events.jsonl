@@ -1,0 +1,4 @@
+{"by": "claude-requeue", "event": "queued", "job": "20261004-211021-0cec1a", "label": "ae-sweep-e2b-b0-r2", "ts": 1791119421.4117084}
+{"event": "precheck_passed", "job": "20261004-211021-0cec1a", "ts": 1791122070.3298883}
+{"command": "./run_measured.sh ae-sweep-e2b-b0-r2 -- ./ae_gate.py --model e2b --flags \"\" --against /home/ari/research/stdbench/mmlupro100-lg-e2b-s1 --per-category 2 --out /home/ari/research/stdbench/ae-sweep-e2b-b0-r2", "event": "started", "job": "20261004-211021-0cec1a", "ts": 1791122070.3529177}
+{"event": "completed", "exit_code": 0, "job": "20261004-211021-0cec1a", "ts": 1791122776.0931976}

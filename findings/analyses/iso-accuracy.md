@@ -79,32 +79,19 @@ Worth keeping as a free extra — zero false positives — but it is not a metho
 20–26% more time on every board and model, and no accuracy: E2B is *worse* on
 both boards, E4B moves inside noise. Settled; do not spend more device time.
 
-## 3. What is left
+## 3. What came of it
 
-Three routes to cutting generation cost, and measurement has eliminated two:
+Measurement ruled out two of the three routes to cutting generation cost —
+capping the budget (−5 to −11 points) and aborting on a detected loop (catches
+4–8%). The third, deciding before generating at all, was then tested too:
 
-| | route | verdict |
-|---|---|---|
-| ❌ | cap the budget once generating | −5 to −11 points |
-| ❌ | detect a loop and abort | catches 4–8% |
-| ✅ | **decide before generating at all** | untested |
+- [`s4-letter-only.md`](s4-letter-only.md) — letter-only alone loses 15 points,
+  but fails on different questions than CoT.
+- [`permutation-ensemble.md`](permutation-ensemble.md) — agreement across
+  permuted option orders predicts correctness, yet no cascade built on it
+  reaches iso-accuracy at n=300.
+- [`model-cascade.md`](model-cascade.md) — an E2B→E4B cascade lands below the
+  line between the two models.
 
-That is the cascade, and it is now the only surviving candidate rather than one
-option among several. Its premise is a single question — can Gemma pick the
-answer without reasoning its way there? — and `S4 letter-only` answers it for
-about 3 hours of device time and no engine patch.
-
-The arithmetic that makes it worth testing: decode is **92–98%** of per-question
-time on both boards. If a gate can answer even half the questions without
-generating, that is a ~45% energy cut at whatever accuracy the cheap path
-holds. If the cheap path holds accuracy at all, this beats both the engine swap
-and the board swap — and it composes with them rather than competing.
-
-## 4. Order
-
-1. **S4 letter-only** — the premise, ~3 h, no patch. Everything else waits on it.
-2. **Report the little-gemma win** — already in hand, costs nothing, and it is
-   a defensible iso-accuracy result for the paper today.
-3. **S7 Q5_K_M precision control** — tells you whether the accuracy you are
-   holding constant is the accuracy you could have had.
-4. **S5 cascade** — only if S4 holds.
+None holds accuracy, so the manuscript took the route that cannot change it:
+exact-output speedups, where the replies stay byte-identical (CoPR, RESULTS §7.6).

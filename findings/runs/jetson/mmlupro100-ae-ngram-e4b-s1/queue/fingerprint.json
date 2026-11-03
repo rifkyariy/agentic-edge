@@ -1,0 +1,75 @@
+{
+ "baseline": "ae-ngram",
+ "captured": {
+  "server_args": "/home/ari/build/little-gemma-ae/build/run-cuda-i8 -m /home/ari/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf -raw -think -1 -s /tmp/lg-bench.sock -ngram -block 3 | python3 /mnt/ssd-ex/research/agentic-edge/benchmark/lg_openai_shim.py --engine /home/ari/build/little-gemma-ae/build/run-cuda-i8 -m /home/ari/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf --thinking off --think -1 --port 8080 --engine-flags -ngram -block 3",
+  "pids": [
+   344403
+  ],
+  "model_path": "/home/ari/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+  "governor": "schedutil",
+  "kernel": "Linux 6.8.12-1021-tegra",
+  "flags": {
+   "engine": "little-gemma",
+   "build": "little-gemma-ae",
+   "model": "/home/ari/research/models/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+   "raw": "on",
+   "think": "-1",
+   "thinking": "off",
+   "ngram": "on",
+   "reuse": "off",
+   "mtp": "off",
+   "block": "3"
+  }
+ },
+ "diff": [
+  {
+   "key": "build",
+   "expected": "little-gemma-ae",
+   "actual": "little-gemma-ae",
+   "ok": true
+  },
+  {
+   "key": "engine",
+   "expected": "little-gemma",
+   "actual": "little-gemma",
+   "ok": true
+  },
+  {
+   "key": "mtp",
+   "expected": "off",
+   "actual": "off",
+   "ok": true
+  },
+  {
+   "key": "ngram",
+   "expected": "on",
+   "actual": "on",
+   "ok": true
+  },
+  {
+   "key": "raw",
+   "expected": "on",
+   "actual": "on",
+   "ok": true
+  },
+  {
+   "key": "reuse",
+   "expected": "off",
+   "actual": "off",
+   "ok": true
+  },
+  {
+   "key": "think",
+   "expected": "-1",
+   "actual": "-1",
+   "ok": true
+  },
+  {
+   "key": "thinking",
+   "expected": "off",
+   "actual": "off",
+   "ok": true
+  }
+ ],
+ "agrees": true
+}

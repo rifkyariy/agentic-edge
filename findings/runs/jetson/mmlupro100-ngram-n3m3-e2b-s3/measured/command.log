@@ -1,0 +1,6 @@
+Thu Oct  8 05:27:09 AM CST 2026 starting llama.cpp (CUDA, -ngl 99) on E2B spec='--spec-type ngram-simple --spec-ngram-simple-size-n 3 --spec-ngram-simple-size-m 3 --spec-draft-n-max 3'
+"model_path":"/home/ari/research/models/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf"
+  CUDA0: Orin (7485 MiB, 3092 MiB free)
+Thu Oct  8 05:28:09 AM CST 2026 start MMLU-Pro subset100/s3  model=E2B thinking=off
+Thu Oct  8 06:14:21 AM CST 2026 end rc=0
+finished

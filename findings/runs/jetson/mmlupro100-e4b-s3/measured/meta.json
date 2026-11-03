@@ -1,0 +1,15 @@
+{
+ "label": "mmlupro-e4b-s3",
+ "command": "env SUBSET=s3 ./std_mmlupro_jetson.sh e4b",
+ "model_path": "",
+ "server_args": "",
+ "governor": "schedutil",
+ "kernel": "Linux 6.8.12-1021-tegra",
+ "host": "mitlab-orin-nano",
+ "cpus": 6,
+ "start_epoch": 1790059696.0296168,
+ "throttled_at_start": "",
+ "work_start_epoch": 1790059726.0,
+ "work_end_epoch": 1790066019.0,
+ "exit_code": 0
+}

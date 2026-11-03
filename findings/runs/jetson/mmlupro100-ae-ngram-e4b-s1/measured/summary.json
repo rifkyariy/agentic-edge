@@ -1,0 +1,97 @@
+{
+ "label": "mmlupro-ae-ngram-e4b-s1",
+ "model": "",
+ "command": "env SUBSET=s1 THINKING=off VARIANT=ngram ./std_mmlupro_lg_jetson.sh e4b",
+ "samples": 4145,
+ "wall_s": 4342.3,
+ "work_s": 4281.7,
+ "power": {
+  "idle_w": 4.53,
+  "idle_post_w": 4.55,
+  "work_mean_w": 11.0,
+  "work_peak_w": 12.1,
+  "generation_mean_w": 11.41,
+  "energy_wh": 13.084,
+  "energy_j": 47101.4,
+  "energy_above_idle_j": 27705.1,
+  "_method": "sum of PMIC per-rail V*I, trapezoidal over 1Hz samples; board DC power, excludes PSU conversion loss"
+ },
+ "tokens": {
+  "requests": 100,
+  "prompt_tokens": 144412,
+  "generated_tokens": 67070,
+  "prefill_s": 305.5,
+  "decode_s": 3786.2,
+  "prefill_tok_s": 472.65,
+  "decode_tok_s": 17.71
+ },
+ "efficiency": {
+  "j_per_generated_token": 0.7,
+  "j_per_generated_token_above_idle": 0.41,
+  "j_per_token_all": 0.223,
+  "decode_tok_s_per_w": 1.553,
+  "tokens_per_wh": 5126.2
+ },
+ "thermal": {
+  "temp_c": {
+   "mean": 59.36,
+   "median": 60.0,
+   "min": 49.1,
+   "max": 60.9,
+   "n": 4087
+  },
+  "throttled_nonzero_samples": 0,
+  "cpu_mhz_mean": 861.68
+ },
+ "utilisation": {
+  "cpu_pct": {
+   "mean": 1.88,
+   "median": 1.4,
+   "min": 1.0,
+   "max": 25.5,
+   "n": 4087
+  },
+  "gpu_pct": {
+   "mean": 93.13,
+   "median": 99.9,
+   "min": 0.0,
+   "max": 100.0,
+   "n": 4087
+  },
+  "gpu_mhz": {
+   "mean": 594.31,
+   "median": 612.0,
+   "min": 306.0,
+   "max": 612.0,
+   "n": 4087
+  },
+  "proc_cpu_pct": {
+   "mean": 1.06,
+   "median": 1.0,
+   "min": 0.0,
+   "max": 102.0,
+   "n": 4083
+  },
+  "proc_rss_mb": {
+   "mean": 4815.34,
+   "median": 4849.7,
+   "min": 53.6,
+   "max": 5570.2,
+   "n": 4082
+  },
+  "mem_used_mb": {
+   "mean": 5446.35,
+   "median": 5536.0,
+   "min": 1465.0,
+   "max": 5557.0,
+   "n": 4087
+  },
+  "swap_used_mb": {
+   "mean": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "max": 0.0,
+   "n": 4087
+  }
+ }
+}
