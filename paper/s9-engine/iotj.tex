@@ -685,9 +685,10 @@ NX~\cite{littlegemmarepo}; on the Nano it is what caps the width.
 \subsection{Gains can be predicted before deployment}
 On E2B, the measured accepted tokens per drafted step (0.57, 0.90, 1.12 at
 widths 2--4, on the sweep's 28 questions) match the offline replay of
-Sec.~\ref{sec:where} (0.55, 0.87, 1.08, on all 300) within 0.04 tokens. If a
-drafted step costs $c$ plain decode steps, a fraction $m$ of steps draft and
-each accepts $a$ tokens on average, the decode speedup is
+Sec.~\ref{sec:where} (0.55, 0.87, 1.08, on all 300) within 0.04 tokens. Every decode step yields one token. If a fraction $m$ of steps draft, each
+accepting on average $a$ drafted tokens on top of that one, a step yields
+$1 + m\,a$ tokens on average. If a drafted step costs $c$ plain decode steps, the
+decode speedup is
 \begin{equation}\label{eq:speedup}
 S = \frac{1 + m\,a}{1 + m\,(c - 1)} .
 \end{equation}

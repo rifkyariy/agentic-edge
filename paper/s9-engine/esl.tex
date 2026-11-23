@@ -172,9 +172,9 @@ both drafts hold and the pass also yields the next token.}
 searches backwards for the most recent earlier occurrence of the last three tokens,
 falling back to two, and proposes the up to $B{-}1$ tokens that followed it.
 \lgm{}'s batched verify computes every position's
-greedy successor in one weight pass and accepts the longest matching prefix. If
-a fraction $m$ of steps draft, each accepting $a$ tokens, and a drafted step
-costs $c$ plain steps, decode speeds up by
+greedy successor in one weight pass and accepts the longest matching prefix. Every step yields one token; if a fraction $m$ of steps draft, each accepting
+on average $a$ drafted tokens on top of it, and a drafted step costs $c$ plain
+steps, decode speeds up by
 \begin{equation}\label{eq:speedup}
 S = (1 + m\,a)\,/\,(1 + m\,(c - 1)) .
 \end{equation}
