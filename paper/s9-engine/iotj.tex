@@ -51,7 +51,7 @@ existing prefix snapshot per request, without touching a kernel. All 2{,}100
 \sys{} replies tested, over 500 distinct prompts, are byte-identical to
 unmodified \lgm{}'s, while on Gemma~4 E2B and E4B \sys{} decodes
 \EtwoSpG$\times$ and \EfourSpG$\times$ faster than \lgm{} and uses 17--19\,\% less
-board energy per token; against \lc{}, which \lgm{} already outpaces, the
+energy per token; against \lc{}, which \lgm{} already outpaces, the
 figures are \EtwoSpL$\times$, \EfourSpL$\times$ and \EtwoJsav--\EfourJsav\,\%.
 \lc{}'s own $n$-gram drafting changed 90--93\,\% of replies at the settings
 that drafted. The speedup follows how much a workload copies its context:
@@ -116,7 +116,7 @@ nothing but speed changed (Sec.~\ref{sec:method}).
 \item \textbf{A measured comparison and ablation} of three engines---and of
 \lc{}'s own $n$-gram drafting---on identical
 weights, prompts and subsets, with accuracy, decode rate, prompt
-tokens processed and board energy per token from the same run
+tokens processed and energy per token from the same run
 (Sec.~\ref{sec:results}).
 \item \textbf{A predictive model of the gain}: speedup follows from the
 acceptance replayed on logged replies and the measured cost of one verify pass
@@ -432,12 +432,20 @@ exactly this kind, altered 90--93\,\% of replies (Sec.~\ref{sec:lcngram}). The
 2{,}100 compared replies cover 500 distinct prompts (300 MMLU-Pro, 200 BFCL)
 across eight run sets.
 
-\textbf{Energy and speed.} A 1\,Hz sampler reads board power from the INA3221
-\texttt{VDD\_IN} rail (board DC input, excluding power-supply loss; not wall
-power) together with GPU and CPU utilization and frequency, temperatures,
+\textbf{Energy and speed.} A 1\,Hz sampler reads the Jetson's on-module INA3221
+power monitor, rail \texttt{VDD\_IN}, which NVIDIA defines as total module
+power~\cite{nvjetsonpower}, together with GPU and CPU utilization and frequency, temperatures,
 throttle flags and memory. Energy is the trapezoidal integral over the
 command's working window, excluding 30\,s idle baselines recorded before and
-after. We report energy per generated token, total and above idle. Rates are
+after. We report energy per generated token, total and above idle. This sensor is the
+usual energy source in Jetson inference studies~\cite{zhan2026,liao2026}. It
+leaves out the carrier board, fan and regulators, so it under-reads input
+power---by up to 50\,\% uncalibrated across Jetson devices~\cite{shalavi2023},
+and by a steady 25\,\% on an Orin Nano against an external meter, the same
+within 1\,\% for GPU and CPU inference~\cite{liao2026}. Every energy comparison in
+this paper is a ratio between engines on the same board, sensor and power mode,
+which such a near-constant scale factor cancels; the absolute joules are module
+energy, below board or wall energy. Rates are
 pooled ratios ($\sum$tokens$/\sum$time) of each engine's own per-request
 timings; with drafting on, decode time is the whole generation phase, verify
 passes included, and the token count is the tokens emitted. Wall time per
@@ -477,7 +485,7 @@ pinned and an unpinned run are therefore not attributed to the engine.
 
 \begin{table*}[t]
 \caption{Engines on the Jetson Orin Nano 8\,GB at 15\,W, MMLU-Pro, $n{=}300$ per cell.
-Energy is board DC energy over the working window per generated token. \textbf{Bold}: best in row, whichever engine; shaded: the
+Energy is module energy (INA3221 \texttt{VDD\_IN}) over the working window per generated token. \textbf{Bold}: best in row, whichever engine; shaded: the
 proposed system. The \lc{} column runs without speculative decoding;
 \lc{}+$n$-gram is \lc{}'s own drafting at the fastest of the three settings
 tried (width~4, not exact); its power and energy are not reported (--,
@@ -850,8 +858,8 @@ not---though the replay of Sec.~\ref{sec:where} measures this for any workload
 with recorded outputs (Table~\ref{tab:replay}). Under sampling, drafts are verified against samples and
 acceptance falls. \sys{} inherits \lgm{}'s scope, the Gemma~4 family on CUDA.
 All runs use the 15\,W mode; at the board's 25\,W mode verify cost, and so the
-best width, may differ. Power is board DC draw, consistent across runs but not
-wall power.
+best width, may differ. Power is on-module (\texttt{VDD\_IN}): consistent across runs, so
+engine ratios hold, but below board and wall power.
 
 \section{Conclusion}
 On a 15\,W edge GPU, decode dominates and chain-of-thought replies repeat

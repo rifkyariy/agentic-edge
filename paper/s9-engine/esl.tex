@@ -45,7 +45,7 @@ batched verify and keys its existing prefix snapshot per request, without
 touching a kernel. All 2{,}100 \sys{} replies tested, over 500 distinct prompts,
 are byte-identical to unmodified \lgm{}'s, while on Gemma~4 E2B and E4B \sys{}
 decodes \EtwoSpG$\times$ and \EfourSpG$\times$ faster than \lgm{} and uses
-17--19\,\% less board energy per token (\EtwoSpL$\times$, \EfourSpL$\times$
+17--19\,\% less energy per token (\EtwoSpL$\times$, \EfourSpL$\times$
 and \EtwoJsav--\EfourJsav\,\% against \lc{}). \lc{}'s own $n$-gram drafting
 changed 90--93\,\% of replies at the settings that drafted.
 \end{abstract}
@@ -75,7 +75,7 @@ already ships a batched verify, built for Gemma~4's draft heads, and a KV snapsh
 of a fixed system prompt that copies sliding-window rings whole. We contribute a
 144-line host-side patch that feeds context drafts into that verify and keys
 that snapshot per request; byte identity as the quality standard; a same-run
-comparison of output, speed and board energy; and a model that predicts the
+comparison of output, speed and energy; and a model that predicts the
 gain from logged replies.
 
 \section{Where the Time Goes}\label{sec:where}
@@ -242,8 +242,11 @@ thinking off, at GPU 612\,MHz and CPU 1{,}497.6\,MHz caps. \sys{} is \lgm{} with
 \texttt{-reuse -ngram -block 3}. Byte
 identity is a sharp test: replies average 660 tokens, so one flipped greedy
 choice shows, and \lc{}'s own drafting altered 90--93\,\% of its replies. Energy
-integrates the INA3221 \texttt{VDD\_IN} rail at 1\,Hz over the working window; it is
-board DC input, not wall power. One batch---\lc{}'s $n$-gram drafting, the
+integrates the on-module INA3221 \texttt{VDD\_IN} rail (total module
+power~\cite{nvjetsonpower}) at 1\,Hz over the working window, as is usual on
+Jetson~\cite{zhan2026,liao2026}. It under-reads board input by a near-constant
+factor~\cite{shalavi2023,liao2026}, which cancels in our engine-to-engine
+ratios. One batch---\lc{}'s $n$-gram drafting, the
 reuse-only ablation and a \sys{} repeat---ran with the CPU clock pinned. That
 raises energy, so we report only speed for it, and an \lc{} rerun that never
 drafted came out 3.3\,\% faster than its unpinned twin, so speed differences
@@ -254,7 +257,7 @@ caught before any reported run.
 
 \begin{table*}[t]
 \caption{Engines on the Jetson Orin Nano 8\,GB at 15\,W, MMLU-Pro, $n{=}300$ per cell.
-Energy is board DC energy over the working window per generated token. \textbf{Bold}: best in row, whichever engine; shaded: the
+Energy is module energy (INA3221 \texttt{VDD\_IN}) over the working window per generated token. \textbf{Bold}: best in row, whichever engine; shaded: the
 proposed system. The \lc{} column runs without speculative decoding;
 \lc{}+$n$-gram is \lc{}'s own drafting at the fastest of the three settings
 tried (width~4, not exact); its power and energy are not reported (--,
