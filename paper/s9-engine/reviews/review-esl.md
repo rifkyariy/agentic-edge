@@ -57,9 +57,9 @@ ring-exact snapshot and the batched verify are CoPR's. The patch shows otherwise
 
    Either keep a small combined table (sweep: width, tok/s, accepted, cost), or point to the repository's
    `findings/TABLES.md` for each.
-6. **The AI-disclosure placeholder** "[describe role: drafting, editing, figures, coding, verification]" in
+6. **[RESOLVED: removed from the manuscript; the author declares AI use on the submission form.]** ~~**The AI-disclosure placeholder** "[describe role: drafting, editing, figures, coding, verification]" in
    the Acknowledgment. ESL desk-rejects papers with an unfilled disclosure, and a bracketed placeholder is
-   worse than none. Fill it in.
+   worse than none. Fill it in.~~
 
 ## C. Moderate
 
