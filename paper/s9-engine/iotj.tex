@@ -1,0 +1,868 @@
+\documentclass[lettersize,journal]{IEEEtran}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{url}
+\usepackage{cite}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,decorations.pathreplacing,calc,fit}
+\input{numbers}
+
+\newcommand{\sys}{CoPR}
+\newcommand{\ours}{\sys{}\,(ours)}
+\definecolor{oursbg}{gray}{0.88}
+\newcolumntype{O}{>{\columncolor{oursbg}}c}
+\newcommand{\lc}{llama.cpp}
+\newcommand{\lgm}{little-gemma}
+
+\begin{document}
+
+\title{Never Compute Twice: Exact-Output Speedups\\for Gemma~4 on an IoT Edge GPU}
+
+% TODO(author): add \IEEEmembership grades if any, and a funding \thanks if any.
+\author{Rifky Ari Yunanto, Jenq-Shiou Leu, and Setya Widyawan Prakosa
+\thanks{(Corresponding author: Jenq-Shiou Leu.)}
+\thanks{The authors are with the Department of Electronic and Computer
+Engineering, National Taiwan University of Science and Technology, Taipei,
+Taiwan (e-mail: M11402807@mail.ntust.edu.tw; jsleu@mail.ntust.edu.tw;
+d10702804@mail.ntust.edu.tw).}}
+
+\markboth{IEEE Internet of Things Journal}%
+{Yunanto \MakeLowercase{\textit{et al.}}: Never Compute Twice: Exact-Output Speedups for Gemma~4 on an IoT Edge GPU}
+
+\maketitle
+
+\begin{abstract}
+Internet of Things (IoT) systems increasingly run language-model agents on the
+edge node itself, where power is limited and revalidating a model across
+deployed nodes is costly. Such an agent must be fast, yet its answers must stay
+the same as it is made faster: a cheaper model, a coarser quantization or a
+shorter chain of thought all buy speed by changing what the model says. We show
+that on a 15\,W edge GPU, an NVIDIA Jetson Orin Nano 8\,GB, much of that speed
+can be bought without changing a single output byte. Decode dominates
+request time there, and chain-of-thought replies copy so much of their own
+context that recorded replies alone predict the gain. \sys{} (Context drafting
+with Prefix Reuse) is a host-side patch to \lgm{}, an open Gemma~4 runtime: it
+feeds prompt-lookup drafts into \lgm{}'s existing batched verify and keys its
+existing prefix snapshot per request, without touching a kernel. All 2{,}100
+\sys{} replies tested, over 500 distinct prompts, are byte-identical to
+unmodified \lgm{}'s, while on Gemma~4 E2B and E4B \sys{} decodes
+\EtwoSpG$\times$ and \EfourSpG$\times$ faster than \lgm{} and uses 17--19\,\% less
+board energy per token; against \lc{}, which \lgm{} already outpaces, the
+figures are \EtwoSpL$\times$, \EfourSpL$\times$ and \EtwoJsav--\EfourJsav\,\%.
+\lc{}'s own $n$-gram drafting changed 90--93\,\% of replies at the settings
+that drafted. The speedup follows how much a workload copies its context:
+large for long reasoning, moderate for tool calls, and predicted to be small
+for free-form text.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Edge inference, energy measurement, Internet of Things (IoT), Jetson Orin Nano, KV-cache reuse, prompt lookup, resource-constrained devices, speculative decoding
+\end{IEEEkeywords}
+
+% ===========================================================================
+\section{Introduction}
+
+\IEEEPARstart{A}{gentic} systems are moving onto the embedded boards of the
+Internet of Things (IoT)---robots, kiosks, offline assistants---where one
+general-purpose language model must answer on the node itself, within a power
+budget of a few watts. On such hardware, speed is usually traded for
+something: a smaller model, more aggressive quantization, a truncated or
+disabled reasoning phase. Each of these changes what the model says, and so
+each must be re-validated on accuracy, with all the noise that a few hundred
+benchmark questions carry. In an IoT deployment that burden falls on every
+application built on the node's model, so a speedup that leaves replies
+unchanged is worth more there than its raw factor suggests.
+
+This paper asks a narrower question: \emph{how much speed is available on an
+edge board without changing the output at all?} We answer it on a Jetson Orin
+Nano 8\,GB in its 15\,W mode, with Gemma~4~\cite{gemma4} E2B and E4B on
+MMLU-Pro~\cite{mmlupro}, comparing the general-purpose runtime \lc{}~\cite{llamacpp}
+with \lgm{}~\cite{littlegemma,littlegemmarepo}, a 6,000-line runtime specialized for
+the Gemma~4 family.
+
+The answer starts from two measurements of the baselines
+(Sec.~\ref{sec:where}). Decode is about 97\,\% of request time, and \lgm{} is
+faster than \lc{} only there; on prefill it is the opposite, because it
+re-reads the whole five-shot prompt for every question where \lc{} reuses it.
+And the replies themselves are repetitive in a useful way: a chain of thought
+restates options, question terms and the fixed phrasing of the few-shot
+answers, so much of what the model is about to write is already in its context.
+
+Both observations have a known remedy that leaves greedy output intact.
+Speculative decoding~\cite{leviathan2023,chen2023} with greedy verification
+accepts a drafted token only where it equals the model's own choice, and
+drafting from the context itself---prompt-lookup decoding~\cite{pld},
+LLMA~\cite{llma}, SuffixDecoding~\cite{suffixdecoding}---costs nothing to run. Prefix caching~\cite{vllm,sglang}
+skips work whose result is already known. The engineering question is whether
+they pay on a board with little compute headroom, inside a runtime built around
+sliding-window ring buffers. We do not propose a new drafting algorithm; we
+contribute:
+
+\begin{itemize}
+\item \textbf{\sys{} (Context drafting with Prefix Reuse)}: a 144-line host-side
+patch to \lgm{} that feeds prompt-lookup drafts into its existing batched
+verify and re-keys its
+existing system-prefix KV snapshot per request so that a shared few-shot prefix
+is restored rather than prefilled (Sec.~\ref{sec:design}).
+\item \textbf{Byte identity as the quality standard.} Every reply is compared
+with unmodified \lgm{}'s reply to the same question. The test has teeth: \lc{}'s
+own drafting, which also verifies greedily, changed 90--93\,\% of its replies
+(Sec.~\ref{sec:lcngram}), so a 2{,}100/2{,}100 match is strong evidence that
+nothing but speed changed (Sec.~\ref{sec:method}).
+\item \textbf{A measured comparison and ablation} of three engines---and of
+\lc{}'s own $n$-gram drafting---on identical
+weights, prompts and subsets, with accuracy, decode rate, prompt
+tokens processed and board energy per token from the same run
+(Sec.~\ref{sec:results}).
+\item \textbf{A predictive model of the gain}: speedup follows from the
+acceptance replayed on logged replies and the measured cost of one verify pass
+(Eq.~\ref{eq:speedup}), which matches the live width sweep and selects the
+verify width (3 for \lgm{} on this GPU) before any device time is spent.
+\end{itemize}
+
+% ===========================================================================
+\section{Background}
+
+\textbf{Speculative decoding.} A drafter proposes $k$ tokens; the target model
+scores all of them in one pass and keeps the longest prefix it agrees
+with~\cite{leviathan2023,chen2023}. Drafters range from small models to extra
+heads (Medusa~\cite{medusa}, EAGLE~\cite{eagle}) and model-free schemes such as
+lookahead decoding~\cite{lookahead} and prompt-lookup decoding~\cite{pld}, which
+copies the continuation of an earlier $n$-gram match; LLMA~\cite{llma} copies
+spans from reference documents and SuffixDecoding~\cite{suffixdecoding} matches
+against suffix trees of earlier outputs, REST~\cite{rest} retrieves drafts from
+a datastore, and ANPD~\cite{anpd} adapts its $n$-gram drafting at run time.
+\lc{} itself ships several $n$-gram drafting modes
+(\texttt{-{}-spec-type ngram-*}). With greedy verification
+the output is exactly the greedy output; only the number of target passes per
+token changes. On edge devices, LLMCad~\cite{llmcad} and EdgeLLM~\cite{edgellm}
+speculate with a small resident draft model to run a larger target; we use no
+draft model and keep the board's single target.
+
+\textbf{Prefix caching.} Serving systems reuse the KV state of shared prompt
+prefixes (vLLM~\cite{vllm}, SGLang's RadixAttention~\cite{sglang}); \lc{}'s
+server keeps the previous request's cache and reuses its longest common prefix.
+Gemma's sliding-window layers complicate this: vLLM's hybrid KV manager treats a
+sliding-window prefix as a hit only while the last window of it stays
+cached~\cite{vllmhybrid}, and a runtime that stores those layers as ring buffers
+overwrites prefix rows as a reply grows.
+
+\textbf{Edge measurements.} Studies of LLM inference on Jetson boards report
+throughput and power across models and quantizations~\cite{cloudedge,arya}; our
+question is narrower, the speed available with the output held fixed.
+
+\textbf{\lgm{}.} \lgm{} (MIT licence) trades generality for one model family:
+a CUDA graph captured once per token, fused Gemma-specific kernels, aligned
+K-quant weight loads, on-device greedy selection and ring-buffered
+sliding-window caches~\cite{littlegemma,littlegemmarepo}. Its authors target
+voice latency. Two of its features are the base \sys{} builds on. First,
+\lgm{} has a batched verify (built for Gemma~4's draft heads): one forward
+pass over a configurable number of positions that keeps a token only where it
+equals the greedy choice; \sys{} feeds it drafts taken from the context. Second, \lgm{} saves and restores the KV state of a
+fixed system prompt, copying every layer's rows---for a ring layer, the whole
+ring---so the snapshot is already exact for sliding-window caches; \sys{}
+re-keys that snapshot per request. Everything else in this paper's \sys{} is
+the drafter, the re-keying, and buffer reuse. The authors are not affiliated
+with the \lgm{} authors, and the patch has not been submitted upstream.
+
+% ===========================================================================
+\section{Where the Time Goes}\label{sec:where}
+
+\begin{table}[t]
+\caption{Baseline anatomy, Gemma~4 E2B on the Jetson Orin Nano at 15\,W, 300 MMLU-Pro questions}
+\label{tab:where}
+\centering\footnotesize
+\begin{tabular}{@{}lcc@{}}
+\toprule
+& \lc{} & \lgm{} \\
+\midrule
+Generated tokens & \GenTokL & \GenTokG \\
+Decode rate (tok/s) & \EtwoDecL & \EtwoDecG \\
+Prompt tokens prefilled / question & \EtwoPrmL & \EtwoPrmG \\
+Share of request time in prefill (\%) & \PrefShareL & \PrefShareG \\
+Accuracy (\%) & \EtwoAccL & \EtwoAccG \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:where} decomposes the two baselines on E2B. Both generate almost
+the same number of tokens, and both spend about 97\,\% of request time
+generating them, so decode rate decides wall time. \lgm{} decodes 11\,\% faster
+(30\,\% on E4B) and is correspondingly faster per question, but it prefills
+3.8$\times$ more prompt: it starts every question from an empty cache, while
+\lc{} reuses the five-shot prefix the previous question left behind. Prefill
+is cheap on this GPU, so this costs only a few percent---yet it is the one
+column on which the faster engine loses.
+
+The second observation concerns what is generated. Because greedy output is
+deterministic, the effect of any drafter can be computed exactly from recorded
+replies: a draft would have been accepted exactly where it equals the recorded
+next tokens. We report two quantities: \emph{tokens per decode step}, emitted
+tokens divided by all generation steps, plain or verified, which is what
+speed follows; and \emph{accepted tokens per drafted step}, counted only over
+steps where the lookup found a match. They are linked by the match rate $m$
+and the accepted tokens per drafted step $a$:
+\begin{equation}
+\text{tokens/step} = 1 + m\,a .
+\end{equation}
+Replaying
+\lgm{}'s 300 recorded E2B replies with a 3-gram lookup over prompt and reply
+gives 1.29, 1.41, 1.48 and 1.52 tokens per decode step at verify widths 2--5,
+from $a = 0.55, 0.87, 1.08, 1.21$ at match rates of 52, 47, 45 and 43\,\%. The 17 replies that
+run into the 2{,}048-token cap barely move this (1.39 at width~3 without them),
+so the effect is not an artefact of degenerate loops. The same replay shows
+that stopping at the first ``answer is (X)''---exact for the score---would save
+only 1.0\,\% of tokens, too little to pursue.
+
+% ===========================================================================
+\section{Design}\label{sec:design}
+
+\sys{} is \lgm{} at commit \texttt{aee759d} plus two patches. A serving patch
+(22 added lines in \texttt{run.c}), which both \lgm{} rows in this paper carry,
+lets the socket server take a fully rendered chat prompt, tokenizes it once and
+whole, counts the context budget in tokens, and raises the per-reply cap from
+1{,}024 to 2{,}048 tokens to match the benchmark's answer budget. The \sys{}
+patch (144 added lines in \texttt{run.c} and the host-side prefix-save
+functions of both backends) adds three switches, off by default:
+\texttt{-ngram}, \texttt{-reuse} and \texttt{-block}~$B$, the verify width,
+which upstream sets through an environment variable. Kernels, sampling and
+tokenizer are untouched.
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+  tok/.style={draw,rounded corners=1pt,minimum height=4.4mm,minimum width=7.6mm,inner sep=1pt,font=\scriptsize\ttfamily},
+  ctx/.style={tok,fill=gray!8},
+  key/.style={tok,fill=blue!18},
+  cp/.style={tok,fill=orange!30},
+  ok/.style={tok,fill=green!25},
+  new/.style={tok,fill=green!45},
+  lab/.style={font=\scriptsize,anchor=east},
+  >={Latex[length=1.6mm]}, node distance=0.6mm]
+% row 1: earlier in the context
+\node[lab] at (-0.15,0) {earlier in context};
+\node[ctx] (a0) at (0.45,0) {...};
+\node[key,right=of a0] (a1) {the};
+\node[key,right=of a1] (a2) {speed};
+\node[key,right=of a2] (a3) {is};
+\node[cp,right=of a3]  (a4) {4.5};
+\node[cp,right=of a4]  (a5) {m/s};
+\node[ctx,right=of a5] (a6) {...};
+% row 2: reply so far (its last 3 tokens sit under their earlier match)
+\node[lab] at (-0.15,-0.85) {reply so far};
+\node[ctx] (b0) at (0.45,-0.85) {...};
+\node[key,right=of b0] (b1) {the};
+\node[key,right=of b1] (b2) {speed};
+\node[key,right=of b2] (b3) {is};
+\draw[decorate,decoration={brace,mirror,amplitude=2pt},thick,blue!60]
+  ($(b1.south west)+(0,-0.03)$) -- ($(b3.south east)+(0,-0.03)$)
+  node[midway,below=1pt,font=\scriptsize,blue!70] {last 3 tokens};
+\draw[->,blue!60,thick] (b2.north) -- node[left,font=\scriptsize,blue!70]{1. match} (a2.south);
+% row 3: verify (drafts directly under their source)
+\node[lab] at (-0.15,-2.05) {verify input};
+\node[key] (v0) at (a3 |- 0,-2.05) {is};
+\node[cp]  (v1) at (a4 |- 0,-2.05) {4.5};
+\node[cp]  (v2) at (a5 |- 0,-2.05) {m/s};
+\draw[->,orange!80!black,thick] (a4.south) -- (v1.north);
+\draw[->,orange!80!black,thick] (a5.south) -- (v2.north);
+\node[font=\scriptsize,orange!80!black,anchor=west] at ($(a5.south east)!0.5!(v2.north east)+(0.1,0)$) {2. copy as draft};
+\node[draw,dashed,rounded corners=2pt,fit=(v0)(v2),inner sep=1.6pt] (vb) {};
+\node[font=\scriptsize,anchor=east] at ($(vb.west)+(-0.05,-0.38)$) {3. one weight pass, $B{=}3$};
+% row 4: greedy outputs
+\node[lab] at (-0.15,-2.85) {greedy output};
+\node[ok]  (o0) at (v0 |- 0,-2.85) {4.5};
+\node[ok]  (o1) at (v1 |- 0,-2.85) {m/s};
+\node[new] (o2) at (v2 |- 0,-2.85) {.};
+\foreach \i in {0,1,2} \draw[->,gray] (v\i.south) -- (o\i.north);
+\node[font=\scriptsize,anchor=west,align=left] at ($(o2.east)+(0.12,0)$)
+  {both drafts hold:\\[-1pt]3 tokens, one pass};
+\end{tikzpicture}}
+\caption{Prompt-lookup drafting with greedy verification. (1) The last three
+tokens of the reply are matched against their most recent earlier occurrence in
+prompt or reply. (2) The tokens that followed it become the draft. (3) One
+batched forward pass computes the model's own greedy choice after every input
+position. Drafts are accepted left to right while they equal those choices; the
+first mismatch is replaced by the model's choice and the rest discarded, so the
+emitted text is exactly what one-token-at-a-time greedy decoding produces. Here
+both drafts hold and the pass also yields the next token.}
+\label{fig:lookup}
+\end{figure}
+
+\subsection{Prompt-lookup drafting}
+Figure~\ref{fig:lookup} shows one step. At each decode step the engine holds the token history (prompt and reply so
+far). It searches backwards for the most recent earlier occurrence of the last
+three tokens, falling back to two, and proposes the up to $B{-}1$ tokens that
+followed it. The proposal, padded to the verify width $B$, goes through the
+existing batched verify, which computes
+the greedy successor of every position in one weight pass and accepts the
+longest matching prefix. A step without a match decodes normally. The scan is
+cheap (Sec.~\ref{sec:overhead}).
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+  seg/.style={draw,minimum height=5mm,inner sep=1pt,font=\scriptsize},
+  lab/.style={font=\scriptsize,anchor=east},
+  >={Latex[length=1.6mm]}]
+% request k
+\node[lab] at (-0.1,0) {request $k$};
+\node[seg,fill=blue!15,minimum width=4.4cm,anchor=west] (pk) at (0,0) {system + 5 few-shot pairs (1.3k tok)};
+\node[seg,fill=gray!10,minimum width=1.5cm,anchor=west] (qk) at (pk.east) {question $k$};
+\draw[very thick,red!70] (pk.north east) ++(0,0.08) -- ++(0,-0.66);
+\node[font=\scriptsize,red!70,anchor=south] at ($(pk.north east)+(0,0.08)$) {snapshot};
+% request k+1
+\node[lab] at (-0.1,-0.95) {request $k{+}1$};
+\node[seg,fill=blue!15,minimum width=4.4cm,anchor=west] (pk1) at (0,-0.95) {same tokens $\to$ \textbf{restore}, no compute};
+\node[seg,fill=gray!10,minimum width=1.5cm,anchor=west] (qk1) at (pk1.east) {question $k{+}1$};
+\node[font=\scriptsize,anchor=north] at (qk1.south) {only this is prefilled};
+% KV layout
+\node[lab] at (-0.1,-2.05) {global layers};
+\node[seg,fill=blue!15,minimum width=4.4cm,anchor=west,minimum height=3.6mm] (g) at (0,-2.05) {rows $0\ldots q{-}1$ saved};
+\node[seg,fill=white,minimum width=1.5cm,anchor=west,minimum height=3.6mm] at (g.east) {later rows};
+\node[lab] at (-0.1,-2.7) {sliding-window};
+\node[lab] at (-0.1,-2.95) {layers (ring)};
+\foreach \i in {0,...,11} {
+  \node[draw,minimum width=3.4mm,minimum height=3.6mm,inner sep=0pt,fill=orange!25] (r\i) at (0.2+\i*0.36,-2.82) {};
+}
+\node[font=\scriptsize,anchor=north,align=center] at ($(r5.south)+(0.18,-0.05)$) {position $p$ $\to$ row $p \bmod (W{+}16)$, so a long reply wraps;\\saved \emph{whole} at the snapshot};
+\end{tikzpicture}}
+\caption{Shared-prefix KV reuse. A request that misses the cached prefix saves
+the KV state at the start of its final user turn; the next request whose
+prompt begins with exactly those tokens restores it and prefills only its
+question. Global-attention rows below the snapshot are never overwritten by
+later positions of the same subject, but the sliding-window layers are rings
+that a long reply wraps over, so the ring is stored whole---its exact content
+at the snapshot position---and rewritten on restore.}
+\label{fig:reuse}
+\end{figure}
+
+\subsection{Shared-prefix KV reuse}
+Figure~\ref{fig:reuse} shows the mechanism. Prompts for one MMLU-Pro subject share a system turn and five few-shot pairs
+(1--2k tokens) and differ only in the final user turn. Upstream \lgm{} saves one
+snapshot, of a system prompt fixed at start-up. \sys{} instead keys it on each
+request: when a request does not start with the cached prefix, it prefills up
+to the start of its final user turn, saves the KV state there through
+\lgm{}'s own save routine, and continues; the next request that begins with
+exactly those tokens restores it and prefills only its own question. That
+routine already handles rings correctly: global-attention layers keep every
+row, and sliding-window rings, which wrap during a long reply, are copied whole,
+so restore rewrites their exact content at the snapshot position. Because
+upstream allocated fresh buffers on every save---once per process for a fixed
+system prompt, but once per subject change here---\sys{} allocates them once
+(39\,MiB on E2B) and reuses them. With one snapshot, reuse depends on request
+order: lm-eval sends each subject's questions together, so the snapshot is
+restored on 85--86 of every 100 requests and missed once per subject change; an
+order that interleaved subjects would miss on almost every request.
+
+\subsection{When the output cannot change, and how we check}
+A draft token is kept only where it equals the verify pass's greedy choice, and
+a restored prefix is reused only where the prompt matches it exactly. That
+makes the output identical to plain greedy decoding \emph{if two numerical
+conditions hold}: (i) the batched verify computes, for every position, logits
+bit-identical to a single-token decode step, and (ii) prefilling the prefix and
+the question as two spans writes the same KV rows as prefilling the whole
+prompt at once. Neither holds in general---a kernel that sums in a different
+order for a batch of $B$ tokens than for one breaks (i), and that is how a
+runtime can verify greedily and still change its replies
+(Sec.~\ref{sec:lcngram}). We therefore treat exactness as an empirical
+property, not a guarantee: every \sys{} reply is compared byte for byte with
+\lgm{}'s reply to the same question (Sec.~\ref{sec:method}), and 2{,}100 of
+2{,}100 match (Secs.~\ref{sec:results} and \ref{sec:agentic}). Byte-identical text shows that every greedy choice
+agreed, not that the logits did; we did not compare logits.
+
+% ===========================================================================
+\section{Methodology}\label{sec:method}
+
+\begin{table}[t]
+\caption{Benchmark protocol, identical for every engine}
+\label{tab:protocol}
+\centering\footnotesize
+\begin{tabular}{@{}ll@{}}
+\toprule
+Task & MMLU-Pro, 5-shot CoT, lm-eval~\cite{lmeval} \texttt{mmlu\_pro} \\
+Questions & 3 disjoint stratified subsets of 100 (seeded); $n{=}300$ \\
+Models & Gemma~4 E2B, E4B; same QAT \texttt{UD-Q4\_K\_XL} GGUF \\
+Decoding & greedy; 2{,}048-token answer cap; 8{,}192 context \\
+Thinking & off (\texttt{-rea off}; no \texttt{<|think|>} turn) \\
+Device & Jetson Orin Nano 8\,GB, 15\,W mode \\
+Clock caps & GPU 612\,MHz, CPU 1{,}497.6\,MHz \\
+Scoring & exact match on the first \texttt{answer is (X)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Engines.} \emph{\lc{}} (CUDA, all layers on GPU, host prompt cache
+disabled); \emph{\lgm{}} (with the serving patch of Sec.~\ref{sec:design},
+behind an OpenAI-compatible shim whose chat rendering is tested
+byte-identical to \lc{}'s template; prompt token counts match \lc{}'s);
+\emph{\sys{}} (the same binary + \texttt{-reuse -ngram -block 3}). All load the
+same GGUF file. Each run's
+serving command line is captured while it is live and diffed against a declared
+configuration before the run counts.
+
+\textbf{Quality.} Accuracy carries sampling uncertainty of about $\pm$5.6
+points at $n{=}300$; paired engine comparisons use McNemar's test. For \sys{}
+the standard is stricter: every reply must equal \lgm{}'s byte for byte. Replies
+are long (about 660 tokens on E2B), so one flipped greedy choice anywhere
+changes the rest of the reply and shows up: \lc{}'s own drafting, a change of
+exactly this kind, altered 90--93\,\% of replies (Sec.~\ref{sec:lcngram}). The
+2{,}100 compared replies cover 500 distinct prompts (300 MMLU-Pro, 200 BFCL)
+across eight run sets.
+
+\textbf{Energy and speed.} A 1\,Hz sampler reads board power from the INA3221
+\texttt{VDD\_IN} rail (board DC input, excluding power-supply loss; not wall
+power) together with GPU and CPU utilization and frequency, temperatures,
+throttle flags and memory. Energy is the trapezoidal integral over the
+command's working window, excluding 30\,s idle baselines recorded before and
+after. We report energy per generated token, total and above idle. Rates are
+pooled ratios ($\sum$tokens$/\sum$time) of each engine's own per-request
+timings; with drafting on, decode time is the whole generation phase, verify
+passes included, and the token count is the tokens emitted. Wall time per
+question, which needs no engine timer, agrees with these rates throughout.
+Each configuration ran once per subset; decode rates differ by at most 2.2\,\%
+between the three subsets of a configuration, and every speedup ratio below
+holds on each subset separately (\sys{} over \lgm{}: 1.148--1.158$\times$ on
+E2B, 1.160--1.189$\times$ on E4B).
+Prompt tokens \emph{processed} count only tokens actually prefilled.
+The working window
+includes model load and the gaps between requests; integrating power over the
+request windows alone lowers energy per token by only 1--2\,\% for every
+engine (E2B: \sys{} \EtwoJA{}$\to$\RwEtwoA{}, \lc{} \EtwoJL{}$\to$\RwEtwoL\,J;
+E4B: \EfourJA{}$\to$\RwEfourA{}, \EfourJL{}$\to$\RwEfourL\,J), so the
+comparison does not depend on that choice.
+
+\textbf{Clock state: two incidents.} \emph{First}, after one reboot the
+board's power-mode service failed silently: the mode query still reported
+15\,W, but the GPU ran at 1{,}020\,MHz under a \emph{performance} governor, and
+plain decode came out $\sim$1.6$\times$ faster than in every earlier run. It
+was caught before any reported run, by comparing against the baselines'
+telemetry; the mode was re-applied, and the run queue now refuses to start when
+the kernel-enforced \emph{maximum} clocks differ from those the mode declares.
+\emph{Second}, the board's clocks were pinned (\texttt{jetson\_clocks}-style)
+for the last batch of runs---\lc{}'s $n$-gram drafting, the reuse-only ablation
+and a \sys{} repeat---holding the CPU at its 1{,}497.6\,MHz cap instead of
+letting it scale; the GPU ran at 612\,MHz throughout. Pinning raises energy, so
+for those runs we report speed but not energy. Its effect on speed is bounded by
+two pinned reruns of unpinned configurations: the \sys{} repeat reproduced all
+100 replies byte for byte and decode within 0.8\,\% (29.78 vs.\ 29.54\,tok/s),
+and an \lc{} run that never drafted (Table~\ref{tab:lcngram}) decoded 3.3\,\%
+faster than its unpinned twin. Speed differences of 3\,\% or less between a
+pinned and an unpinned run are therefore not attributed to the engine.
+
+% ===========================================================================
+\section{Results}\label{sec:results}
+
+\begin{table*}[t]
+\caption{Engines on the Jetson Orin Nano 8\,GB at 15\,W, MMLU-Pro, $n{=}300$ per cell.
+Energy is board DC energy over the working window per generated token. \textbf{Bold}: best in row, whichever engine; shaded: the
+proposed system. The \lc{} column runs without speculative decoding;
+\lc{}+$n$-gram is \lc{}'s own drafting at the fastest of the three settings
+tried (width~4, not exact); its power and energy are not reported (--,
+Sec.~\ref{sec:method}). Lowest power is not bolded: it does not imply lowest
+energy.}
+\label{tab:main}
+\centering
+\setlength{\tabcolsep}{3.8pt}
+\begin{tabular}{@{}l cccO cccO@{}}
+\toprule
+& \multicolumn{4}{c}{Gemma~4 E2B} & \multicolumn{4}{c}{Gemma~4 E4B} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}
+& \lc{} & \lc{}+$n$-gram & \lgm{} & \ours & \lc{} & \lc{}+$n$-gram & \lgm{} & \ours \\
+\midrule
+Accuracy (\%)$^a$              & \EtwoAccL & \EtwoAccN & \EtwoAccG & \EtwoAccA & \EfourAccL & \EfourAccN & \EfourAccG & \EfourAccA \\
+Identical to \lgm{}$^b$         & 32/300 & 34/300 & ref. & \textbf{\EtwoIdent} & 28/300 & 20/300 & ref. & \textbf{\EfourIdent} \\
+Exact: identical without drafting$^c$ & ref. & 29/300 & ref. & \textbf{\EtwoIdent} & ref. & 20/300 & ref. & \textbf{\EfourIdent} \\
+Decode (tok/s)                 & \EtwoDecL & \EtwoDecN & \EtwoDecG & \textbf{\EtwoDecA} & \EfourDecL & \EfourDecN & \EfourDecG & \textbf{\EfourDecA} \\
+Prompt tokens processed / q    & \textbf{\EtwoPrmL} & \textbf{\EtwoPrmN} & \EtwoPrmG & \EtwoPrmA & \textbf{\EfourPrmL} & \textbf{\EfourPrmN} & \EfourPrmG$^d$ & \EfourPrmA \\
+Wall time / question (s)       & \EtwoWallL & \EtwoWallN & \EtwoWallG & \textbf{\EtwoWallA} & \EfourWallL & \EfourWallN & \EfourWallG$^d$ & \textbf{\EfourWallA} \\
+Mean power, generating (W)     & \EtwoWL & -- & \EtwoWG & \EtwoWA & \EfourWL & -- & \EfourWG & \EfourWA \\
+Energy / gen.\ token (J)       & \EtwoJL & -- & \EtwoJG & \textbf{\EtwoJA} & \EfourJL & -- & \EfourJG & \textbf{\EfourJA} \\
+\quad above idle (J)           & \EtwoJiL & -- & \EtwoJiG & \textbf{\EtwoJiA} & \EfourJiL & -- & \EfourJiG & \textbf{\EfourJiA} \\
+\bottomrule
+\multicolumn{9}{@{}l}{\footnotesize $^a$ Not bolded: all engines are statistically tied (Sec.~\ref{sec:results}).}\\
+\multicolumn{9}{@{}l}{\footnotesize $^b$ Byte-identical to \lgm{}'s replies, same 300 questions; ref.: the reference itself.}\\
+\multicolumn{9}{@{}l}{\footnotesize $^c$ Byte-identical to the same engine without drafting (\sys{}: to \lgm{}); the exactness test.}\\
+\multicolumn{9}{@{}l}{\footnotesize $^d$ One subset re-sent 5 prompts (105 requests); figures divide by its 100 questions, so they include the re-sends.}
+\end{tabular}
+\end{table*}
+
+\subsection{Quality first: nothing changed}
+On both models, \sys{} answers all 300 questions with exactly \lgm{}'s replies
+(Table~\ref{tab:main}), and so do the 1{,}200 replies of the ablation runs
+(lookup only and reuse only, Table~\ref{tab:ablation}) and the 100 of a repeat
+run: 1{,}900 replies, none different (the 224 replies of the width sweep,
+Table~\ref{tab:sweep}, match too but are not counted). On E2B its total generated-token count is identical too
+(197{,}977), as byte identity requires. Its accuracy is therefore \lgm{}'s:
+53.0\,\% on E2B, statistically tied with \lc{}'s 52.7\,\% (paired over the
+same questions, 14 right only under \lgm{} and 13 only under \lc{}; exact
+McNemar $p{=}1.00$), and 65.3\,\% on E4B against \lc{}'s 66.0\,\%.
+
+\subsection{Speed and energy}
+With the output fixed, \sys{} decodes \EtwoSpG$\times$ faster than the \lgm{}
+it patches on E2B and \EfourSpG$\times$ on E4B; this is the effect of the
+patch. Against \lc{} the factors are \EtwoSpL$\times$ and \EfourSpL$\times$,
+of which \lgm{}'s own engine advantage accounts for 1.11$\times$ and
+1.30$\times$. Reuse brings prompt tokens processed from \lgm{}'s
+\EtwoPrmG{} per question down to \EtwoPrmA{}, level with \lc{}, removing the
+one cost on which \lgm{} trailed. Wall time per question falls 22\,\% against
+\lc{} and 15\,\% against \lgm{} on E2B, and 34\,\% and 20\,\% on E4B. Board
+power while generating barely moves (10.3--11.6\,W), so energy follows time:
+per generated token, \sys{} uses \EtwoJsav\,\% (E2B) and \EfourJsav\,\% (E4B)
+less than \lc{}, and 17\,\% and 19\,\% less than \lgm{}. The gain is larger on
+E4B against \lc{} because \lgm{}'s own decode advantage is larger there.
+
+\subsection{Against \lc{}'s own $n$-gram drafting}\label{sec:lcngram}
+
+\begin{table}[t]
+\caption{\lc{}'s own $n$-gram drafting against \sys{}, E2B, subset s1 ($n{=}100$). ``Exact'': replies identical to the
+same engine without drafting (ref.: that engine itself; for \sys{}, \lgm{}).
+Bold: best per column; accuracy not bolded (all tied).}
+\label{tab:lcngram}
+\centering\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+& Exact & Acc. & Decode & Wall \\
+& & (\%) & (tok/s) & (s/q) \\
+\midrule
+\lc{}, no drafting & ref.    & 56 & 23.04 & 27.9 \\
+\lc{} $n$-gram, width 3$^\S$ & n/a & 56 & 23.80 & 27.4 \\
+\lc{} $n$-gram, width 4 & 8/100   & 56 & 26.97 & 26.1 \\
+\lc{} $n$-gram, stock & 9/100   & 53 & 25.15 & 26.8 \\
+\rowcolor{oursbg}\ours, width 3 & \textbf{100/100} & 54 & \textbf{29.54} & \textbf{23.8} \\
+\bottomrule
+\multicolumn{5}{@{}l}{\footnotesize $^\S$ Never drafted (no draft logged in any request): a plain}\\
+\multicolumn{5}{@{}l}{\footnotesize \phantom{$^\S$} rerun, so exactness is not applicable (n/a).}\\
+\end{tabular}
+\end{table}
+
+\lc{} ships its own $n$-gram drafting, so the fair question is whether \sys{}
+beats \lc{} \emph{with} it. Table~\ref{tab:lcngram} runs it
+(\texttt{-{}-spec-type ngram-simple}) on subset s1 in
+three configurations: matched to \sys{} (3-token lookup, width~3), one width
+wider, and with \lc{}'s stock settings (12-token lookup, up to 48-token
+drafts). The width-3 setting never drafted: its server log records no
+accepted or rejected draft for any of the 100 requests, so that row is a plain
+rerun of \lc{} under pinned clocks, and it says nothing about drafting. Both
+settings that did draft lost exactness: only 8 and 9 of 100 replies match \lc{}
+without drafting, while decode rose 17\,\% and 9\,\% (up to 3 points of which
+may be the pinned clocks, Sec.~\ref{sec:method}). The likely mechanism is that
+the result of a GPU matrix product depends on how many tokens are in the batch:
+kernels choose different tilings and reduction orders for one token and for
+several, which breaks condition~(i) of Sec.~\ref{sec:design}. We did not
+isolate which \lc{} kernel is responsible. Accuracy is unaffected (56 vs.\
+56; four questions flip each way, exact McNemar $p{=}1.00$): the change is
+numerical, not a loss of quality, but it is a loss of exactness, and in no run
+that drafted was \lc{}'s $n$-gram drafting byte-exact. Against the fastest of
+these, \sys{} decodes 10\,\% faster (29.54 vs.\ 26.97\,tok/s) and finishes
+questions 9\,\% sooner, while its replies stay byte-identical. Over all 300 questions (Table~\ref{tab:main}) the
+picture holds on both models: \lc{} at width~4 changes 271 of 300 E2B replies
+and 280 of 300 E4B replies relative to its own plain decoding, with accuracy
+tied (53.3 vs.\ 52.7\,\% and 65.0 vs.\ 66.0\,\%; McNemar $p{=}0.86$ and
+$0.69$), and decodes 16\,\% and 19\,\% faster than without drafting. \sys{}
+still decodes 1.11$\times$ and 1.28$\times$ faster than it, and answers
+questions 14\,\% and 23\,\% sooner.
+
+\subsection{Ablation}
+
+\begin{table}[t]
+\caption{Ablation, $n{=}300$ per row. The first row is \lgm{}; \sys{} with
+every switch off reproduced it byte for byte on two pre-run gate checks of 14
+and 28 questions (a 300-question no-switch run was not made). Every other row's
+replies are byte-identical to \lgm{}'s (1{,}800 replies). The reuse-only rows
+ran with pinned clocks. Bold: best per column within a model.}
+\label{tab:ablation}
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}l cccc@{}}
+\toprule
+& Decode & Prompt & Wall & J / \\
+& (tok/s) & tok / q & s / q & tok \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{Gemma~4 E2B}} \\
+\lgm{} (no switches)   & \EtwoDecG & \EtwoPrmG & \EtwoWallG & \EtwoJG \\
++ prompt lookup        & \AbNgDecEtwo & \AbNgPrmEtwo & \AbNgWallEtwo & \AbNgJEtwo \\
++ prefix reuse         & \AbRuDecEtwo & \textbf{\AbRuPrmEtwo} & \AbRuWallEtwo & \AbRuJEtwo \\
+\rowcolor{oursbg}+ both (\ours)        & \textbf{\EtwoDecA} & \textbf{\EtwoPrmA} & \textbf{\EtwoWallA} & \textbf{\EtwoJA} \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{Gemma~4 E4B}} \\
+\lgm{} (no switches)   & \EfourDecG & \EfourPrmG & \EfourWallG & \EfourJG \\
++ prompt lookup        & \textbf{\AbNgDecEfour} & \AbNgPrmEfour & \AbNgWallEfour & \AbNgJEfour \\
++ prefix reuse         & \AbRuDecEfour & \textbf{\AbRuPrmEfour} & \AbRuWallEfour & \AbRuJEfour \\
+\rowcolor{oursbg}+ both (\ours)        & \EfourDecA & \textbf{\EfourPrmA} & \textbf{\EfourWallA} & \textbf{\EfourJA} \\
+\bottomrule
+\multicolumn{5}{@{}l}{\footnotesize $^a$ Not reported: run with pinned clocks (Sec.~\ref{sec:method}).}
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:ablation} separates the two mechanisms. Prompt lookup alone
+delivers nearly all of the decode gain---29.51 against 29.52\,tok/s on E2B,
+17.82 against 17.67 on E4B, within the 1\,\% run-to-run spread---and most of
+the wall-clock and energy gain: $-$12\,\% and $-$18\,\% wall time per
+question, $-$15\,\% and $-$17\,\% energy per token against \lgm{}. Reuse acts
+on prefill only: comparing the full system with lookup alone, it cuts prompt
+tokens processed by 73\,\% and adds a further 3\,\% on wall time and 2--3\,\%
+on energy per token. The two compose as their phases suggest, almost additively.
+Reuse alone cuts prompt tokens processed by 73\,\% and shortens each question
+by 4\,\% on E2B and 8\,\% on E4B, where prefill is slower. Its decode rates
+(25.81 and 15.47\,tok/s against \lgm{}'s \EtwoDecG{} and \EfourDecG{}, $+$1\,\%
+and $+$3\,\%) are within the pinned-clock bound of Sec.~\ref{sec:method}, as is
+part of its E2B wall-time gain; the full-system comparison above, both runs
+unpinned, is the cleaner measure of what reuse adds.
+
+\subsection{Overhead}\label{sec:overhead}
+Neither mechanism costs anything the run can feel. The prefix snapshot takes
+39\,MiB on E2B and 114\,MiB on E4B, 0.5\,\% and 1.4\,\% of the board's 8\,GB. A
+lookup that finds no match, the worst case since it scans the whole history at
+both $n$-gram lengths, took 17\,$\mu$s at a typical 2{,}100-token context and
+68\,$\mu$s at the full 8{,}192 on this board's CPU, against about 39\,ms for one
+E2B decode step: under 0.2\,\%. The real cost is the verify pass, next.
+
+\subsection{Choosing the verify width}\label{sec:sweep}
+
+\begin{table}[t]
+\caption{Verify-width selection: 28 s1 questions per row (2 per subject),
+\sys{} with reuse and lookup on, all 224 replies byte-identical to \lgm{}. Last
+row: the chosen width over all 300 questions (Table~\ref{tab:main})}
+\label{tab:sweep}
+\centering\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l cc cc cc@{}}
+\toprule
+& \multicolumn{2}{c}{E2B} & \multicolumn{2}{c}{E4B} & \multicolumn{2}{c}{per drafted step (E2B)} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Width & tok/s & J/tok & tok/s & J/tok & accepted & cost \\
+\midrule
+none & 25.63 & 0.451 & 15.39 & 0.879 & -- & 1.00 \\
+2 & 29.62 & 0.386 & 17.76 & 0.736 & 0.57 & 1.24 \\
+\rowcolor{oursbg}\textbf{3} & \textbf{29.93} & \textbf{0.381} & \textbf{17.91} & \textbf{0.707} & 0.90 & 1.47 \\
+4 & 28.81 & 0.393 & 17.63 & 0.713 & 1.12 & 1.76 \\
+\midrule
+3, $n{=}300$ & \EtwoDecA & \EtwoJA & \EfourDecA & \EfourJA & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A wider verify block can confirm more tokens, but every block costs more.
+Table~\ref{tab:sweep} measures both sides: on E2B, a drafted step at widths 2,
+3 and 4 accepts 0.57, 0.90 and 1.12 tokens and costs 1.24, 1.47 and 1.76 plain
+decode steps. Width~4 is clearly costlier per pass than it gains. Width~3 was
+fastest on both models, but only by 1.0\,\% (E2B) and 0.8\,\% (E4B) over
+width~2: more than the 0.2\,\% by which repeated sweep runs reproduced, yet from
+a single 28-question sweep per width. We therefore take width~3 as a reasonable
+default for this engine and board, not a proven optimum. The sweep is a selection step on 28 questions, all of them
+also in the evaluation set; because every width yields byte-identical replies,
+choosing it there cannot affect accuracy, only---slightly---the measured speed.
+Over all 300 questions width~3 decodes at \EtwoDecA{} and \EfourDecA{}\,tok/s,
+1--2\,\% below its sweep values, which is simply a faster mix of questions in
+the 28. The cost curve is steeper than the $\sim$1.0 step that
+\lgm{}'s authors report for a width-2 verify on the larger Orin
+NX~\cite{littlegemmarepo}; on the Nano it is what caps the width.
+
+\subsection{Gains can be predicted before deployment}
+On E2B, the measured accepted tokens per drafted step (0.57, 0.90, 1.12 at
+widths 2--4, on the sweep's 28 questions) match the offline replay of
+Sec.~\ref{sec:where} (0.55, 0.87, 1.08, on all 300) within 0.04 tokens. If a
+drafted step costs $c$ plain decode steps, a fraction $m$ of steps draft and
+each accepts $a$ tokens on average, the decode speedup is
+\begin{equation}\label{eq:speedup}
+S = \frac{1 + m\,a}{1 + m\,(c - 1)} .
+\end{equation}
+With the replayed $m$ and $a$ and the measured $c$ of Table~\ref{tab:sweep},
+Eq.~\eqref{eq:speedup} gives 1.14, 1.15 and 1.11$\times$ at widths 2--4,
+against 1.16, 1.17 and 1.12$\times$ measured over the sweep's no-drafting row:
+within 0.02, and in the same order, so the prediction picks the same width. Logged replies and a one-minute
+measurement of verify cost thus predict the speedup before any engine change is
+built or run, and the next section applies this to a board \sys{} does not run
+on.
+
+\begin{table}[t]
+\caption{Replayed prompt-lookup acceptance, in tokens per decode step, on
+recorded greedy replies from other engines, modes and tasks; no device time}
+\label{tab:replay}
+\centering\footnotesize
+\setlength{\tabcolsep}{2pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}llcc@{}}
+\toprule
+Replies & Engine & $B{=}3$ & $B{=}4$ \\
+\midrule
+\rowcolor{oursbg}E2B MMLU-Pro, no thinking & \lgm{} = \sys{}$^\dagger$ & 1.41 & 1.48 \\
+E2B MMLU-Pro, no thinking & \lc{} (Pi) & 1.41--1.44 & 1.47--1.51 \\
+E2B MMLU-Pro, thinking & \lc{} (Pi) & 1.40--1.43 & 1.48--1.50 \\
+E4B MMLU-Pro, no thinking & \lc{} (Pi) & 1.35--1.37 & 1.41--1.43 \\
+E4B MMLU-Pro, thinking & \lc{} (Pi) & 1.35--1.37 & 1.41--1.43 \\
+\bottomrule
+\multicolumn{4}{@{}l}{\footnotesize Ranges span the three MMLU-Pro subsets ($n{=}100$ each).}\\
+\multicolumn{4}{@{}l}{\footnotesize $^\dagger$ Jetson Orin Nano; \sys{}'s replies are \lgm{}'s byte for byte. Measured}\\
+\multicolumn{4}{@{}l}{\footnotesize \phantom{$^\dagger$} live in \sys{} (width sweep): 1.42 at $B{=}3$, 1.49 at $B{=}4$.}
+\end{tabular}}
+\end{table}
+
+The same replay on other recorded replies (Table~\ref{tab:replay}) shows the
+effect is not an artefact of one engine or mode: \lc{}'s replies to the same
+questions copy their context as much as \lgm{}'s do; replies with the thinking
+channel on, which are 25\,\% longer, copy just as much on both models; and E4B
+copies somewhat less than E2B, consistent with its smaller measured gain. Other
+tasks follow in Sec.~\ref{sec:agentic}.
+
+% ===========================================================================
+\section{Beyond Multiple Choice: Tool Calls and Instructions}\label{sec:agentic}
+
+\begin{table}[t]
+\caption{Agent-shaped prompts, Gemma~4 E2B, Jetson Orin Nano (all runs one
+clock state). Top: replayed acceptance at width~3. Bottom: 200 BFCL prompts
+through each engine.}
+\label{tab:agentic}
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Replies (replayed) & Tokens / & Lookup & Accepted / \\
+ & decode step & match & drafted step \\
+\midrule
+MMLU-Pro chain of thought      & 1.41 & 47\,\% & 0.87 \\
+BFCL reference answers         & 1.22 & 31\,\% & 0.72 \\
+BFCL, Gemma's own calls        & 1.24 & 32\,\% & 0.75 \\
+IFEval, Gemma's own replies    & 1.10 & 16\,\% & 0.60 \\
+\midrule
+BFCL, measured & \lc{} & \lgm{} & \ours \\
+\midrule
+Identical to \lgm{}            & 189/200 & ref. & \textbf{200/200} \\
+Prompt / reply tokens          & 599 / 24 & 599 / 24 & 599 / 24 \\
+Prefill share of time          & 46\,\% & 30\,\% & 33\,\% \\
+Decode (tok/s)                 & 25.8 & 28.8 & \textbf{32.3} \\
+Wall time / request (s)        & 1.74 & 1.20 & \textbf{1.13} \\
+Prefix restores                & header$^\star$ & -- & 0 \\
+\bottomrule
+\multicolumn{4}{@{}l}{\footnotesize $^\star$ \lc{} reuses the $\sim$131-token shared header.}
+\end{tabular}
+\end{table}
+
+MMLU-Pro's long chains of thought favour copying from the context, so we also
+tested agent-shaped prompts (Table~\ref{tab:agentic}): 200 BFCL~\cite{bfcl}
+tool-calling prompts and 100 IFEval~\cite{ifeval} instructions. Exactness
+holds: all 200 \sys{} tool calls equal \lgm{}'s. The speedup shrinks with how
+much the output copies: tool calls reach 1.24 tokens per decode step (decode
++12\,\%, each request 6\,\% sooner, as prefill is a third of the time) and
+free-form instructions only 1.10, which Eq.~\eqref{eq:speedup} turns into a
+predicted $\approx$+2\,\% (IFEval was replayed, not run live). The replay
+predicted the live acceptance on BFCL to three decimals (0.748 vs.\ 0.749).
+Prefix reuse never fired here: per-request tool schemas precede the final user
+turn, so \sys{}'s snapshot never matches, while \lc{} reuses the shared
+header (Sec.~\ref{sec:limits}).
+
+% ===========================================================================
+\section{Other Edge Devices}\label{sec:devices}
+
+The same questions ran on two other edge targets as deployment context, not an
+engine comparison: a Raspberry~Pi~5 with \lc{} on its CPU, and an iPhone~15~Pro
+with MLX~\cite{mlx} 4-bit builds of the same QAT checkpoints (a different
+quantization from the GGUF's). Accuracy is the same within sampling error:
+51.7 and 65.7\,\% on the Pi, and 51.0 and 66.0\,\% on the iPhone (E2B, E4B),
+where the iPhone differs from \sys{} by $-2.0$ and $+0.7$ points (exact
+McNemar, iPhone vs.\ \sys{}: $p{=}0.42$ and $0.87$). Decode is 6.9 and 3.4\,tok/s on the Pi and 14.5
+and 9.2\,tok/s on the iPhone, which ran thermally throttled for most of every
+run, against \sys{}'s \EtwoDecA{} and \EfourDecA{}. We do not compare energy: the
+iPhone's is only a whole-phone battery estimate.
+
+Would the method help on the Pi? Not as built: \lgm{}'s CPU backend verifies a
+draft as sequential single-token forwards, which preserves the output but saves
+no weight passes. A batched CPU verify could. On the Pi, \lc{}'s CPU path
+(E2B, 3 threads) processes a 4-token batch in 140\,ms against 132\,ms for one
+token (1.06$\times$), while batches of 2 and 3 cost 1.30$\times$ and
+1.58$\times$ (\texttt{llama-bench}, which reports this file as Q4\_0 since most
+of its tensors are). A plausible cause, which we have not verified, is that
+\lc{}'s ARM kernels for Q4\_0 process activations in groups of four, so a
+batch of four fills a tile that a batch of two or three leaves partly empty.
+These are prompt-processing timings with an empty cache, not verify passes at
+a 2{,}000-token context, so they bound $c$ only roughly. With the acceptance
+replayed on the Pi's own \lc{} replies (Table~\ref{tab:replay}: 1.49 tokens
+per decode step at width~4, a lookup match on 45\,\% of steps),
+Eq.~\eqref{eq:speedup} predicts $\approx$1.45$\times$ decode for prompt-lookup
+drafting in \lc{} on the Pi at width~4, and only $\approx$1.1$\times$ at
+width~3. This is a prediction, not a measured speedup, and whether \lc{}'s
+drafting would be exact on the CPU is untested.
+
+% ===========================================================================
+\section{Discussion and Limitations}\label{sec:limits}
+
+\textbf{Implications for IoT deployments.} Three results bear on IoT nodes
+that host a language model, though we did not test a fielded IoT system. An
+exact speedup can be adopted as an engine update without re-validating the
+applications above it, provided the byte-identity check is repeated on the
+target hardware, since exactness is an empirical property of its kernels
+(Sec.~\ref{sec:design}). Lower energy per token reduces the energy of each
+request on a power-limited node. And because acceptance can be replayed from
+recorded replies, an operator can estimate the benefit for a node's own workload
+from its logs, with no device time. Both mechanisms are host-side changes, with
+a memory cost of at most 1.4\,\% of this board's RAM (Sec.~\ref{sec:overhead}).
+
+\textbf{What generalizes.} The two mechanisms are runtime-agnostic: any engine
+with a batched verify can take context-derived drafts, and any engine with
+ring-buffered sliding-window caches needs the snapshot treatment we describe.
+The quality standard generalizes too: when a change is meant to be exact,
+comparing outputs byte for byte against the unmodified engine is both stricter
+and cheaper than re-measuring accuracy within its noise.
+
+\textbf{Baselines.} \lc{}'s own $n$-gram drafting is measured in three
+settings on one subset and at the fastest of them over all 300 questions.
+Against \lgm{}, the comparison is exact: same runtime, same kernels, switches
+on or off. Drafting with Gemma~4's trained draft heads, which \lgm{} also supports, is
+outside this paper's scope: it needs extra weights resident, while \sys{}
+drafts from the context at no memory cost.
+
+\textbf{Prefix reuse for agent prompts.} \sys{}'s snapshot rule suits
+few-shot prompts that share everything up to the final user turn; agent
+prompts that put per-request tool schemas in the system turn never match it
+(Sec.~\ref{sec:agentic}). Reusing the longest common prefix, as \lc{} does,
+with the ring treatment of Sec.~\ref{sec:design}, is the obvious extension.
+
+\textbf{What does not generalize.} The engine comparison covers one board,
+one benchmark at full scale plus a 200-prompt tool-calling sample, E2B for the
+latter, and greedy decoding. Acceptance depends on how much replies copy their context;
+multiple-choice chain-of-thought does so heavily, and open-ended generation may
+not---though the replay of Sec.~\ref{sec:where} measures this for any workload
+with recorded outputs (Table~\ref{tab:replay}). Under sampling, drafts are verified against samples and
+acceptance falls. \sys{} inherits \lgm{}'s scope, the Gemma~4 family on CUDA.
+All runs use the 15\,W mode; at the board's 25\,W mode verify cost, and so the
+best width, may differ. Power is board DC draw, consistent across runs but not
+wall power.
+
+\section{Conclusion}
+On a 15\,W edge GPU, decode dominates and chain-of-thought replies repeat
+their context. Two host-side changes to \lgm{} built on exactly those
+facts---drafting from the context into its existing verify, and keying its
+existing prefix snapshot per request---make it decode \EtwoSpG$\times$ and
+\EfourSpG$\times$ faster on Gemma~4 E2B and E4B, 17--19\,\% cheaper in energy
+per token (\EtwoSpL$\times$, \EfourSpL$\times$ and \EtwoJsav--\EfourJsav\,\%
+against \lc{}), without changing one byte of its answers. Exactness carried over to tool calls; the speedup carries
+over in proportion to how much a workload copies its context, which a replay of
+recorded replies measures before anything is deployed. Measure where the time
+goes, replay what the model already said, and verify by identity: speed of this
+kind needs no accuracy trade to justify it.
+
+\appendix[Reproducibility]
+Both patches against \lgm{} commit \texttt{aee759d}, the run scripts, the telemetry
+logs, the recorded replies behind every byte-identity claim and a script that
+recomputes the tables from them (\texttt{benchmark/paper\_tables.py}) are in
+\url{https://github.com/rifkyariy/agentic-edge}.
+Failed runs are kept too: six reuse-only jobs that stopped at start-up on a
+run-script argument bug were archived and re-run after the fix.
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+% TODO(author): not required by the IoT-J guidelines at submission, usually
+% requested at the proof stage.
+% \begin{IEEEbiographynophoto}{Rifky Ari Yunanto}
+% Biography text here.
+% \end{IEEEbiographynophoto}
+
+\end{document}
