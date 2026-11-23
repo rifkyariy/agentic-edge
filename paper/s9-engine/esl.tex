@@ -89,12 +89,23 @@ tokens per decode step: a match on 47\,\% of steps, with 0.87 tokens accepted pe
 drafted step.
 
 \section{Design}\label{sec:design}
-\sys{} is \lgm{} at commit \texttt{aee759d} plus two patches. A 22-line serving
-patch, carried by both \lgm{} rows, accepts fully rendered prompts, tokenizes
-them whole and raises the reply cap from 1{,}024 to 2{,}048 tokens. The 144-line
-\sys{} patch adds the switches \texttt{-ngram}, \texttt{-reuse} and
-\texttt{-block}~$B$ in \texttt{run.c} and the host-side prefix-save functions;
-kernels, sampling and tokenizer are untouched.
+We build \sys{} as a small modification of the open-source \lgm{}
+engine~\cite{littlegemmarepo}, so the \lgm{} and
+\sys{} rows run the same program and differ only in three switches.
+A small change, applied to both rows, lets the benchmark run: whole rendered
+prompts in, replies up to 2{,}048 tokens instead of 1{,}024. The 144 lines of
+\sys{} add the switches \texttt{-ngram} (context drafting), \texttt{-reuse}
+(prefix reuse) and \texttt{-block}~$B$ (verify width). GPU kernels, sampling and
+tokenizer are untouched.
+
+The change is small but the gain is not: \lgm{}'s kernels are already tuned, so
+what is left is repeated work---one token per weight pass where the reply
+copies its context, and the same few-shot prefix prefilled for every question.
+Removing only that makes \lgm{} \EtwoSpG$\times$ and \EfourSpG$\times$ faster
+and 17--19\,\% cheaper in energy per token, with identical replies, no
+retraining or draft model, and one saved prefix as the only added memory on an
+8\,GB board
+(Sec.~\ref{sec:results}).
 
 \begin{figure}[t]
 \centering
@@ -384,7 +395,7 @@ with tool calls on E2B only; under sampling, acceptance falls. Drafting with
 Gemma~4's trained draft heads is out of scope. \sys{} inherits \lgm{}'s scope, the Gemma~4 family on CUDA. Within that
 scope, two host-side changes to \lgm{} make it decode \EtwoSpG$\times$ and
 \EfourSpG$\times$ faster without changing one byte of its answers, and the gain
-follows how much a workload copies its context. Both patches, scripts, logs, all
+follows how much a workload copies its context. Both changes to \lgm{}, scripts, logs, all
 replies including failed runs, and a script that recomputes the tables are at
 \url{https://github.com/rifkyariy/agentic-edge}.
 

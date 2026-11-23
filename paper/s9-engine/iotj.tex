@@ -221,16 +221,33 @@ only 1.0\,\% of tokens, too little to pursue.
 % ===========================================================================
 \section{Design}\label{sec:design}
 
-\sys{} is \lgm{} at commit \texttt{aee759d} plus two patches. A serving patch
-(22 added lines in \texttt{run.c}), which both \lgm{} rows in this paper carry,
-lets the socket server take a fully rendered chat prompt, tokenizes it once and
-whole, counts the context budget in tokens, and raises the per-reply cap from
-1{,}024 to 2{,}048 tokens to match the benchmark's answer budget. The \sys{}
-patch (144 added lines in \texttt{run.c} and the host-side prefix-save
-functions of both backends) adds three switches, off by default:
-\texttt{-ngram}, \texttt{-reuse} and \texttt{-block}~$B$, the verify width,
-which upstream sets through an environment variable. Kernels, sampling and
-tokenizer are untouched.
+We implement \sys{} as a small modification of the open-source \lgm{}
+engine~\cite{littlegemmarepo}. The \lgm{} and \sys{} rows in this paper therefore run the
+same program; \sys{} only turns on three switches that \lgm{} leaves off. We
+change the engine in two places:
+\begin{itemize}
+\item \emph{To run the benchmark at all} (both rows): the server
+accepts a fully rendered chat prompt and tokenizes it whole, counts its context
+budget in tokens, and allows replies of 2{,}048 tokens instead of 1{,}024, the
+benchmark's answer budget.
+\item \emph{\sys{} itself} (144 lines): the switches \texttt{-ngram} (context
+drafting), \texttt{-reuse} (prefix reuse) and \texttt{-block}~$B$ (the verify
+width).
+\end{itemize}
+Neither change touches the GPU kernels, sampling or the tokenizer.
+
+\textbf{Why so small a change matters.} \lgm{} is already a hand-tuned engine,
+faster than \lc{} on this board, so its remaining cost is not in the kernels but
+in work it repeats: it decodes one token per weight pass although the reply
+often copies its context, and it prefills the same few-shot prefix for every
+question. \sys{} removes only that repeated work. On the same board and the same
+300 questions, those 144 lines make \lgm{} decode \EtwoSpG$\times$ (E2B) and
+\EfourSpG$\times$ (E4B) faster, cut the prompt tokens it prefills per question
+from \EtwoPrmG{} to \EtwoPrmA{}, and lower energy per token by 17\,\% and
+19\,\% (Sec.~\ref{sec:results}), with every reply byte-identical. Nothing is
+retrained and no draft model is loaded; the only added memory is one saved
+prefix, which matters on an 8\,GB board that already holds the model. The same switches apply unchanged to
+any \lgm{} deployment.
 
 \begin{figure}[t]
 \centering
@@ -398,7 +415,7 @@ Scoring & exact match on the first \texttt{answer is (X)} \\
 \end{table}
 
 \textbf{Engines.} \emph{\lc{}} (CUDA, all layers on GPU, host prompt cache
-disabled); \emph{\lgm{}} (with the serving patch of Sec.~\ref{sec:design},
+disabled); \emph{\lgm{}} (with the benchmark change of Sec.~\ref{sec:design},
 behind an OpenAI-compatible shim whose chat rendering is tested
 byte-identical to \lc{}'s template; prompt token counts match \lc{}'s);
 \emph{\sys{}} (the same binary + \texttt{-reuse -ngram -block 3}). All load the
@@ -849,7 +866,7 @@ goes, replay what the model already said, and verify by identity: speed of this
 kind needs no accuracy trade to justify it.
 
 \appendix[Reproducibility]
-Both patches against \lgm{} commit \texttt{aee759d}, the run scripts, the telemetry
+Both changes to \lgm{}, the run scripts, the telemetry
 logs, the recorded replies behind every byte-identity claim and a script that
 recomputes the tables from them (\texttt{benchmark/paper\_tables.py}) are in
 \url{https://github.com/rifkyariy/agentic-edge}.
